@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta name="naver-site-verification" content="0ab67b90aa6889bad13c609610d36dc820596907" />
-  <meta name="google-site-verification" content="KRD5KVvPp3Dc85BHV3UiTL2EjL24xoKb2XUooo7wLx4" />
+  <meta name="naver-site-verification" content="9e03a9e3b1493547d8a028e17fea9032965c8e34" />
+  <meta name="google-site-verification" content="TJQkf_GJ_qnSZjyXC1GaZMYe65FUmW0EDua6TGiO6Ps" />
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2538594772108776" crossorigin="anonymous"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,7 +10,7 @@
   <meta property="og:title" content="OkayNotepad — 나만의 클라우드 노트" />
   <meta property="og:description" content="어디서든 로그인 하나로 내 노트를 확인하세요. 이미지, 파일 첨부, 자동 저장 지원." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://okaynotepad.netlify.app" />
+  <meta property="og:url" content="https://okaynotepad.pages.dev" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="OkayNotepad — 나만의 클라우드 노트" />
   <meta name="twitter:description" content="어디서든 로그인 하나로 내 노트를 확인하세요." />
@@ -20,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "OkayNotepad",
-    "url": "https://okaynotepad.netlify.app",
+    "url": "https://okaynotepad.pages.dev",
     "description": "어디서든 로그인 하나로 내 노트를 확인하는 무료 클라우드 노트 서비스.",
     "applicationCategory": "ProductivityApplication",
     "operatingSystem": "All",
@@ -244,7 +244,7 @@
       <div class="modal-title">다시 오셨군요</div>
       <div class="modal-sub">아이디와 비밀번호로 로그인하세요.</div>
       <div class="form-group"><label class="form-label">아이디</label><input class="form-input" type="text" id="loginEmail" placeholder="아이디 입력" /></div>
-      <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" type="password" id="loginPassword" placeholder="••••••••" /></div>
+      <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" type="password" id="loginPassword" placeholder="비밀번호 입력" /></div>
       <div class="error-msg" id="loginError"></div>
       <div class="modal-footer">
         <span class="modal-switch">계정이 없으신가요? <a onclick="switchModal('signup')">회원가입</a></span>
@@ -258,7 +258,7 @@
       <div class="modal-title">시작해볼까요</div>
       <div class="modal-sub">아이디를 만들어 무료로 시작하세요.</div>
       <div class="form-group"><label class="form-label">아이디 (5자 이상, 영문/숫자)</label><input class="form-input" type="text" id="signupEmail" placeholder="아이디 입력" /></div>
-      <div class="form-group"><label class="form-label">비밀번호 (6자 이상)</label><input class="form-input" type="password" id="signupPassword" placeholder="••••••••" /></div>
+      <div class="form-group"><label class="form-label">비밀번호 (6자 이상)</label><input class="form-input" type="password" id="signupPassword" placeholder="비밀번호 입력" /></div>
       <div class="error-msg" id="signupError"></div>
       <div class="modal-footer">
         <span class="modal-switch">이미 계정이 있으신가요? <a onclick="switchModal('login')">로그인</a></span>
@@ -313,14 +313,14 @@
     <div class="section-divider"></div>
     <div class="section-label">아이디 변경</div>
     <div class="form-group"><label class="form-label">새 아이디 (5자 이상)</label><input class="form-input" type="text" id="newUsername" placeholder="새 아이디" /></div>
-    <div class="form-group"><label class="form-label">현재 비밀번호 확인</label><input class="form-input" type="password" id="usernameConfirmPw" placeholder="••••••••" /></div>
+    <div class="form-group"><label class="form-label">현재 비밀번호 확인</label><input class="form-input" type="password" id="usernameConfirmPw" placeholder="비밀번호 입력" /></div>
     <div style="text-align:right; margin-bottom:0.5rem;"><button class="btn btn-primary" onclick="changeUsername()">아이디 변경</button></div>
 
     <div class="section-divider"></div>
     <div class="section-label">비밀번호 변경</div>
-    <div class="form-group"><label class="form-label">현재 비밀번호</label><input class="form-input" type="password" id="currentPw" placeholder="••••••••" /></div>
-    <div class="form-group"><label class="form-label">새 비밀번호 (6자 이상)</label><input class="form-input" type="password" id="newPw" placeholder="••••••••" /></div>
-    <div class="form-group"><label class="form-label">새 비밀번호 확인</label><input class="form-input" type="password" id="newPwConfirm" placeholder="••••••••" /></div>
+    <div class="form-group"><label class="form-label">현재 비밀번호</label><input class="form-input" type="password" id="currentPw" placeholder="비밀번호 입력" /></div>
+    <div class="form-group"><label class="form-label">새 비밀번호 (6자 이상)</label><input class="form-input" type="password" id="newPw" placeholder="비밀번호 입력" /></div>
+    <div class="form-group"><label class="form-label">새 비밀번호 확인</label><input class="form-input" type="password" id="newPwConfirm" placeholder="비밀번호 입력" /></div>
     <div class="error-msg" id="settingsError"></div>
     <div style="text-align:right; margin-top:0.5rem;"><button class="btn btn-primary" onclick="changePassword()">비밀번호 변경</button></div>
   </div>
@@ -340,6 +340,15 @@
       <div class="user-info" id="userEmail"></div>
       <div class="sidebar-actions">
         <button class="icon-btn" onclick="newNote()">+ 새 노트</button>
+        <select class="icon-btn" id="sortSelect" onchange="sortNotes()" style="cursor:pointer;">
+          <option value="date">최신순</option>
+          <option value="name">이름순</option>
+        </select>
+        <button class="icon-btn" id="selectModeBtn" onclick="toggleSelectMode()">선택</button>
+      </div>
+      <div id="bulkActions" style="display:none; gap:0.5rem; padding:0 0 0.5rem;">
+        <button class="icon-btn" onclick="selectAll()" style="font-size:0.78rem;">전체선택</button>
+        <button class="btn-danger" onclick="bulkDelete()" style="font-size:0.78rem; padding:0.3rem 0.6rem;">선택 삭제</button>
       </div>
       <input class="search-input" type="text" placeholder="노트 검색..." id="searchInput" oninput="filterNotes()" />
     </div>
@@ -353,7 +362,7 @@
       <div class="editor-empty-icon">📝</div>
       <div class="editor-empty-text">노트를 선택하거나 새로 만드세요</div>
     </div>
-    <div id="editorContent" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+    <div id="editorContent" style="display:none; flex-direction:column; flex:1; overflow:hidden; position:relative;">
       <div class="editor-toolbar">
         <input class="note-title-input" type="text" id="noteTitle" placeholder="제목 없음" oninput="onEdit()" />
         <div class="toolbar-actions">
@@ -366,6 +375,7 @@
         </div>
       </div>
       <div class="attach-area" id="attachArea"></div>
+      <div id="dropZone" style="display:none; position:absolute; inset:0; background:rgba(61,90,62,0.08); border:2px dashed var(--accent); border-radius:8px; z-index:10; align-items:center; justify-content:center; font-size:1rem; color:var(--accent); pointer-events:none;">📎 파일을 여기에 놓으세요</div>
       <textarea class="note-textarea" id="noteBody" placeholder="여기에 메모를 적어보세요..." oninput="onEdit()"></textarea>
     </div>
   </div>
@@ -443,6 +453,9 @@
     document.getElementById('app').style.display = 'flex'
     document.getElementById('userEmail').textContent = currentUser.email.replace('@notepad.app', '')
     loadNotes()
+    initDragDrop()
+    initPaste()
+    initAutoLogout()
   }
   function showLanding() {
     document.getElementById('landing').style.display = 'flex'
@@ -459,11 +472,18 @@
   function renderNotesList(list) {
     const el = document.getElementById('notesList')
     if (!list.length) { el.innerHTML = '<div class="empty-state">아직 노트가 없어요.<br>새 노트를 만들어보세요.</div>'; return }
-    el.innerHTML = list.map(n => `<div class="note-item ${activeNote?.id === n.id ? 'active' : ''}" onclick="selectNote('${n.id}')">
-      <div class="note-item-title">${escHtml(n.title || '제목 없음')}</div>
-      <div class="note-item-preview">${escHtml((n.body || '').slice(0, 60))}</div>
-      <div class="note-item-date">${formatDate(n.updated_at)}</div>
-    </div>`).join('')
+    el.innerHTML = list.map(n => {
+      const checked = selectedIds.has(n.id)
+      const activeClass = activeNote?.id === n.id ? 'active' : ''
+      const selectedClass = checked ? 'style="background:var(--accent-light);"' : ''
+      const checkbox = selectMode ? `<input type="checkbox" ${checked ? 'checked' : ''} onclick="toggleSelectNote('${n.id}', event)" style="margin-right:0.5rem;cursor:pointer;" />` : ''
+      const clickFn = selectMode ? `toggleSelectNote('${n.id}', event)` : `selectNote('${n.id}')`
+      return `<div class="note-item ${activeClass}" ${selectedClass} onclick="${clickFn}">
+        <div style="display:flex;align-items:center;">${checkbox}<div class="note-item-title">${escHtml(n.title || '제목 없음')}</div></div>
+        <div class="note-item-preview">${escHtml((n.body || '').slice(0, 60))}</div>
+        <div class="note-item-date">${formatDate(n.updated_at)}</div>
+      </div>`
+    }).join('')
   }
 
   function filterNotes() {
@@ -521,17 +541,8 @@
   async function uploadFiles(event) {
     if (!activeNote) return
     const files = Array.from(event.target.files)
-    if (!files.length) return
-    document.getElementById('saveStatus').textContent = '업로드 중...'
-    for (const file of files) {
-      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-      const path = `${currentUser.id}/${activeNote.id}/${Date.now()}_${safeName}`
-      const { error } = await sb.storage.from('images').upload(path, file, { upsert: false })
-      if (error) { console.error(error); document.getElementById('saveStatus').textContent = '일부 업로드 실패' }
-    }
+    if (files.length) await uploadFilesRaw(files)
     event.target.value = ''
-    document.getElementById('saveStatus').textContent = '저장됨'
-    loadAttachments(activeNote.id)
   }
 
   async function loadAttachments(noteId) {
@@ -647,6 +658,116 @@
     const span = el.querySelector('.faq-q span')
     const isOpen = a.classList.toggle('open')
     span.textContent = isOpen ? '－' : '＋'
+  }
+
+  // ── Sort ──
+  let sortMode = 'date'
+  let selectMode = false
+  let selectedIds = new Set()
+
+  function sortNotes() {
+    sortMode = document.getElementById('sortSelect').value
+    const sorted = [...notes].sort((a, b) => {
+      if (sortMode === 'name') return (a.title || '').localeCompare(b.title || '', 'ko')
+      return new Date(b.updated_at) - new Date(a.updated_at)
+    })
+    renderNotesList(sorted)
+  }
+
+  function toggleSelectMode() {
+    selectMode = !selectMode
+    selectedIds.clear()
+    document.getElementById('selectModeBtn').textContent = selectMode ? '취소' : '선택'
+    document.getElementById('bulkActions').style.display = selectMode ? 'flex' : 'none'
+    renderNotesList(notes)
+  }
+
+  function toggleSelectNote(id, e) {
+    e.stopPropagation()
+    if (selectedIds.has(id)) selectedIds.delete(id)
+    else selectedIds.add(id)
+    renderNotesList(notes)
+  }
+
+  function selectAll() {
+    if (selectedIds.size === notes.length) selectedIds.clear()
+    else notes.forEach(n => selectedIds.add(n.id))
+    renderNotesList(notes)
+  }
+
+  async function bulkDelete() {
+    if (!selectedIds.size) return
+    if (!confirm(`선택한 ${selectedIds.size}개의 노트를 삭제할까요?`)) return
+    for (const id of selectedIds) {
+      await sb.from('notes').delete().eq('id', id)
+    }
+    notes = notes.filter(n => !selectedIds.has(n.id))
+    selectedIds.clear()
+    if (activeNote && !notes.find(n => n.id === activeNote.id)) {
+      activeNote = null
+      document.getElementById('editorEmpty').style.display = 'flex'
+      document.getElementById('editorContent').style.display = 'none'
+    }
+    toggleSelectMode()
+    renderNotesList(notes)
+  }
+
+  // ── Drag & Drop files ──
+  function initDragDrop() {
+    const ec = document.getElementById('editorContent')
+    const dz = document.getElementById('dropZone')
+    ec.addEventListener('dragover', e => { if (!activeNote) return; e.preventDefault(); dz.style.display = 'flex' })
+    ec.addEventListener('dragleave', e => { if (!ec.contains(e.relatedTarget)) dz.style.display = 'none' })
+    ec.addEventListener('drop', e => {
+      e.preventDefault(); dz.style.display = 'none'
+      if (!activeNote) return
+      const files = Array.from(e.dataTransfer.files)
+      if (files.length) uploadFilesRaw(files)
+    })
+  }
+
+  // ── Paste image ──
+  function initPaste() {
+    document.addEventListener('paste', async e => {
+      if (!activeNote) return
+      const items = Array.from(e.clipboardData.items)
+      const imageItems = items.filter(i => i.type.startsWith('image/'))
+      if (!imageItems.length) return
+      e.preventDefault()
+      const files = imageItems.map(i => i.getAsFile()).filter(Boolean)
+      uploadFilesRaw(files)
+    })
+  }
+
+  async function uploadFilesRaw(files) {
+    document.getElementById('saveStatus').textContent = '업로드 중...'
+    for (const file of files) {
+      const ext = file.type.split('/')[1] || 'png'
+      const name = file.name || `paste_${Date.now()}.${ext}`
+      const safeName = name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      const path = `${currentUser.id}/${activeNote.id}/${Date.now()}_${safeName}`
+      const { error } = await sb.storage.from('images').upload(path, file, { upsert: false })
+      if (error) console.error(error)
+    }
+    document.getElementById('saveStatus').textContent = '저장됨'
+    loadAttachments(activeNote.id)
+  }
+
+  // ── Auto logout 24h ──
+  function initAutoLogout() {
+    const key = 'notepad_last_active'
+    const now = Date.now()
+    const last = localStorage.getItem(key)
+    if (last && now - parseInt(last) > 24 * 60 * 60 * 1000) {
+      sb.auth.signOut()
+      return
+    }
+    localStorage.setItem(key, now)
+    setInterval(() => {
+      if (Date.now() - parseInt(localStorage.getItem(key)) > 24 * 60 * 60 * 1000) sb.auth.signOut()
+    }, 60 * 1000)
+    document.addEventListener('click', () => localStorage.setItem(key, Date.now()))
+    document.addEventListener('keydown', () => localStorage.setItem(key, Date.now()))
   }
 
   // ── Utils ──
