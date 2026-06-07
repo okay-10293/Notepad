@@ -7,14 +7,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="OkayNotepad — 어디서든 로그인 하나로 내 노트를 확인하는 무료 클라우드 노트 서비스. 이미지, 파일 첨부, 자동 저장 지원." />
-  <meta property="og:title" content="OkayNotepad — 나만의 클라우드 노트" />
+  <meta property="og:title" content="오케이노트 — 나만의 클라우드 노트" />
   <meta property="og:description" content="어디서든 로그인 하나로 내 노트를 확인하세요. 이미지, 파일 첨부, 자동 저장 지원." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://okaynotepad.pages.dev" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="OkayNotepad — 나만의 클라우드 노트" />
+  <meta name="twitter:title" content="오케이노트 — 나만의 클라우드 노트" />
   <meta name="twitter:description" content="어디서든 로그인 하나로 내 노트를 확인하세요." />
-  <title>OkayNotepad — 나만의 클라우드 노트</title>
+  <title>오케이노트 — 나만의 클라우드 노트</title>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -148,6 +148,10 @@
     .attach-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .attach-del { position: absolute; top: -6px; right: -6px; background: #c0392b; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; line-height: 18px; text-align: center; padding: 0; }
 
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
+    }
     @media (max-width: 640px) {
       .sidebar { width: 100%; min-width: unset; }
       #app { flex-direction: column; }
@@ -172,12 +176,13 @@
 
   <div class="land-hero">
     <span class="hero-tag">클라우드 노트</span>
-    <h1 class="hero-title">어디서든,<br>내 노트는 항상 여기에</h1>
+    <h1 class="hero-title">어디서든 OK,<br>내 노트는 항상 여기에</h1>
     <p class="hero-sub">컴퓨터에서 쓴 메모를 핸드폰에서 바로 확인하세요.<br>로그인 하나로 모든 기기에서 동기화됩니다.</p>
     <div class="hero-btns">
       <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
       <button class="btn btn-ghost btn-lg" onclick="openModal('login')">로그인</button>
     </div>
+    <div onclick="document.querySelector('.land-features').scrollIntoView({behavior:'smooth'})" style="margin-top:1.5rem; width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-3); animation:bounce 2s infinite; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink-3)'">↓</div>
   </div>
 
   <div class="ad-banner">
@@ -186,7 +191,7 @@
 
   <div class="land-features">
     <div class="feature"><div class="feature-icon">☁️</div><div class="feature-title">실시간 동기화</div><div class="feature-desc">자동 저장, 모든 기기에서 최신 상태 유지.</div></div>
-    <div class="feature"><div class="feature-icon">🔒</div><div class="feature-title">나만의 공간</div><div class="feature-desc">내 계정으로 로그인해야만 접근 가능.</div></div>
+    <div class="feature"><div class="feature-icon">🔒</div><div class="feature-title">나만의 공간</div><div class="feature-desc">본인 계정으로만 접근 가능한 완전한 개인 공간. 엔터프라이즈급 보안 인프라로 데이터를 안전하게 지킵니다.</div></div>
     <div class="feature"><div class="feature-icon">📎</div><div class="feature-title">파일 첨부</div><div class="feature-desc">이미지, PDF 등 모든 파일 첨부 가능.</div></div>
     <div class="feature"><div class="feature-icon">🔍</div><div class="feature-title">노트 검색</div><div class="feature-desc">제목으로 빠르게 원하는 노트 검색.</div></div>
     <div class="feature"><div class="feature-icon">📧</div><div class="feature-title">이메일 연동</div><div class="feature-desc">이메일 연동 시 아이디/비밀번호 찾기 지원.</div></div>
@@ -222,7 +227,7 @@
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
       <div class="faq-q">개인정보는 안전한가요? <span>＋</span></div>
-      <div class="faq-a">본인 계정으로 로그인해야만 본인의 노트에 접근할 수 있습니다. 다른 사람의 노트는 절대 볼 수 없습니다.</div>
+      <div class="faq-a">OkayNotepad는 글로벌 대기업 Supabase의 보안 인프라를 사용합니다. 비밀번호는 암호화되어 저장되며, 본인 외에는 관리자조차 노트 내용을 열람할 수 없습니다. Supabase는 전 세계 수백만 개의 서비스가 신뢰하는 엔터프라이즈급 보안 시스템으로, 해킹 및 DDoS 공격 등 각종 외부 위협으로부터 안전하게 보호됩니다.</div>
     </div>
   </div>
 
