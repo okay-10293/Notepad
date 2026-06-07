@@ -565,7 +565,7 @@
       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
       const inner = isImage
         ? `<img class="attach-img" src="${url}" onclick="window.open('${url}')" /><a href="${url}" download="${escHtml(file.name)}" style="position:absolute;bottom:-6px;right:-6px;background:var(--accent);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:18px;text-align:center;text-decoration:none;display:block;">↓</a>`
-        : `<a class="attach-file" href="${url}" download="${escHtml(file.name)}">📄 <span>${escHtml(file.name)}</span></a>`
+        : `<a class="attach-file" href="${url}" download="${escHtml(file.name)}" onclick="return confirm('${escHtml(file.name)} 을 다운로드 하시겠습니까?')">📄 <span>${escHtml(file.name)}</span></a>`
       return `<div class="attach-item">${inner}<button class="attach-del" onclick="deleteAttachment('${path}')">✕</button></div>`
     }).join('')
   }
