@@ -561,8 +561,8 @@
       const url = urlData.publicUrl
       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
       const inner = isImage
-        ? `<a href="${url}" download="${escHtml(file.name)}"><img class="attach-img" src="${url}" /></a>`
-        : `<a class="attach-file" href="${url}" download="${escHtml(file.name)}">📄 <span>${escHtml(file.name)}</span></a>`
+        ? `<img class="attach-img" src="${url}" onclick="downloadFile('${url}', '${escHtml(file.name)}')" style="cursor:pointer;" />`
+        : `<div class="attach-file" onclick="downloadFile('${url}', '${escHtml(file.name)}')" style="cursor:pointer;">📄 <span>${escHtml(file.name)}</span></div>`
       return `<div class="attach-item">${inner}<button class="attach-del" onclick="deleteAttachment('${path}')">✕</button></div>`
     }).join('')
   }
@@ -667,6 +667,19 @@
   }
 
   // ── Download ──
+  async function downloadFile(url, name) {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = name
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch(e) {
+      window.open(url)
+    }
+  }
   function downloadNoteById(id, e) {
     e.stopPropagation()
     const note = notes.find(n => n.id === id)
