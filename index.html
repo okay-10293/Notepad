@@ -668,6 +668,7 @@
 
   // ── Download ──
   async function downloadFile(url, name) {
+    if (!confirm(name + '을 다운로드 하시겠습니까?')) return
     try {
       const res = await fetch(url)
       const blob = await res.blob()
