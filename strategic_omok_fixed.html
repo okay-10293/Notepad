@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>전략 오목</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<!-- Firebase SDKs — must load before game script -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+:root{--bg:#f5f3ef;--bg2:#eceae4;--board-bg:#c8a96e;--ui-bg:#ffffff;--border:#d8d2c8;--border2:#b8b0a0;--panel:#fafaf8;--text:#1a1814;--text2:#6b6358;--text3:#a09888;--accent:#b8860b;--accent2:#8b5e0a;--red:#c62828;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow-x:hidden;}
+button,input{cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.page{display:none;min-height:100vh;}
+.page.active{display:flex;flex-direction:column;}
+/* AUTH */
+#page-auth{align-items:center;justify-content:center;background:var(--bg);}
+.auth-wrap{width:100%;max-width:400px;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:22px;}
+.auth-logo h1{font-family:'Black Han Sans',sans-serif;font-size:38px;color:var(--accent);letter-spacing:2px;text-align:center;}
+.auth-logo p{font-size:13px;color:var(--text3);text-align:center;margin-top:4px;}
+.auth-tabs{display:flex;width:100%;border:1.5px solid var(--border2);border-radius:10px;overflow:hidden;}
+.auth-tab{flex:1;padding:11px;background:var(--ui-bg);border:none;font-size:14px;font-weight:700;color:var(--text3);}
+.auth-tab.active{background:var(--accent);color:#fff;}
+.auth-form{width:100%;display:flex;flex-direction:column;gap:9px;}
+.auth-input{padding:12px 14px;border:1.5px solid var(--border2);border-radius:9px;font-size:14px;outline:none;width:100%;}
+.auth-input:focus{border-color:var(--accent);}
+.auth-btn{width:100%;padding:13px;border:none;border-radius:9px;font-size:15px;font-weight:700;}
+.auth-btn.primary{background:var(--accent);color:#fff;}
+.auth-btn.google{background:#fff;color:#444;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:10px;}
+.auth-divider{display:flex;align-items:center;gap:10px;width:100%;color:var(--text3);font-size:12px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-err{font-size:12px;color:var(--red);text-align:center;min-height:16px;}
+/* MENU */
+#page-menu{align-items:center;justify-content:center;background:var(--bg);}
+.menu-wrap{display:flex;flex-direction:column;align-items:center;gap:22px;padding:32px 20px;width:100%;max-width:420px;}
+.menu-logo h1{font-family:'Black Han Sans',sans-serif;font-size:38px;color:var(--accent);letter-spacing:2px;text-align:center;}
+.menu-logo p{font-size:13px;color:var(--text3);text-align:center;margin-top:4px;}
+.menu-user-bar{width:100%;background:var(--ui-bg);border:1.5px solid var(--border);border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:11px;}
+.menu-user-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0;}
+.menu-user-name{font-weight:700;font-size:14px;}
+.menu-user-record{font-size:12px;color:var(--text3);margin-top:1px;}
+.menu-logout-btn{background:none;border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:12px;color:var(--text2);margin-left:auto;}
+.menu-btn{width:100%;padding:14px;border:none;border-radius:11px;font-size:15px;font-weight:700;letter-spacing:1px;}
+.menu-btn.primary{background:var(--accent);color:#fff;}
+.menu-btn.secondary{background:var(--ui-bg);color:var(--text);border:1.5px solid var(--border2);}
+.menu-btn.disabled{background:var(--bg2);color:var(--text3);border:1.5px solid var(--border);cursor:not-allowed;}
+.menu-btn-group{display:flex;flex-direction:column;gap:8px;width:100%;}
+/* BOOK */
+#page-book{background:var(--bg);}
+.book-header{padding:13px 16px;background:var(--ui-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;}
+.back-btn{background:none;border:none;font-size:20px;color:var(--accent);padding:4px 7px;}
+.book-header h2{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--accent);}
+.book-filters{display:flex;gap:6px;padding:10px 13px;overflow-x:auto;background:var(--ui-bg);border-bottom:1px solid var(--border);}
+.book-filters::-webkit-scrollbar{display:none;}
+.book-filter-btn{padding:5px 12px;border-radius:99px;border:1.5px solid var(--border2);background:var(--ui-bg);font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap;}
+.book-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px;padding:13px;}
+.book-card{background:var(--ui-bg);border:1.5px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px;}
+.book-card-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.book-card-name{font-size:13px;font-weight:700;}
+.book-card-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+.book-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700;margin-top:2px;}
+/* ONLINE */
+#page-online{align-items:center;justify-content:center;background:var(--bg);}
+.online-wrap{width:100%;max-width:400px;padding:22px 18px;display:flex;flex-direction:column;gap:14px;}
+.online-section{background:var(--ui-bg);border:1.5px solid var(--border);border-radius:11px;padding:16px;display:flex;flex-direction:column;gap:9px;}
+.online-section-title{font-size:13px;font-weight:700;color:var(--text2);}
+.room-code-big{font-family:monospace;font-size:28px;font-weight:900;letter-spacing:8px;color:var(--accent);background:var(--bg2);border-radius:8px;padding:12px;text-align:center;}
+/* GAME */
+#page-game{flex-direction:column;background:var(--bg);}
+.game-header{padding:8px 13px;background:var(--ui-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;}
+.gh-logo{font-family:'Black Han Sans',sans-serif;font-size:16px;color:var(--accent);}
+.turn-badge{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:12px;font-weight:700;}
+.turn-stone-sm{width:14px;height:14px;border-radius:50%;}
+.turn-stone-sm.b{background:radial-gradient(circle at 35% 30%,#555,#111);}
+.turn-stone-sm.w{background:radial-gradient(circle at 35% 30%,#fff,#aaa);border:1px solid #ccc;}
+.timer-wrap{display:flex;align-items:center;gap:6px;}
+.timer-num{font-size:13px;font-weight:700;color:var(--accent);min-width:20px;text-align:right;}
+.timer-bar-wrap{width:70px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.timer-bar{height:100%;background:var(--accent);border-radius:3px;transition:width 0.5s linear,background 0.3s;}
+.timer-bar.warn{background:#e65100;}.timer-bar.danger{background:var(--red);}
+.game-body{display:flex;flex:1;overflow:hidden;}
+@media(max-width:700px){
+  .game-body{flex-direction:column;overflow-y:auto;}
+  .side-panel{width:100%!important;border-right:none!important;border-left:none!important;border-bottom:1px solid var(--border);}
+  .board-area{padding:6px;}
+  .board-wrap{padding:10px;}
+}
+.side-panel{width:205px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.side-panel.right{border-right:none;border-left:1px solid var(--border);}
+.panel-player-header{padding:8px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+.panel-player-stone{width:17px;height:17px;border-radius:50%;flex-shrink:0;}
+.panel-player-stone.b{background:radial-gradient(circle at 35% 30%,#555,#111);}
+.panel-player-stone.w{background:radial-gradient(circle at 35% 30%,#fff,#aaa);border:1px solid #ccc;}
+.panel-player-name{font-weight:700;font-size:13px;}
+.panel-player-nick{font-size:10px;color:var(--text3);}
+.panel-active-glow{box-shadow:inset 3px 0 0 var(--accent);}
+.panel-section{padding:6px 11px 0;}
+.panel-section-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding-bottom:3px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+.hand-list{display:flex;flex-direction:column;gap:4px;padding:0 11px 7px;}
+.hand-card{background:var(--ui-bg);border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;}
+.hand-card.mine{cursor:pointer;}
+.hand-card.mine:hover{border-color:var(--accent);background:#fffbf0;}
+.hand-card.selected{border-color:var(--accent);background:#fff8e1;box-shadow:0 0 0 2px rgba(184,134,11,0.15);}
+.hand-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:3px;}
+.hand-card-name{font-size:12px;font-weight:700;}
+.hand-card-stars{font-size:9px;flex-shrink:0;}
+.hand-card-badges{display:flex;gap:3px;margin-top:2px;flex-wrap:wrap;}
+.hand-card-desc{font-size:10px;color:var(--text2);line-height:1.45;margin-top:3px;display:none;}
+.hand-card-desc.open{display:block;}
+.hand-card-toggle{font-size:10px;color:var(--accent);margin-top:2px;display:inline-block;cursor:pointer;user-select:none;}
+.opp-hand{padding:5px 11px;display:flex;flex-wrap:wrap;gap:3px;}
+.opp-card-back{width:22px;height:32px;background:var(--bg2);border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text3);}
+.merge-section{padding:6px 11px;border-top:1px solid var(--border);}
+.merge-slots{display:flex;gap:5px;margin-bottom:5px;}
+.merge-slot{flex:1;height:36px;border:1.5px dashed var(--border2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);cursor:pointer;text-align:center;padding:2px;}
+.merge-slot.filled{border-color:var(--accent);background:#fff8e1;color:var(--accent);font-size:9px;font-weight:700;}
+.merge-btn{width:100%;padding:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;}
+.merge-btn:disabled{background:var(--border);color:var(--text3);}
+.merge-hint{font-size:10px;color:var(--text3);text-align:center;margin-top:3px;}
+.action-section{padding:6px 11px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
+.action-btn{width:100%;padding:7px;background:var(--ui-bg);border:1.5px solid var(--border2);border-radius:7px;font-size:12px;font-weight:700;color:var(--text);}
+.action-btn.use-card{background:var(--accent);color:#fff;border-color:var(--accent);}
+.action-btn.place-btn{background:#2e7d32;color:#fff;border-color:#2e7d32;}
+.action-btn.place-btn:disabled{background:var(--border);color:var(--text3);border-color:var(--border);}
+.board-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:10px;gap:8px;min-width:0;}
+.board-wrap{background:var(--board-bg);border-radius:5px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.14);flex-shrink:0;}
+canvas#boardCanvas{display:block;touch-action:none;}
+.status-bar{background:var(--ui-bg);border:1.5px solid var(--border);border-radius:7px;padding:7px 12px;font-size:13px;color:var(--text2);text-align:center;width:100%;max-width:540px;}
+.status-bar b{color:var(--accent);}
+/* CARD ANIM */
+.card-anim-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.card-anim-overlay.show{background:rgba(0,0,0,0.3);}
+.card-anim-box{background:var(--ui-bg);border-radius:14px;padding:20px 26px;text-align:center;max-width:270px;width:88%;box-shadow:0 8px 32px rgba(0,0,0,0.22);transform:scale(0.5) translateY(60px);opacity:0;transition:transform 0.25s cubic-bezier(.34,1.56,.64,1),opacity 0.2s;border:2px solid var(--accent);}
+.card-anim-overlay.show .card-anim-box{transform:scale(1) translateY(0);opacity:1;}
+.card-anim-box.hide{transform:scale(0.8) translateY(-40px)!important;opacity:0!important;transition:transform 0.2s,opacity 0.2s!important;}
+.card-anim-who{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.card-anim-stars{font-size:18px;margin-bottom:3px;}
+.card-anim-name{font-family:'Black Han Sans',sans-serif;font-size:22px;color:var(--accent);margin-bottom:5px;}
+.card-anim-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:600;display:none;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--ui-bg);border-radius:13px;padding:22px 18px;max-width:330px;width:90%;}
+.modal-box h3{font-family:'Black Han Sans',sans-serif;font-size:19px;color:var(--accent);margin-bottom:7px;}
+.modal-box p{font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:14px;}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;}
+.modal-btn{padding:8px 16px;border-radius:7px;border:none;font-size:13px;font-weight:700;}
+.modal-btn.confirm{background:var(--accent);color:#fff;}
+.modal-btn.cancel{background:var(--bg2);color:var(--text);border:1.5px solid var(--border2);}
+.win-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:700;display:none;align-items:center;justify-content:center;}
+.win-overlay.show{display:flex;}
+.win-box{background:var(--ui-bg);border-radius:16px;padding:32px 24px;text-align:center;max-width:300px;width:90%;}
+.win-box h2{font-family:'Black Han Sans',sans-serif;font-size:30px;color:var(--accent);margin-bottom:6px;}
+.win-box p{color:var(--text2);margin-bottom:18px;font-size:13px;}
+.win-box button{padding:11px 28px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;}
+.card-pick-list{display:flex;flex-direction:column;gap:5px;max-height:250px;overflow-y:auto;margin-bottom:12px;}
+.card-pick-item{background:var(--bg2);border:1.5px solid var(--border);border-radius:7px;padding:7px 9px;cursor:pointer;}
+.card-pick-item:hover,.card-pick-item.picked{border-color:var(--accent);background:#fff8e1;}
+.card-pick-item .cpname{font-size:13px;font-weight:700;}
+.card-pick-item .cpdesc{font-size:11px;color:var(--text2);margin-top:2px;}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700;}
+.b-배치{background:#e8f5e9;color:#2e7d32;}.b-방어{background:#e3f2fd;color:#1565c0;}
+.b-방해{background:#fce4ec;color:#c62828;}.b-강화{background:#fff8e1;color:#f57f17;}
+.b-특수{background:#f3e5f5;color:#6a1b9a;}.b-별{background:#fff9c4;color:#f9a825;}
+.b-즉시{background:#f5f5f5;color:#555;}.b-지속{background:#e8f5e9;color:#2e7d32;}
+</style>
+</head>
+<body>
+<!-- AUTH -->
+<div id="page-auth" class="page active">
+  <div class="auth-wrap">
+    <div class="auth-logo"><h1>전략 오목</h1><p>Strategic Gomoku — 카드로 판을 뒤집어라</p></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">로그인</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">회원가입</button>
+    </div>
+    <div class="auth-form">
+      <input class="auth-input" id="authEmail" type="email" placeholder="이메일">
+      <input class="auth-input" id="authPw" type="password" placeholder="비밀번호">
+      <input class="auth-input" id="authPw2" type="password" placeholder="비밀번호 확인" style="display:none;">
+      <input class="auth-input" id="authNick" type="text" placeholder="닉네임 (2~10자)" maxlength="10" style="display:none;">
+      <div class="auth-err" id="authErr"></div>
+      <button class="auth-btn primary" onclick="submitAuth()" id="authSubmitBtn">로그인</button>
+    </div>
+    <div class="auth-divider">또는</div>
+    <button class="auth-btn google" onclick="loginWithGoogle()">
+      <svg width="17" height="17" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+      Google로 계속하기
+    </button>
+  </div>
+</div>
+<!-- NICKNAME MODAL -->
+<div class="modal-overlay" id="nickModal">
+  <div class="modal-box">
+    <h3>닉네임 설정</h3>
+    <p>게임에서 사용할 닉네임을 입력하세요.</p>
+    <input class="auth-input" id="nickInput" type="text" placeholder="닉네임 (2~10자)" maxlength="10" style="margin-bottom:10px;">
+    <div class="auth-err" id="nickErr" style="margin-bottom:8px;"></div>
+    <div class="modal-btns"><button class="modal-btn confirm" onclick="submitNickname()">완료</button></div>
+  </div>
+</div>
+<!-- MENU -->
+<div id="page-menu" class="page">
+  <div class="menu-wrap">
+    <div class="menu-logo"><h1>전략 오목</h1><p>Strategic Gomoku</p></div>
+    <canvas id="menuCanvas" width="140" height="140" style="border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.13);"></canvas>
+    <div class="menu-user-bar">
+      <div class="menu-user-avatar" id="menuAvatar">?</div>
+      <div style="flex:1;"><div class="menu-user-name" id="menuNickname">-</div><div class="menu-user-record" id="menuRecord">승 0 / 패 0</div></div>
+      <button class="menu-logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+    <div class="menu-btn-group">
+      <button class="menu-btn primary" onclick="startLocalGame()">로컬 2인 대전 (같은 기기)</button>
+      <button class="menu-btn secondary" onclick="showPage('page-online')">온라인 대전 (다른 기기)</button>
+      <button class="menu-btn disabled">AI 대전 (준비중)</button>
+      <button class="menu-btn secondary" onclick="showPage('page-book')">카드 도감</button>
+    </div>
+  </div>
+</div>
+<!-- BOOK -->
+<div id="page-book" class="page">
+  <div class="book-header"><button class="back-btn" onclick="showPage('page-menu')">←</button><h2>카드 도감</h2></div>
+  <div class="book-filters" id="bookFilters"></div>
+  <div class="book-grid" id="bookGrid"></div>
+</div>
+<!-- ONLINE -->
+<div id="page-online" class="page" style="align-items:center;justify-content:center;background:var(--bg);">
+  <div class="online-wrap">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <button class="back-btn" onclick="showPage('page-menu')">←</button>
+      <span style="font-family:'Black Han Sans',sans-serif;font-size:21px;color:var(--accent);">온라인 대전</span>
+    </div>
+    <div class="online-section">
+      <div class="online-section-title">방 만들기</div>
+      <button class="menu-btn primary" onclick="createOnlineRoom()">새 방 만들기</button>
+      <div id="roomCodeDisplay" style="display:none;flex-direction:column;gap:7px;align-items:center;">
+        <div style="font-size:12px;color:var(--text3);">방 코드 — 상대방에게 전달하세요</div>
+        <div class="room-code-big" id="roomCodeText"></div>
+        <div id="roomWaitMsg" style="font-size:12px;color:var(--text3);">상대방 입장 대기 중...</div>
+      </div>
+    </div>
+    <div class="online-section">
+      <div class="online-section-title">방 입장하기</div>
+      <input id="roomCodeInput" type="text" maxlength="6" placeholder="방 코드 6자리"
+        style="padding:10px;border:1.5px solid var(--border2);border-radius:8px;font-size:20px;font-weight:700;letter-spacing:5px;text-align:center;font-family:monospace;text-transform:uppercase;outline:none;width:100%;">
+      <button class="menu-btn primary" onclick="joinOnlineRoom()">입장하기</button>
+      <div id="joinMsg" style="font-size:12px;color:var(--red);text-align:center;display:none;"></div>
+    </div>
+  </div>
+</div>
+<!-- GAME -->
+<div id="page-game" class="page">
+  <div class="game-header">
+    <div style="display:flex;align-items:center;gap:7px;">
+      <button style="background:none;border:none;font-size:18px;color:var(--accent);" onclick="confirmQuit()">←</button>
+      <span class="gh-logo">전략 오목</span>
+    </div>
+    <div class="turn-badge">
+      <div class="turn-stone-sm b" id="turnStoneEl"></div>
+      <span id="turnLabel">흑의 턴</span>
+      <span id="turnNumEl" style="color:var(--text3);font-weight:400;font-size:11px;">턴 1</span>
+    </div>
+    <div class="timer-wrap">
+      <span class="timer-num" id="timerText">30</span>
+      <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar"></div></div>
+    </div>
+  </div>
+  <div class="game-body">
+    <div class="side-panel" id="panelBlack">
+      <div class="panel-player-header">
+        <div class="panel-player-stone b"></div>
+        <div class="panel-player-name">흑</div>
+        <span class="panel-player-nick" id="blackNickDisplay"></span>
+        <span id="blackHandCount" style="margin-left:auto;font-size:10px;color:var(--text3);">0/8</span>
+      </div>
+      <div class="panel-section"><div class="panel-section-label">상대 패</div></div>
+      <div class="opp-hand" id="whiteOppView"></div>
+      <div class="panel-section"><div class="panel-section-label">내 패</div></div>
+      <div class="hand-list" id="blackHand"></div>
+      <div class="merge-section">
+        <div class="panel-section-label" style="margin-bottom:4px;">합성</div>
+        <div class="merge-slots">
+          <div class="merge-slot" id="bms0" onclick="clickMergeSlot('black',0)">+</div>
+          <div class="merge-slot" id="bms1" onclick="clickMergeSlot('black',1)">+</div>
+        </div>
+        <button class="merge-btn" id="bMergeBtn" onclick="doMerge('black')" disabled>합성 ▶</button>
+        <div class="merge-hint">같은 성급 카드 2장만 합성 가능</div>
+      </div>
+      <div class="action-section">
+        <button class="action-btn use-card" id="bUseCardBtn" onclick="triggerUseCard()" style="display:none;">카드 사용 ▶</button>
+        <button class="action-btn" id="bPassBtn" onclick="passToPlace()">착수만 하기</button>
+        <button class="action-btn place-btn" id="bPlaceBtn" onclick="confirmPlace()" disabled style="display:none;">착수 확정</button>
+      </div>
+    </div>
+    <div class="board-area">
+      <div class="board-wrap"><canvas id="boardCanvas"></canvas></div>
+      <div class="status-bar" id="statusBar">게임을 시작합니다.</div>
+    </div>
+    <div class="side-panel right" id="panelWhite">
+      <div class="panel-player-header">
+        <div class="panel-player-stone w"></div>
+        <div class="panel-player-name">백</div>
+        <span class="panel-player-nick" id="whiteNickDisplay"></span>
+        <span id="whiteHandCount" style="margin-left:auto;font-size:10px;color:var(--text3);">0/8</span>
+      </div>
+      <div class="panel-section"><div class="panel-section-label">상대 패</div></div>
+      <div class="opp-hand" id="blackOppView"></div>
+      <div class="panel-section"><div class="panel-section-label">내 패</div></div>
+      <div class="hand-list" id="whiteHand"></div>
+      <div class="merge-section">
+        <div class="panel-section-label" style="margin-bottom:4px;">합성</div>
+        <div class="merge-slots">
+          <div class="merge-slot" id="wms0" onclick="clickMergeSlot('white',0)">+</div>
+          <div class="merge-slot" id="wms1" onclick="clickMergeSlot('white',1)">+</div>
+        </div>
+        <button class="merge-btn" id="wMergeBtn" onclick="doMerge('white')" disabled>합성 ▶</button>
+        <div class="merge-hint">같은 성급 카드 2장만 합성 가능</div>
+      </div>
+      <div class="action-section">
+        <button class="action-btn use-card" id="wUseCardBtn" onclick="triggerUseCard()" style="display:none;">카드 사용 ▶</button>
+        <button class="action-btn" id="wPassBtn" onclick="passToPlace()">착수만 하기</button>
+        <button class="action-btn place-btn" id="wPlaceBtn" onclick="confirmPlace()" disabled style="display:none;">착수 확정</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- CARD ANIM -->
+<div class="card-anim-overlay" id="cardAnimOverlay">
+  <div class="card-anim-box" id="cardAnimBox">
+    <div class="card-anim-who" id="cardAnimWho"></div>
+    <div class="card-anim-stars" id="cardAnimStars"></div>
+    <div class="card-anim-name" id="cardAnimName"></div>
+    <div class="card-anim-desc" id="cardAnimDesc"></div>
+  </div>
+</div>
+<!-- EFFECT MODAL -->
+<div class="modal-overlay" id="effectModal">
+  <div class="modal-box">
+    <h3 id="effModalTitle"></h3>
+    <p id="effModalDesc"></p>
+    <div id="effModalInstruction" style="font-size:12px;color:var(--accent);margin-bottom:12px;"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="cancelCardUse()">취소</button>
+      <button class="modal-btn confirm" onclick="confirmCardUse()">사용</button>
+    </div>
+  </div>
+</div>
+<!-- CARD PICK -->
+<div class="modal-overlay" id="cardPickModal">
+  <div class="modal-box" style="max-width:380px;">
+    <h3 id="cpTitle">카드 선택</h3>
+    <p id="cpDesc" style="margin-bottom:7px;"></p>
+    <div class="card-pick-list" id="cpList"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" id="cpCancelBtn" onclick="cancelCardPick()">취소</button>
+      <button class="modal-btn confirm" id="cpConfirmBtn" onclick="confirmCardPick()">선택 완료</button>
+    </div>
+  </div>
+</div>
+<!-- WIN -->
+<div class="win-overlay" id="winOverlay">
+  <div class="win-box">
+    <h2 id="winTitle">승리!</h2>
+    <p id="winDesc"></p>
+    <button onclick="afterWin()">메인 메뉴로</button>
+  </div>
+</div>
+<!-- QUIT -->
+<div class="modal-overlay" id="quitModal">
+  <div class="modal-box">
+    <h3>게임 종료</h3><p>메인 메뉴로 돌아가시겠습니까?</p>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('quitModal')">계속</button>
+      <button class="modal-btn confirm" onclick="quitToMenu()">종료</button>
+    </div>
+  </div>
+</div>
+<script>
+const STAR_CHAR=['','★','★★','★★★','★★★★','★★★★★'];
+const STAR_COLOR=['','#888','#2e7d32','#1565c0','#6a1b9a','#bf360c'];
+const CARDS_DEF=[
+  {id:'s1_1',star:1,name:'굳히기',type:'방어',tag:'즉시',effect:'fortify',desc:'자신의 돌 하나를 굳힌다. 굳힌 돌은 상대 카드 효과로 제거되거나 이동되지 않는다.',count:3},
+  {id:'s1_2',star:1,name:'예약 착수',type:'배치',tag:'지속',effect:'reserve',desc:'이번 턴을 패스하고, 다음 턴에 돌을 2개 놓는다.',count:3},
+  {id:'s1_3',star:1,name:'예언자',type:'배치',tag:'지속',effect:'prophet',desc:'빈 지점 하나를 지정한다. 다음 내 턴 시작 시 해당 지점에 내 돌이 자동으로 놓인다. 그 사이 상대가 그 자리에 착수하면 취소된다.',count:3},
+  {id:'s1_4',star:1,name:'위험 예고',type:'방해',tag:'지속',effect:'danger_mark',desc:'상대 돌 하나를 지정한다. 지정된 돌은 상대의 다음 턴이 끝날 때 제거된다.',count:3},
+  {id:'s1_5',star:1,name:'교체',type:'강화',tag:'즉시',effect:'replace',desc:'이 카드를 버리고 즉시 덱에서 카드 한 장을 드로우한다.',count:3},
+  {id:'s1_6',star:1,name:'부정행위(소)',type:'특수',tag:'즉시',effect:'cheat_s',desc:'상대 패에서 카드 한 장을 무작위로 확인한다. 상대는 어떤 카드가 공개됐는지 알 수 없다.',count:3},
+  {id:'s1_7',star:1,name:'공사 예고',type:'방해',tag:'지속',effect:'construction',desc:'상대 돌 하나를 지정한다. 상대는 다음 턴에 그 돌을 인접한 빈 칸으로 반드시 이동시켜야 한다.',count:3},
+  {id:'s1_8',star:1,name:'착수 금지',type:'방해',tag:'지속',effect:'ban_place',desc:'빈 지점 하나를 지정한다. 이후 3턴 동안 해당 지점에는 누구도 돌을 놓을 수 없다.',count:3},
+  {id:'s1_star',star:1,name:'1성 별',type:'별',tag:'특수',effect:'star1',desc:'1성의 별이다. 1성~5성 별을 모두 모으면 즉시 승리한다. 별 카드는 패 공개 효과에 면역이다.',count:1},
+  {id:'s2_1',star:2,name:'돌 이동',type:'배치',tag:'즉시',effect:'move_stone',desc:'자신의 돌 하나를 인접한 빈 칸으로 즉시 이동시킨다.',count:2},
+  {id:'s2_2',star:2,name:'칸 방어',type:'방어',tag:'즉시',effect:'cell_clear',desc:'칸 하나를 지정한다. 해당 칸에 걸린 모든 효과를 즉시 제거한다.',count:2},
+  {id:'s2_3',star:2,name:'드로우',type:'강화',tag:'즉시',effect:'draw2',desc:'이 카드를 버리고 즉시 카드 두 장을 드로우한다.',count:2},
+  {id:'s2_4',star:2,name:'함정 설치',type:'방해',tag:'지속',effect:'trap',desc:'빈 칸 하나에 함정을 설치한다. 함정은 자신에게만 보인다. 아군·적군을 불문하고 해당 칸에 돌이 놓이면 즉시 제거된다.',count:2},
+  {id:'s2_5',star:2,name:'제거',type:'방해',tag:'즉시',effect:'remove',desc:'보드 위의 돌 하나를 즉시 제거한다. 굳힌 돌은 제거할 수 없다.',count:2},
+  {id:'s2_6',star:2,name:'부정행위(중)',type:'특수',tag:'즉시',effect:'cheat_m',desc:'상대 패에서 카드 두 장을 선택해 확인한다. 상대는 어떤 카드가 공개됐는지 알 수 없다.',count:2},
+  {id:'s2_7',star:2,name:'카드 교체',type:'강화',tag:'즉시',effect:'card_exchange',desc:'이 카드와 손패의 1성 카드 한 장을 버리고, 카드 한 장을 드로우한 뒤 랜덤 2성 카드 한 장을 추가로 가져온다.',count:2},
+  {id:'s2_8',star:2,name:'왕따',type:'방해',tag:'지속',effect:'exile',desc:'돌 하나를 2턴 동안 없는 취급한다. 해당 돌은 모든 카드 효과에 면역이 되며, 오목 승리 판정에서도 제외된다. 효과가 끝날 때 5목이 완성되어 있으면 즉시 승리한다.',count:2},
+  {id:'s2_9',star:2,name:'합리적인 저주',type:'방해',tag:'즉시',effect:'rational_curse',desc:'상대 패에서 카드 한 장을 제거한다. 단, 제거할 카드는 상대가 직접 선택한다.',count:2},
+  {id:'s2_star',star:2,name:'2성 별',type:'별',tag:'특수',effect:'star2',desc:'2성의 별이다. 1성~5성 별을 모두 모으면 즉시 승리한다. 별 카드는 패 공개 효과에 면역이다.',count:1},
+  {id:'s3_1',star:3,name:'폭탄 설치(소)',type:'방해',tag:'지속',effect:'bomb_s',desc:'빈 칸에 소형 폭탄을 설치한다. 다음 내 턴 시작 시 해당 위치를 기준으로 2×2 범위 내 모든 돌이 제거된다.',count:1},
+  {id:'s3_2',star:3,name:'분열(가로)',type:'배치',tag:'즉시',effect:'split_h',desc:'자신의 돌 하나를 제거하고, 그 좌우 칸에 각각 내 돌을 놓는다. 해당 칸에 상대 돌이 있으면 그 방향에는 놓이지 않는다.',count:1},
+  {id:'s3_3',star:3,name:'분열(세로)',type:'배치',tag:'즉시',effect:'split_v',desc:'자신의 돌 하나를 제거하고, 그 위아래 칸에 각각 내 돌을 놓는다. 해당 칸에 상대 돌이 있으면 그 방향에는 놓이지 않는다.',count:1},
+  {id:'s3_4',star:3,name:'보호구역',type:'방어',tag:'지속',effect:'sanctuary',desc:'2×2 구간을 지정한다. 3턴 동안 해당 구역 안에는 누구도 돌을 놓거나 제거할 수 없으며, 어떤 카드 효과도 적용되지 않는다.',count:1},
+  {id:'s3_5',star:3,name:'자폭',type:'방해',tag:'즉시',effect:'self_destruct',desc:'자신의 돌 하나를 폭발시켜 제거하고, 주변 1칸(8방향) 내 모든 돌을 함께 제거한다.',count:1},
+  {id:'s3_6',star:3,name:'설치',type:'배치',tag:'즉시',effect:'extra_place',desc:'보드의 빈 칸에 즉시 자신의 돌을 하나 놓는다. 이 효과는 이번 턴의 일반 착수와 별개로 적용된다.',count:1},
+  {id:'s3_7',star:3,name:'완벽한 부정행위',type:'특수',tag:'즉시',effect:'perfect_cheat',desc:'상대 패에서 2성 이하 카드를 모두 확인하고, 그 중 원하는 카드 한 장을 내 패로 가져온다.',count:1},
+  {id:'s3_8',star:3,name:'불안정한 두 돌',type:'배치',tag:'즉시',effect:'unstable_two',desc:'즉시 내 돌 두 개를 놓는다. 단, 두 돌은 가로·세로·대각선 방향으로 같은 선상에 놓일 수 없다.',count:1},
+  {id:'s3_9',star:3,name:'회피 효과',type:'방어',tag:'지속',effect:'evade',desc:'2턴 동안 상대는 일반 착수로 내 돌 주변 1칸 이내에 돌을 놓을 수 없다.',count:1},
+  {id:'s3_10',star:3,name:'지뢰 두 개',type:'방해',tag:'지속',effect:'double_mine',desc:'빈 칸 두 곳에 지뢰를 설치한다. 지뢰는 자신에게만 보인다. 아군·적군을 불문하고 해당 칸에 돌이 놓이면 즉시 제거된다.',count:1},
+  {id:'s3_star',star:3,name:'3성 별',type:'별',tag:'특수',effect:'star3',desc:'3성의 별이다. 1성~5성 별을 모두 모으면 즉시 승리한다. 별 카드는 패 공개 효과에 면역이다.',count:1},
+  {id:'s4_1',star:4,name:'시간 역행',type:'특수',tag:'즉시',effect:'time_rewind',desc:'보드와 모든 효과를 2턴 전 상태로 되돌린다. 패와 카드 사용 횟수는 유지된다.',count:1},
+  {id:'s4_2',star:4,name:'심판의 눈',type:'특수',tag:'즉시',effect:'judges_eye',desc:'상대 패에서 5성 카드를 제외한 모든 카드를 확인하고, 그 중 원하는 카드 한 장을 제거한다.',count:1},
+  {id:'s4_3',star:4,name:'대형 폭탄',type:'방해',tag:'지속',effect:'bomb_l',desc:'빈 칸에 대형 폭탄을 설치한다. 다음 내 턴 시작 시 해당 위치를 기준으로 3×3 범위 내 모든 돌이 제거된다.',count:1},
+  {id:'s4_4',star:4,name:'영역 전환',type:'특수',tag:'즉시',effect:'area_swap',desc:'2×2 구역 두 곳을 선택해 두 구역의 내용을 서로 맞바꾼다.',count:1},
+  {id:'s4_5',star:4,name:'공허',type:'방해',tag:'지속',effect:'void_zone',desc:'3×3 영역을 지정해 그 안의 모든 돌을 즉시 제거하고, 3턴 동안 해당 영역에는 돌을 놓거나 효과를 적용할 수 없다.',count:1},
+  {id:'s4_6',star:4,name:'연쇄 체인',type:'방해',tag:'즉시',effect:'chain',desc:'돌 하나를 지정한다. 해당 돌에서 가로·세로로 연속해서 맞닿은 돌들을 모두 제거한다. (대각선 제외, 굳힌 돌 제외)',count:1},
+  {id:'s4_star',star:4,name:'4성 별',type:'별',tag:'특수',effect:'star4',desc:'4성의 별이다. 1성~5성 별을 모두 모으면 즉시 승리한다. 별 카드는 패 공개 효과에 면역이다.',count:1},
+  {id:'s5_1',star:5,name:'운명',type:'특수',tag:'즉시',effect:'fate',desc:'덱과 패에 있는 1성~4성 카드 전체(상대 소유 제외)를 확인하고, 원하는 카드 2장을 패로 가져온다.',count:1},
+  {id:'s5_2',star:5,name:'종말의 심판',type:'방해',tag:'즉시',effect:'doomsday',desc:'보드의 가로 또는 세로 방향을 선택해 반으로 나누고, 원하는 쪽 영역의 모든 돌을 제거한다.',count:1},
+  {id:'s5_3',star:5,name:'비합리',type:'방해',tag:'지속',effect:'irrational',desc:'다음 두 턴 동안 상대는 카드를 사용할 수 없다.',count:1},
+  {id:'s5_star',star:5,name:'5성 별',type:'별',tag:'특수',effect:'star5',desc:'5성의 별이다. 1성~5성 별을 모두 모으면 즉시 승리한다. 별 카드는 패 공개 효과에 면역이다.',count:1},
+];
+
+// ── Firebase ──────────────────────────────────────────
+const firebaseConfig={apiKey:"AIzaSyAq1MFNPjcZiIVRbrRomvjhh09Fctoizy4",authDomain:"omok-38491.firebaseapp.com",databaseURL:"https://omok-38491-default-rtdb.firebaseio.com",projectId:"omok-38491",storageBucket:"omok-38491.firebasestorage.app",messagingSenderId:"351493069879",appId:"1:351493069879:web:bcce32066cbb61eb89b3b2"};
+let db=null,auth=null,currentUser=null,currentUserData=null;
+function initFirebase(){
+  if(db)return true;
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+    db=firebase.database();auth=firebase.auth();
+    auth.onAuthStateChanged(onAuthChanged);
+    return true;
+  }catch(e){console.error(e);return false;}
+}
+
+// ── Auth ──────────────────────────────────────────────
+let authMode='login';
+function switchAuthTab(m){
+  authMode=m;
+  document.getElementById('tabLogin').classList.toggle('active',m==='login');
+  document.getElementById('tabSignup').classList.toggle('active',m==='signup');
+  document.getElementById('authPw2').style.display=m==='signup'?'block':'none';
+  document.getElementById('authNick').style.display=m==='signup'?'block':'none';
+  document.getElementById('authSubmitBtn').textContent=m==='login'?'로그인':'회원가입';
+  document.getElementById('authErr').textContent='';
+}
+function setAuthErr(msg){document.getElementById('authErr').textContent=msg;}
+async function submitAuth(){
+  if(!initFirebase()){setAuthErr('Firebase 초기화에 실패했습니다. 새로고침 후 다시 시도하세요.');return;}
+  const email=document.getElementById('authEmail').value.trim();
+  const pw=document.getElementById('authPw').value;
+  if(!email||!pw){setAuthErr('이메일과 비밀번호를 입력하세요.');return;}
+  const btn=document.getElementById('authSubmitBtn');
+  btn.disabled=true;btn.textContent='처리 중...';
+  if(authMode==='login'){
+    try{await auth.signInWithEmailAndPassword(email,pw);}
+    catch(e){setAuthErr(fbErrMsg(e.code));btn.disabled=false;btn.textContent='로그인';}
+  }else{
+    const pw2=document.getElementById('authPw2').value;
+    const nick=document.getElementById('authNick').value.trim();
+    if(pw!==pw2){setAuthErr('비밀번호가 일치하지 않습니다.');btn.disabled=false;btn.textContent='회원가입';return;}
+    if(nick.length<2){setAuthErr('닉네임은 2자 이상이어야 합니다.');btn.disabled=false;btn.textContent='회원가입';return;}
+    try{
+      const cred=await auth.createUserWithEmailAndPassword(email,pw);
+      await db.ref('users/'+cred.user.uid).set({nickname:nick,wins:0,losses:0});
+    }catch(e){setAuthErr(fbErrMsg(e.code));btn.disabled=false;btn.textContent='회원가입';}
+  }
+}
+async function loginWithGoogle(){
+  if(!initFirebase())return;
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    const cred=await auth.signInWithPopup(provider);
+    const snap=await db.ref('users/'+cred.user.uid).once('value');
+    if(!snap.exists()){window._pendingUid=cred.user.uid;document.getElementById('nickModal').classList.add('show');}
+  }catch(e){setAuthErr(fbErrMsg(e.code));}
+}
+async function submitNickname(){
+  const nick=document.getElementById('nickInput').value.trim();
+  if(nick.length<2){document.getElementById('nickErr').textContent='닉네임은 2자 이상이어야 합니다.';return;}
+  const uid=window._pendingUid||(currentUser&&currentUser.uid);
+  if(!uid)return;
+  const data={nickname:nick,wins:0,losses:0};
+  await db.ref('users/'+uid).set(data);
+  currentUserData=data;
+  closeModal('nickModal');
+  showMenuWithUser();
+}
+function fbErrMsg(code){
+  const m={'auth/user-not-found':'등록되지 않은 이메일입니다.','auth/wrong-password':'비밀번호가 틀렸습니다.','auth/email-already-in-use':'이미 사용 중인 이메일입니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.','auth/weak-password':'비밀번호는 6자 이상이어야 합니다.','auth/popup-closed-by-user':'로그인 창이 닫혔습니다.','auth/invalid-credential':'이메일 또는 비밀번호가 잘못되었습니다.'};
+  return m[code]||'오류가 발생했습니다.('+code+')';
+}
+async function onAuthChanged(user){
+  currentUser=user;
+  if(!user){showPage('page-auth');return;}
+  const snap=await db.ref('users/'+user.uid).once('value');
+  if(!snap.exists()){window._pendingUid=user.uid;document.getElementById('nickModal').classList.add('show');return;}
+  currentUserData=snap.val();showMenuWithUser();
+}
+function showMenuWithUser(){
+  if(!currentUserData)return;
+  const nick=currentUserData.nickname||'?';
+  document.getElementById('menuAvatar').textContent=nick.charAt(0).toUpperCase();
+  document.getElementById('menuNickname').textContent=nick;
+  document.getElementById('menuRecord').textContent=`승 ${currentUserData.wins||0} / 패 ${currentUserData.losses||0}`;
+  showPage('page-menu');
+}
+function doLogout(){if(auth)auth.signOut();}
+async function recordResult(isWin){
+  if(!currentUser||!currentUserData)return;
+  const f=isWin?'wins':'losses';
+  const v=(currentUserData[f]||0)+1;
+  await db.ref('users/'+currentUser.uid+'/'+f).set(v);
+  currentUserData[f]=v;
+}
+
+// ── Pages ─────────────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='page-book')renderBook();
+  if(id==='page-menu'){drawMenuBoard();if(currentUserData)showMenuWithUser();}
+}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// ── Menu board ────────────────────────────────────────
+function drawMenuBoard(){
+  const c=document.getElementById('menuCanvas');if(!c)return;
+  const ctx=c.getContext('2d'),SZ=140,N=6,OFF=12,CELL=(SZ-OFF*2)/(N-1);
+  ctx.clearRect(0,0,SZ,SZ);ctx.fillStyle='#c8a96e';ctx.fillRect(0,0,SZ,SZ);
+  ctx.strokeStyle='#8b6914';ctx.lineWidth=0.8;
+  for(let i=0;i<N;i++){ctx.beginPath();ctx.moveTo(OFF+i*CELL,OFF);ctx.lineTo(OFF+i*CELL,OFF+(N-1)*CELL);ctx.stroke();ctx.beginPath();ctx.moveTo(OFF,OFF+i*CELL);ctx.lineTo(OFF+(N-1)*CELL,OFF+i*CELL);ctx.stroke();}
+  [{r:1,c:1,p:1},{r:2,c:2,p:2},{r:2,c:3,p:1},{r:3,c:2,p:2},{r:1,c:3,p:1},{r:4,c:4,p:2}].forEach(({r,c,p})=>{
+    const x=OFF+c*CELL,y=OFF+r*CELL,R=7,g=ctx.createRadialGradient(x-R*.3,y-R*.3,1,x,y,R);
+    if(p===1){g.addColorStop(0,'#888');g.addColorStop(1,'#111');}else{g.addColorStop(0,'#fff');g.addColorStop(1,'#bbb');}
+    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  });
+}
+
+// ── Book ──────────────────────────────────────────────
+let bookFilter=0;
+function renderBook(){
+  const typeBg={'배치':'#e8f5e9','방어':'#e3f2fd','방해':'#fce4ec','강화':'#fff8e1','특수':'#f3e5f5','별':'#fff9c4'};
+  const typeTxt={'배치':'#2e7d32','방어':'#1565c0','방해':'#c62828','강화':'#f57f17','특수':'#6a1b9a','별':'#f9a825'};
+  document.getElementById('bookFilters').innerHTML=['전체','1성','2성','3성','4성','5성'].map((l,i)=>
+    `<button class="book-filter-btn${bookFilter===i?' active':''}" onclick="setBookFilter(${i})">${i>0?STAR_CHAR[i]+' ':''}${l}</button>`).join('');
+  const shown=bookFilter===0?CARDS_DEF:CARDS_DEF.filter(c=>c.star===bookFilter);
+  document.getElementById('bookGrid').innerHTML=shown.map(c=>`
+    <div class="book-card" style="border-color:${STAR_COLOR[c.star]}44;">
+      <div class="book-card-top"><div class="book-card-name">${c.name}</div><span style="font-size:10px;color:${STAR_COLOR[c.star]}">${STAR_CHAR[c.star]}</span></div>
+      <div><span class="book-badge" style="background:${typeBg[c.type]};color:${typeTxt[c.type]}">${c.type}</span>
+      <span class="book-badge" style="background:#f5f5f5;color:#666;margin-left:2px">${c.tag}</span>
+      <span class="book-badge" style="background:#f0f0f0;color:#888;margin-left:2px">x${c.count}</span></div>
+      <div class="book-card-desc">${c.desc}</div>
+    </div>`).join('');
+}
+function setBookFilter(n){bookFilter=n;renderBook();}
+
+// ── Game state ────────────────────────────────────────
+const BS=15;let CELL_SIZE=34;
+let board,fortified,traps,banCells,prophetCells,dangerMarks,constructionMark;
+let exiledCells,sanctuaryZones,voidZones,bombs,evadeEffect;
+let boardHistory,currentPlayer,turnCount,phase;
+let hands,decks,mergeSlots,selectedCardIdx,clickState;
+let extraPlace,reserveNext,irrationalTurns,starCards;
+let timerInterval,timerLeft,hoverCell,pendingSelected;
+let isOnlineGame=false,onlineRoomId=null,onlineMyRole=null;
+let gameNicknames={black:'흑',white:'백'};
+let winnerDetermined=false;
+const TIMER_MAX=30;
+
+function buildDeck(){const d=[];CARDS_DEF.forEach(cd=>{for(let i=0;i<cd.count;i++)d.push({...cd,uid:cd.id+'_'+i+'_'+Math.random().toString(36).slice(2)});});return shuffle(d);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function getOpp(p){return p===1?2:1;}
+function playerKey(p){return p===1?'black':'white';}
+function currentKey(){return playerKey(currentPlayer);}
+function oppKey(){return playerKey(getOpp(currentPlayer));}
+
+function initGame(opts={}){
+  isOnlineGame=opts.online||false;onlineRoomId=opts.roomId||null;onlineMyRole=opts.myRole||null;
+  gameNicknames=opts.nicknames||{black:'흑',white:'백'};winnerDetermined=false;
+  board=Array.from({length:BS},()=>new Array(BS).fill(0));
+  fortified=new Set();traps={};banCells={};prophetCells={};dangerMarks={};
+  constructionMark=null;exiledCells={};sanctuaryZones=[];voidZones=[];bombs=[];evadeEffect=null;
+  boardHistory=[];currentPlayer=1;turnCount=1;phase='card';
+  selectedCardIdx=null;clickState=null;extraPlace=0;
+  reserveNext={black:false,white:false};irrationalTurns={black:0,white:0};starCards={black:[],white:[]};
+  mergeSlots={black:[null,null],white:[null,null]};hoverCell=null;pendingSelected=null;
+  decks={black:buildDeck(),white:buildDeck()};hands={black:[],white:[]};
+  dealCards('black',3);dealCards('white',2);
+  document.getElementById('blackNickDisplay').textContent=gameNicknames.black!=='흑'?'('+gameNicknames.black+')':'';
+  document.getElementById('whiteNickDisplay').textContent=gameNicknames.white!=='백'?'('+gameNicknames.white+')':'';
+  resizeBoard();startTimer();renderAll();
+  setStatus('흑의 차례입니다. 카드를 사용하거나 <b>착수만 하기</b>를 누르세요.');
+}
+function dealCards(p,n){const h=hands[p],d=decks[p];for(let i=0;i<n&&d.length>0&&h.length<8;i++)h.push(d.shift());}
+
+// ── Timer ─────────────────────────────────────────────
+function startTimer(){clearInterval(timerInterval);timerLeft=TIMER_MAX;updateTimerUI();timerInterval=setInterval(()=>{timerLeft--;updateTimerUI();if(timerLeft<=0){clearInterval(timerInterval);autoEndTurn();}},1000);}
+function updateTimerUI(){document.getElementById('timerText').textContent=timerLeft;const bar=document.getElementById('timerBar');bar.style.width=(timerLeft/TIMER_MAX*100)+'%';bar.className='timer-bar'+(timerLeft<=10?' danger':timerLeft<=20?' warn':'');}
+function autoEndTurn(){if(phase==='card'){passToPlace();return;}for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)if(board[r][c]===0&&!isCellBanned(r,c)){pendingSelected={r,c};doPlaceStone(r,c);return;}}
+
+// ── Board draw ────────────────────────────────────────
+function resizeBoard(){const avail=Math.min(window.innerWidth-46,window.innerHeight-170,520);CELL_SIZE=Math.floor(avail/(BS+0.5));const SZ=CELL_SIZE*(BS-1)+CELL_SIZE;const cv=document.getElementById('boardCanvas');cv.width=SZ;cv.height=SZ;drawBoard();}
+function drawBoard(){
+  const cv=document.getElementById('boardCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),N=BS,H=CELL_SIZE/2,OFF=H;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='#8b6914';ctx.lineWidth=0.8;
+  for(let i=0;i<N;i++){ctx.beginPath();ctx.moveTo(OFF+i*CELL_SIZE,OFF);ctx.lineTo(OFF+i*CELL_SIZE,OFF+(N-1)*CELL_SIZE);ctx.stroke();ctx.beginPath();ctx.moveTo(OFF,OFF+i*CELL_SIZE);ctx.lineTo(OFF+(N-1)*CELL_SIZE,OFF+i*CELL_SIZE);ctx.stroke();}
+  [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]].forEach(([r,c])=>{ctx.beginPath();ctx.arc(OFF+c*CELL_SIZE,OFF+r*CELL_SIZE,3,0,Math.PI*2);ctx.fillStyle='#8b6914';ctx.fill();});
+  sanctuaryZones.filter(z=>z.turns>0).forEach(z=>{ctx.fillStyle='rgba(46,125,50,0.1)';ctx.fillRect(OFF+z.c*CELL_SIZE-H,OFF+z.r*CELL_SIZE-H,CELL_SIZE*2,CELL_SIZE*2);ctx.strokeStyle='rgba(46,125,50,0.4)';ctx.lineWidth=1.5;ctx.strokeRect(OFF+z.c*CELL_SIZE-H,OFF+z.r*CELL_SIZE-H,CELL_SIZE*2,CELL_SIZE*2);});
+  voidZones.filter(z=>z.turns>0).forEach(z=>{ctx.fillStyle='rgba(198,40,40,0.07)';ctx.fillRect(OFF+(z.c-1)*CELL_SIZE,OFF+(z.r-1)*CELL_SIZE,CELL_SIZE*3,CELL_SIZE*3);ctx.strokeStyle='rgba(198,40,40,0.25)';ctx.lineWidth=1;ctx.strokeRect(OFF+(z.c-1)*CELL_SIZE,OFF+(z.r-1)*CELL_SIZE,CELL_SIZE*3,CELL_SIZE*3);});
+  Object.keys(banCells).forEach(k=>{if(banCells[k].turns>0){const[r,c]=k.split(',').map(Number);ctx.fillStyle='rgba(198,40,40,0.12)';ctx.fillRect(OFF+c*CELL_SIZE-H,OFF+r*CELL_SIZE-H,CELL_SIZE,CELL_SIZE);ctx.fillStyle='rgba(198,40,40,0.65)';ctx.font=`bold ${Math.round(CELL_SIZE*0.36)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('X',OFF+c*CELL_SIZE,OFF+r*CELL_SIZE);}});
+  Object.entries(prophetCells).forEach(([k,info])=>{const[r,c]=k.split(',').map(Number);ctx.strokeStyle=info.owner===1?'rgba(0,0,0,0.45)':'rgba(200,200,200,0.7)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(OFF+c*CELL_SIZE,OFF+r*CELL_SIZE,H-3,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);});
+  Object.entries(dangerMarks).forEach(([k])=>{const[r,c]=k.split(',').map(Number);ctx.fillStyle='rgba(198,40,40,0.8)';ctx.font=`bold ${Math.round(CELL_SIZE*0.24)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('위험',OFF+c*CELL_SIZE,OFF+r*CELL_SIZE-H);});
+  if(constructionMark){const[r,c]=constructionMark.key.split(',').map(Number);ctx.strokeStyle='#ff9800';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(OFF+c*CELL_SIZE,OFF+r*CELL_SIZE,H-2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+  const myP=currentPlayer;
+  Object.entries(traps).forEach(([k,info])=>{if(info.owner!==myP)return;const[r,c]=k.split(',').map(Number);ctx.fillStyle='rgba(230,81,0,0.8)';ctx.font=`bold ${Math.round(CELL_SIZE*0.24)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(info.type==='mine'?'지뢰':'함정',OFF+c*CELL_SIZE,OFF+r*CELL_SIZE);});
+  bombs.filter(b=>b.turns>0).forEach(b=>{const x=OFF+b.c*CELL_SIZE,y=OFF+b.r*CELL_SIZE;ctx.fillStyle='#b71c1c';ctx.font=`bold ${Math.round(CELL_SIZE*0.27)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('폭탄',x,y-CELL_SIZE*0.1);ctx.font=`${Math.round(CELL_SIZE*0.22)}px sans-serif`;ctx.fillStyle='rgba(183,28,28,0.8)';ctx.fillText(b.turns+'턴후',x,y+CELL_SIZE*0.22);});
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const v=board[r][c];if(v===0)continue;
+    const k=r+','+c,x=OFF+c*CELL_SIZE,y=OFF+r*CELL_SIZE,R=H-2;
+    const isFort=fortified.has(k),isEx=exiledCells[k]!==undefined;
+    const g=ctx.createRadialGradient(x-R*.3,y-R*.3,R*.05,x,y,R);
+    if(v===1){g.addColorStop(0,'#777');g.addColorStop(1,'#111');}else{g.addColorStop(0,'#fff');g.addColorStop(1,'#bbb');}
+    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    if(isEx){ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.globalAlpha=1;}
+    if(isFort){ctx.strokeStyle='#f9a825';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,R+1.5,0,Math.PI*2);ctx.stroke();}
+  }
+  if(phase==='place'&&hoverCell&&!pendingSelected){const{r,c}=hoverCell;if(board[r][c]===0&&!isCellBanned(r,c)){const x=OFF+c*CELL_SIZE,y=OFF+r*CELL_SIZE,R=H-2;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fillStyle=currentPlayer===1?'rgba(0,0,0,0.2)':'rgba(255,255,255,0.3)';ctx.fill();}}
+  if(pendingSelected){const{r,c}=pendingSelected;const x=OFF+c*CELL_SIZE,y=OFF+r*CELL_SIZE,R=H-2;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fillStyle=currentPlayer===1?'rgba(0,0,0,0.42)':'rgba(255,255,255,0.52)';ctx.fill();ctx.strokeStyle=currentPlayer===1?'#111':'#ddd';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,R+2,0,Math.PI*2);ctx.stroke();}
+  if(clickState&&clickState.mode){
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(isValidTarget(r,c)){ctx.fillStyle='rgba(184,134,11,0.17)';ctx.fillRect(OFF+c*CELL_SIZE-H,OFF+r*CELL_SIZE-H,CELL_SIZE,CELL_SIZE);}}
+    clickState.collected.forEach(([r,c])=>{ctx.strokeStyle='#b8860b';ctx.lineWidth=2;ctx.strokeRect(OFF+c*CELL_SIZE-H+1,OFF+r*CELL_SIZE-H+1,CELL_SIZE-2,CELL_SIZE-2);});
+  }
+}
+function isValidTarget(r,c){if(!clickState)return false;const m=clickState.mode;if(m==='empty')return board[r][c]===0;if(m==='own')return board[r][c]===currentPlayer;if(m==='opp')return board[r][c]===getOpp(currentPlayer);if(m==='stone')return board[r][c]!==0;return true;}
+
+// ── Board events ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  initFirebase();
+  const cv=document.getElementById('boardCanvas');
+  cv.addEventListener('mousemove',e=>{const{r,c}=bpos(e,cv);hoverCell=(r>=0&&r<BS&&c>=0&&c<BS)?{r,c}:null;drawBoard();});
+  cv.addEventListener('mouseleave',()=>{hoverCell=null;drawBoard();});
+  cv.addEventListener('click',e=>{const{r,c}=bpos(e,cv);if(r<0||r>=BS||c<0||c>=BS)return;boardClick(r,c);});
+  cv.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];const{r,c}=bpos(t,cv);if(r<0||r>=BS||c<0||c>=BS)return;hoverCell={r,c};drawBoard();},{passive:false});
+  cv.addEventListener('touchend',e=>{e.preventDefault();if(!hoverCell)return;const{r,c}=hoverCell;hoverCell=null;boardClick(r,c);drawBoard();},{passive:false});
+  drawMenuBoard();renderBook();
+});
+function bpos(e,cv){const rect=cv.getBoundingClientRect(),sx=cv.width/rect.width,sy=cv.height/rect.height;return{r:Math.round(((e.clientY-rect.top)*sy-CELL_SIZE/2)/CELL_SIZE),c:Math.round(((e.clientX-rect.left)*sx-CELL_SIZE/2)/CELL_SIZE)};}
+function boardClick(r,c){
+  if(clickState&&clickState.mode){
+    if(!isValidTarget(r,c)){setStatus('유효하지 않은 칸입니다!');return;}
+    if(clickState.collected.some(([pr,pc])=>pr===r&&pc===c))return;
+    clickState.collected.push([r,c]);drawBoard();
+    if(clickState.collected.length>=clickState.max){const cb=clickState.callback,col=[...clickState.collected];clickState=null;cb(col);}
+    else setStatus(`${clickState.max-clickState.collected.length}개 더 선택하세요.`);
+    return;
+  }
+  if(phase==='place'){
+    if(isOnlineGame&&!isMyTurn()){setStatus('상대방의 차례입니다.');return;}
+    if(board[r][c]===0&&!isCellBanned(r,c)){
+      pendingSelected={r,c};
+      const btnId=currentKey()==='black'?'bPlaceBtn':'wPlaceBtn';
+      const btn=document.getElementById(btnId);if(btn)btn.disabled=false;
+      setStatus(`(${r+1},${c+1}) 선택됨 — [착수 확정] 버튼을 눌러 착수하세요.`);drawBoard();
+    }else setStatus('해당 칸에는 착수할 수 없습니다.');
+  }
+}
+
+// ── Cell helpers ──────────────────────────────────────
+function isCellBanned(r,c){const k=r+','+c;if(banCells[k]&&banCells[k].turns>0)return true;if(sanctuaryZones.some(z=>z.turns>0&&r>=z.r&&r<=z.r+1&&c>=z.c&&c<=z.c+1))return true;if(voidZones.some(z=>z.turns>0&&r>=z.r-1&&r<=z.r+1&&c>=z.c-1&&c<=z.c+1))return true;return false;}
+function isFort(r,c){return fortified.has(r+','+c);}
+function isExiled(r,c){return exiledCells[r+','+c]!==undefined;}
+
+// ── Render ────────────────────────────────────────────
+function renderAll(){drawBoard();renderHand('black');renderHand('white');updateTurnUI();}
+function renderHand(player){
+  const isActive=(player==='black'&&currentPlayer===1)||(player==='white'&&currentPlayer===2);
+  const canAct=isOnlineGame?(onlineMyRole===player&&isMyTurn()):isActive;
+  const isOppOnline=isOnlineGame&&onlineMyRole!==player;
+  const hand=hands[player];
+  const el=document.getElementById(player+'Hand');el.innerHTML='';
+  if(isOppOnline){
+    el.innerHTML=`<div style="padding:3px 0;font-size:11px;color:var(--text3);">카드 ${hand.length}장 보유</div>`;
+  }else{
+    hand.forEach((card,idx)=>{
+      const isSel=canAct&&selectedCardIdx===idx;
+      const div=document.createElement('div');
+      div.className='hand-card'+(canAct?' mine':'')+(isSel?' selected':'');
+      div.innerHTML=`<div class="hand-card-row"><span class="hand-card-name">${card.name}</span><span class="hand-card-stars" style="color:${STAR_COLOR[card.star]}">${STAR_CHAR[card.star]}</span></div><div class="hand-card-badges"><span class="badge b-${card.type}">${card.type}</span><span class="badge b-${card.tag}">${card.tag}</span></div><span class="hand-card-toggle">설명 ▾</span><div class="hand-card-desc" id="hcd_${player}_${idx}">${card.desc}</div>`;
+      div.onclick=e=>{
+        if(e.target.classList.contains('hand-card-toggle')){const d=document.getElementById('hcd_'+player+'_'+idx);const o=d.classList.contains('open');document.querySelectorAll('.hand-card-desc').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.hand-card-toggle').forEach(x=>x.textContent='설명 ▾');if(!o){d.classList.add('open');e.target.textContent='설명 ▴';}return;}
+        if(canAct)selectCard(idx);
+      };
+      el.appendChild(div);
+    });
+  }
+  document.getElementById(player+'HandCount').textContent=hand.length+'/8';
+  const oppId=player==='black'?'whiteOppView':'blackOppView';
+  const oppHand=hands[player==='black'?'white':'black'];
+  document.getElementById(oppId).innerHTML=isOnlineGame?'':oppHand.map(()=>'<div class="opp-card-back">?</div>').join('');
+  updateMerge(player);
+  const btnId=player==='black'?'bUseCardBtn':'wUseCardBtn';
+  const btn=document.getElementById(btnId);if(btn)btn.style.display=(canAct&&selectedCardIdx!==null)?'block':'none';
+}
+function updateTurnUI(){
+  const isB=currentPlayer===1;
+  document.getElementById('turnLabel').textContent=(isB?'흑':'백')+'의 턴';
+  document.getElementById('turnStoneEl').className='turn-stone-sm '+(isB?'b':'w');
+  document.getElementById('turnNumEl').textContent='턴 '+turnCount;
+  document.getElementById('panelBlack').classList.toggle('panel-active-glow',isB);
+  document.getElementById('panelWhite').classList.toggle('panel-active-glow',!isB);
+  ['bPlaceBtn','wPlaceBtn'].forEach(id=>{const e=document.getElementById(id);if(e&&phase==='card'){e.style.display='none';}});
+}
+function updateMerge(player){
+  const isActive=(player==='black'&&currentPlayer===1)||(player==='white'&&currentPlayer===2);
+  const canAct=isOnlineGame?(onlineMyRole===player&&isMyTurn()):isActive;
+  const ms=mergeSlots[player];
+  [0,1].forEach(i=>{const el=document.getElementById((player==='black'?'b':'w')+'ms'+i);const card=ms[i];if(card){el.classList.add('filled');el.textContent=card.name+' '+STAR_CHAR[card.star];}else{el.classList.remove('filled');el.textContent='+';}});
+  const btn=document.getElementById(player==='black'?'bMergeBtn':'wMergeBtn');
+  btn.disabled=!(canAct&&ms[0]&&ms[1]&&ms[0].star===ms[1].star&&ms[0].star<5&&phase==='card');
+}
+
+// ── Merge ─────────────────────────────────────────────
+function clickMergeSlot(player,idx){
+  const isActive=(player==='black'&&currentPlayer===1)||(player==='white'&&currentPlayer===2);
+  const canAct=isOnlineGame?(onlineMyRole===player&&isMyTurn()):isActive;
+  if(!canAct||phase!=='card')return;
+  const ms=mergeSlots[player];
+  if(ms[idx]){hands[player].push(ms[idx]);ms[idx]=null;renderHand(player);return;}
+  if(selectedCardIdx===null){setStatus('먼저 패에서 카드를 선택하세요.');return;}
+  const card=hands[player][selectedCardIdx];if(!card)return;
+  const other=ms[1-idx];if(other&&other.star!==card.star){setStatus('같은 성급 카드끼리만 합성 가능합니다!');return;}
+  ms[idx]=card;hands[player].splice(selectedCardIdx,1);selectedCardIdx=null;renderHand(player);
+}
+function doMerge(player){
+  const ms=mergeSlots[player];if(!ms[0]||!ms[1]||ms[0].star!==ms[1].star||ms[0].star>=5)return;
+  const ts=ms[0].star+1;const pool=CARDS_DEF.filter(c=>c.star===ts&&c.type!=='별');
+  const result=pool[Math.floor(Math.random()*pool.length)];mergeSlots[player]=[null,null];
+  if(hands[player].length<8){hands[player].push({...result,uid:result.id+'_m_'+Math.random().toString(36).slice(2)});setStatus(`합성 성공! ${STAR_CHAR[ts]} ${result.name} 획득!`);}
+  else setStatus('패가 가득 차 합성할 수 없습니다.');
+  selectedCardIdx=null;renderAll();
+}
+
+// ── Card use ──────────────────────────────────────────
+function selectCard(idx){
+  if(phase!=='card'){setStatus('카드는 착수 전에 사용하세요!');return;}
+  if(irrationalTurns[currentKey()]>0){setStatus('비합리 효과로 카드를 사용할 수 없습니다!');return;}
+  selectedCardIdx=selectedCardIdx===idx?null:idx;renderHand(currentKey());
+}
+function passToPlace(){
+  if(phase==='place')return;
+  if(isOnlineGame&&!isMyTurn()){setStatus('상대방의 차례입니다.');return;}
+  phase='place';selectedCardIdx=null;pendingSelected=null;showPlaceBtn(true);
+  renderHand(currentKey());setStatus('착수할 위치를 클릭 후 [착수 확정]을 누르세요.');drawBoard();
+}
+function showPlaceBtn(show){
+  const pKey=currentKey();
+  const pid=pKey==='black'?'bPlaceBtn':'wPlaceBtn',cid=pKey==='black'?'bUseCardBtn':'wUseCardBtn',sid=pKey==='black'?'bPassBtn':'wPassBtn';
+  const pb=document.getElementById(pid),cb=document.getElementById(cid),sb=document.getElementById(sid);
+  if(pb){pb.style.display=show?'block':'none';pb.disabled=!pendingSelected;}
+  if(cb&&show)cb.style.display='none';
+  if(sb)sb.style.display=show?'none':'block';
+}
+function triggerUseCard(){
+  if(selectedCardIdx===null)return;
+  const card=hands[currentKey()][selectedCardIdx];if(!card)return;
+  document.getElementById('effModalTitle').textContent=card.name+' '+STAR_CHAR[card.star];
+  document.getElementById('effModalDesc').textContent=card.desc;
+  document.getElementById('effModalInstruction').textContent=getEffInstr(card.effect);
+  document.getElementById('effectModal').classList.add('show');
+}
+function cancelCardUse(){document.getElementById('effectModal').classList.remove('show');}
+function confirmCardUse(){
+  document.getElementById('effectModal').classList.remove('show');
+  const pKey=currentKey();const card=hands[pKey][selectedCardIdx];if(!card)return;
+  hands[pKey].splice(selectedCardIdx,1);selectedCardIdx=null;
+  showCardAnim(card,()=>applyEffect(card));
+}
+function getEffInstr(e){const m={fortify:'내 돌을 클릭해 굳힙니다.',reserve:'자동으로 다음 턴 착수 2회.',prophet:'배치할 빈 칸을 클릭합니다.',danger_mark:'제거할 상대 돌을 클릭합니다.',replace:'자동 카드 1장 드로우.',cheat_s:'자동으로 상대 패 1장 확인.',construction:'강제 이동시킬 상대 돌을 클릭합니다.',ban_place:'착수 금지 지정할 빈 칸을 클릭합니다.',move_stone:'내 돌 클릭 → 이동할 빈 칸 클릭.',cell_clear:'효과 제거할 칸을 클릭합니다.',draw2:'자동 카드 2장 드로우.',trap:'함정 설치할 빈 칸을 클릭합니다.',remove:'제거할 돌을 클릭합니다.',cheat_m:'자동으로 상대 패 2장 확인.',card_exchange:'버릴 1성 카드를 선택합니다.',exile:'없는 취급할 돌을 클릭합니다.',rational_curse:'상대가 버릴 카드를 직접 고릅니다.',bomb_s:'폭탄 설치할 빈 칸을 클릭합니다.',split_h:'분열시킬 내 돌을 클릭합니다.',split_v:'분열시킬 내 돌을 클릭합니다.',sanctuary:'보호구역 좌상단을 클릭합니다.',self_destruct:'폭발시킬 내 돌을 클릭합니다.',extra_place:'배치할 빈 칸을 클릭합니다.',perfect_cheat:'상대 패에서 가져올 카드를 선택합니다.',unstable_two:'첫 번째 위치 클릭 → 두 번째 위치 클릭.',evade:'자동으로 회피 효과 발동.',double_mine:'지뢰 위치 클릭 × 2.',time_rewind:'자동으로 2턴 전 보드로 되돌립니다.',judges_eye:'제거할 카드를 선택합니다.',bomb_l:'폭탄 설치할 빈 칸을 클릭합니다.',area_swap:'첫 번째 2×2 좌상단 클릭 → 두 번째.',void_zone:'공허 중심 칸을 클릭합니다.',chain:'연쇄 시작 돌을 클릭합니다.',fate:'가져올 카드 2장을 선택합니다.',doomsday:'제거할 영역을 선택합니다.',irrational:'자동으로 상대 2턴 카드 사용 금지.',star1:'별 카드 수집!',star2:'별 카드 수집!',star3:'별 카드 수집!',star4:'별 카드 수집!',star5:'별 카드 수집!'};return m[e]||'';}
+
+// ── Card animation ────────────────────────────────────
+function showCardAnim(card,cb){
+  const ov=document.getElementById('cardAnimOverlay'),bx=document.getElementById('cardAnimBox');
+  document.getElementById('cardAnimWho').textContent=(currentPlayer===1?'흑':'백')+' 플레이어';
+  document.getElementById('cardAnimStars').textContent=STAR_CHAR[card.star];document.getElementById('cardAnimStars').style.color=STAR_COLOR[card.star];
+  document.getElementById('cardAnimName').textContent=card.name;document.getElementById('cardAnimDesc').textContent=card.desc;
+  bx.style.borderColor=STAR_COLOR[card.star]||'var(--accent)';bx.classList.remove('hide');ov.classList.add('show');
+  setTimeout(()=>{bx.classList.add('hide');setTimeout(()=>{ov.classList.remove('show');bx.classList.remove('hide');if(cb)cb();},220);},1500);
+}
+
+// ── Effects ───────────────────────────────────────────
+function applyEffect(card){
+  const eff=card.effect,p=currentPlayer,pKey=currentKey(),oKey=oppKey(),opp=getOpp(p);
+  if(eff.startsWith('star')){
+    const sn=parseInt(eff.replace('star',''));if(!starCards[pKey])starCards[pKey]=[];starCards[pKey].push(sn);
+    if([1,2,3,4,5].every(s=>starCards[pKey].includes(s))){showWin(p,'별을 모두 모아 승리!');return;}
+    setStatus(`${STAR_CHAR[sn]} 별 획득! (${starCards[pKey].length}/5)`);endGoPlace();return;
+  }
+  if(eff==='replace'){dealCards(pKey,1);setStatus('카드 1장 드로우!');endGoPlace();return;}
+  if(eff==='draw2'){dealCards(pKey,2);setStatus('카드 2장 드로우!');endGoPlace();return;}
+  if(eff==='reserve'){reserveNext[pKey]=true;setStatus('다음 턴 착수 2회!');endTurn();return;}
+  if(eff==='evade'){evadeEffect={owner:p,turns:2};setStatus('회피 효과 발동!');endGoPlace();return;}
+  if(eff==='time_rewind'){
+    if(boardHistory.length>=2){const snap=boardHistory[boardHistory.length-2];board=JSON.parse(JSON.stringify(snap.board));banCells={...snap.banCells};sanctuaryZones=[...snap.sanctuaryZones];voidZones=[...snap.voidZones];bombs=[...snap.bombs];fortified=new Set(snap.fortified);traps={...snap.traps};setStatus('2턴 전으로 되돌렸습니다!');}else setStatus('기록이 부족합니다.');endGoPlace();return;
+  }
+  if(eff==='irrational'){irrationalTurns[oKey]=2;setStatus('비합리! 상대 2턴 카드 사용 금지!');endGoPlace();return;}
+  if(eff==='doomsday'){showDoomsdayPicker();return;}
+  if(eff==='cheat_s'){const oh=hands[oKey].filter(c=>c.type!=='별');if(!oh.length){setStatus('공개 가능한 카드 없음.');endGoPlace();return;}showCardPeek([oh[Math.floor(Math.random()*oh.length)]],'상대 카드 확인',()=>endGoPlace());return;}
+  if(eff==='cheat_m'){const oh=hands[oKey].filter(c=>c.type!=='별');showCardPeek(shuffle([...oh]).slice(0,2),'상대 카드 2장 확인',()=>endGoPlace());return;}
+  if(eff==='rational_curse'){const oh=hands[oKey];if(!oh.length){setStatus('상대 패가 비어있습니다.');endGoPlace();return;}showPick('합리적인 저주','상대가 버릴 카드를 선택합니다.',oh,1,false,(picked)=>{const i=oh.findIndex(c=>c.uid===picked[0].uid);if(i!==-1)oh.splice(i,1);setStatus('상대가 카드를 버렸습니다.');endGoPlace();});return;}
+  if(eff==='perfect_cheat'){const oh=hands[oKey].filter(c=>c.star<=2&&c.type!=='별');if(!oh.length){setStatus('상대 패에 2성 이하 카드 없음.');endGoPlace();return;}showPick('완벽한 부정행위','가져올 카드를 선택합니다.',oh,1,false,(picked)=>{const c=picked[0];const i=hands[oKey].findIndex(x=>x.uid===c.uid);if(i!==-1){hands[oKey].splice(i,1);if(hands[pKey].length<8)hands[pKey].push(c);}setStatus(`"${c.name}" 획득!`);endGoPlace();});return;}
+  if(eff==='judges_eye'){const oh=hands[oKey].filter(c=>c.star<5&&c.type!=='별');if(!oh.length){setStatus('대상 없음.');endGoPlace();return;}showPick('심판의 눈','제거할 카드를 선택합니다.',oh,1,false,(picked)=>{const i=hands[oKey].findIndex(c=>c.uid===picked[0].uid);if(i!==-1)hands[oKey].splice(i,1);setStatus(`"${picked[0].name}" 제거!`);endGoPlace();});return;}
+  if(eff==='fate'){const pool=[...decks[pKey].filter(c=>c.star<=4&&c.type!=='별'),...hands[pKey].filter(c=>c.star<=4&&c.type!=='별')];const uniq=[];const seen=new Set();pool.forEach(c=>{if(!seen.has(c.id)){seen.add(c.id);uniq.push(c);}});if(!uniq.length){setStatus('선택 가능한 카드 없음.');endGoPlace();return;}showPick('운명','가져올 카드 2장을 선택합니다.',uniq,2,false,(picked)=>{picked.forEach(c=>{if(hands[pKey].length<8)hands[pKey].push({...c,uid:c.id+'_fate_'+Math.random().toString(36).slice(2)});});setStatus('카드 2장 추가!');endGoPlace();});return;}
+  if(eff==='card_exchange'){const my1=hands[pKey].filter(c=>c.star===1);if(!my1.length){setStatus('손패에 1성 카드 없음.');endGoPlace();return;}showPick('카드 교체','버릴 1성 카드를 선택합니다.',my1,1,false,(picked)=>{const i=hands[pKey].findIndex(c=>c.uid===picked[0].uid);if(i!==-1)hands[pKey].splice(i,1);dealCards(pKey,1);const pool2=CARDS_DEF.filter(c=>c.star===2&&c.type!=='별');const r2=pool2[Math.floor(Math.random()*pool2.length)];if(hands[pKey].length<8)hands[pKey].push({...r2,uid:r2.id+'_ex_'+Math.random().toString(36).slice(2)});setStatus('카드 교체 완료!');endGoPlace();});return;}
+  // Click-based
+  const CE={
+    fortify:['own',1,(cs)=>{cs.forEach(([r,c])=>fortified.add(r+','+c));setStatus('굳히기!');endGoPlace();}],
+    prophet:['empty',1,(cs)=>{prophetCells[cs[0][0]+','+cs[0][1]]={owner:p,turnsLeft:1};setStatus('예언자!');endGoPlace();}],
+    danger_mark:['opp',1,(cs)=>{dangerMarks[cs[0][0]+','+cs[0][1]]={turnsLeft:1};setStatus('위험 예고!');endGoPlace();}],
+    construction:['opp',1,(cs)=>{constructionMark={key:cs[0][0]+','+cs[0][1],forPlayer:opp};setStatus('공사 예고!');endGoPlace();}],
+    ban_place:['empty',1,(cs)=>{banCells[cs[0][0]+','+cs[0][1]]={turns:3};setStatus('착수 금지!');endGoPlace();}],
+    trap:['empty',1,(cs)=>{cs.forEach(([r,c])=>traps[r+','+c]={owner:p,type:'trap'});setStatus('함정 설치!');endGoPlace();}],
+    double_mine:['empty',2,(cs)=>{cs.forEach(([r,c])=>traps[r+','+c]={owner:p,type:'mine'});setStatus('지뢰 2개!');endGoPlace();}],
+    remove:['stone',1,(cs)=>{const[r,c]=cs[0];if(isFort(r,c)){setStatus('굳힌 돌은 제거 불가!');endGoPlace();return;}board[r][c]=0;fortified.delete(r+','+c);setStatus('제거!');endGoPlace();}],
+    exile:['stone',1,(cs)=>{exiledCells[cs[0][0]+','+cs[0][1]]={turns:2};setStatus('왕따!');endGoPlace();}],
+    cell_clear:['any',1,(cs)=>{const k=cs[0][0]+','+cs[0][1];delete banCells[k];delete prophetCells[k];delete traps[k];delete dangerMarks[k];setStatus('칸 방어!');endGoPlace();}],
+    bomb_s:['empty',1,(cs)=>{bombs.push({r:cs[0][0],c:cs[0][1],size:2,owner:p,turns:1});setStatus('소형 폭탄!');endGoPlace();}],
+    bomb_l:['empty',1,(cs)=>{bombs.push({r:cs[0][0],c:cs[0][1],size:3,owner:p,turns:1});setStatus('대형 폭탄!');endGoPlace();}],
+    split_h:['own',1,(cs)=>{const[r,c]=cs[0];board[r][c]=0;fortified.delete(r+','+c);if(c-1>=0&&board[r][c-1]!==opp)board[r][c-1]=p;if(c+1<BS&&board[r][c+1]!==opp)board[r][c+1]=p;setStatus('분열(가로)!');endGoPlace();}],
+    split_v:['own',1,(cs)=>{const[r,c]=cs[0];board[r][c]=0;fortified.delete(r+','+c);if(r-1>=0&&board[r-1][c]!==opp)board[r-1][c]=p;if(r+1<BS&&board[r+1][c]!==opp)board[r+1][c]=p;setStatus('분열(세로)!');endGoPlace();}],
+    sanctuary:['any',1,(cs)=>{const[r,c]=cs[0];sanctuaryZones.push({r:Math.min(r,BS-2),c:Math.min(c,BS-2),turns:3});setStatus('보호구역!');endGoPlace();}],
+    self_destruct:['own',1,(cs)=>{const[r,c]=cs[0];board[r][c]=0;fortified.delete(r+','+c);for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(dr===0&&dc===0)continue;const nr=r+dr,nc=c+dc;if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!isFort(nr,nc))board[nr][nc]=0;}setStatus('자폭!');endGoPlace();}],
+    extra_place:['empty',1,(cs)=>{const[r,c]=cs[0];board[r][c]=p;if(checkWin(r,c,p)){showWin(p);return;}setStatus('설치! 착수도 가능합니다.');endGoPlace();}],
+    void_zone:['any',1,(cs)=>{const[r,c]=cs[0];voidZones.push({r,c,turns:3});for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!isFort(nr,nc))board[nr][nc]=0;}setStatus('공허!');endGoPlace();}],
+    chain:['stone',1,(cs)=>{const[r,c]=cs[0];const q=[[r,c]],vis=new Set([r+','+c]),rem=[[r,c]];while(q.length){const[cr,cc]=q.shift();[[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr,dc])=>{const nr=cr+dr,nc=cc+dc,k=nr+','+nc;if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!vis.has(k)&&board[nr][nc]!==0&&!isFort(nr,nc)){vis.add(k);rem.push([nr,nc]);q.push([nr,nc]);}});}rem.forEach(([rr,rc])=>{board[rr][rc]=0;fortified.delete(rr+','+rc);});setStatus(`연쇄 체인! ${rem.length}개 제거.`);endGoPlace();}],
+  };
+  if(CE[eff]){const[mode,max,cb]=CE[eff];startClick(mode,max,cb);return;}
+  if(eff==='move_stone'){startClick('own',1,(cs)=>{const[r,c]=cs[0];startClick('empty',1,(cs2)=>{const[nr,nc]=cs2[0];if(Math.abs(nr-r)>1||Math.abs(nc-c)>1){setStatus('인접 칸으로만!');endGoPlace();return;}board[nr][nc]=board[r][c];board[r][c]=0;if(fortified.has(r+','+c)){fortified.delete(r+','+c);fortified.add(nr+','+nc);}setStatus('돌 이동!');endGoPlace();});});return;}
+  if(eff==='unstable_two'){let first=null;startClick('empty',1,(cs)=>{first=cs[0];clickState={mode:'empty',max:1,collected:[],callback:(cs2)=>{const[r2,c2]=cs2[0],[r1,c1]=first;if(r1===r2||c1===c2||r1-c1===r2-c2||r1+c1===r2+c2){setStatus('같은 선상 불가!');clickState=null;drawBoard();return;}board[r1][c1]=p;board[r2][c2]=p;if(checkWin(r1,c1,p)||checkWin(r2,c2,p)){showWin(p);return;}setStatus('불안정한 두 돌!');endGoPlace();}};setStatus('두 번째 위치를 클릭하세요.');drawBoard();});return;}
+  if(eff==='area_swap'){let f2=null;startClick('any',1,(cs)=>{const[r,c]=cs[0];f2=[Math.min(r,BS-2),Math.min(c,BS-2)];clickState={mode:'any',max:1,collected:[],callback:(cs2)=>{const[r3,c3]=cs2[0];const[nr2,nc2]=[Math.min(r3,BS-2),Math.min(c3,BS-2)];const[r1a,c1a]=f2;for(let dr=0;dr<2;dr++)for(let dc=0;dc<2;dc++){const tmp=board[r1a+dr][c1a+dc];board[r1a+dr][c1a+dc]=board[nr2+dr][nc2+dc];board[nr2+dr][nc2+dc]=tmp;}setStatus('영역 전환!');endGoPlace();}};setStatus('두 번째 2×2 좌상단을 클릭합니다.');drawBoard();});return;}
+  endGoPlace();
+}
+function endGoPlace(){phase='place';selectedCardIdx=null;pendingSelected=null;showPlaceBtn(true);renderAll();setStatus('착수할 위치를 클릭 후 [착수 확정]을 누르세요.');}
+function startClick(mode,max,cb){clickState={mode,max,collected:[],callback:cb};const ml={empty:'빈 칸',own:'내 돌',opp:'상대 돌',stone:'돌',any:'칸'};setStatus(`${ml[mode]||mode} ${max}개를 클릭하세요.`);drawBoard();}
+
+// ── Place stone ───────────────────────────────────────
+function confirmPlace(){if(!pendingSelected){setStatus('먼저 보드에서 위치를 선택하세요.');return;}doPlaceStone(pendingSelected.r,pendingSelected.c);}
+function doPlaceStone(r,c){
+  const p=currentPlayer,k=r+','+c;
+  if(board[r][c]!==0){setStatus('이미 돌이 있습니다!');pendingSelected=null;drawBoard();return;}
+  if(isCellBanned(r,c)){setStatus('착수 금지된 칸입니다!');pendingSelected=null;drawBoard();return;}
+  if(evadeEffect&&evadeEffect.owner!==p){for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(dr===0&&dc===0)continue;const nr=r+dr,nc=c+dc;if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&board[nr][nc]===evadeEffect.owner){setStatus('회피 효과! 상대 돌 주변 착수 불가.');pendingSelected=null;drawBoard();return;}}}
+  if(traps[k]&&traps[k].owner!==p){delete traps[k];setStatus('함정을 밟았습니다!');pendingSelected=null;endTurn();return;}
+  saveHistory();board[r][c]=p;
+  if(prophetCells[k]&&prophetCells[k].owner!==p)delete prophetCells[k];
+  if(checkWin(r,c,p)){showWin(p);return;}
+  if(isOnlineGame&&isMyTurn())sendPlace(r,c);
+  pendingSelected=null;
+  if(extraPlace>0){extraPlace--;setStatus(`추가 착수 ${extraPlace}회 남음.`);showPlaceBtn(true);drawBoard();renderAll();return;}
+  endTurn();
+}
+
+// ── Win check ─────────────────────────────────────────
+function checkWin(r,c,p){
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(const[dr,dc]of dirs){let cnt=1;for(let i=1;i<5;i++){const nr=r+dr*i,nc=c+dc*i;if(nr<0||nr>=BS||nc<0||nc>=BS||board[nr][nc]!==p||isExiled(nr,nc))break;cnt++;}for(let i=1;i<5;i++){const nr=r-dr*i,nc=c-dc*i;if(nr<0||nr>=BS||nc<0||nc>=BS||board[nr][nc]!==p||isExiled(nr,nc))break;cnt++;}if(cnt>=5)return true;}
+  return false;
+}
+function showWin(player,reason){
+  if(winnerDetermined)return;winnerDetermined=true;clearInterval(timerInterval);
+  const name=player===1?'흑 ('+gameNicknames.black+')':'백 ('+gameNicknames.white+')';
+  document.getElementById('winTitle').textContent=name+' 승리!';
+  document.getElementById('winDesc').textContent=reason||'5개를 연속으로 놓아 승리!';
+  document.getElementById('winOverlay').classList.add('show');
+  if(isOnlineGame&&currentUser){const myP=onlineMyRole==='black'?1:2;recordResult(player===myP);}
+}
+function afterWin(){document.getElementById('winOverlay').classList.remove('show');showMenuWithUser?showMenuWithUser():showPage('page-menu');}
+
+// ── End turn ──────────────────────────────────────────
+function endTurn(){
+  const pKey=currentKey(),oKey=oppKey();
+  Object.entries(dangerMarks).forEach(([k,info])=>{info.turnsLeft--;if(info.turnsLeft<=0){const[r,c]=k.split(',').map(Number);if(!isFort(r,c))board[r][c]=0;delete dangerMarks[k];}});
+  Object.keys(banCells).forEach(k=>{banCells[k].turns--;if(banCells[k].turns<=0)delete banCells[k];});
+  sanctuaryZones=sanctuaryZones.map(z=>({...z,turns:z.turns-1})).filter(z=>z.turns>0);
+  voidZones=voidZones.map(z=>({...z,turns:z.turns-1})).filter(z=>z.turns>0);
+  const exCheck=[];Object.keys(exiledCells).forEach(k=>{exiledCells[k].turns--;if(exiledCells[k].turns<=0){exCheck.push(k);delete exiledCells[k];}});
+  exCheck.forEach(k=>{const[r,c]=k.split(',').map(Number);if(board[r][c]!==0&&checkWin(r,c,board[r][c]))showWin(board[r][c],'왕따 해제 후 5목!');});
+  if(irrationalTurns[pKey]>0)irrationalTurns[pKey]--;
+  if(evadeEffect){evadeEffect.turns--;if(evadeEffect.turns<=0)evadeEffect=null;}
+  currentPlayer=getOpp(currentPlayer);const newKey=currentKey();turnCount++;
+  phase='card';selectedCardIdx=null;pendingSelected=null;clickState=null;
+  ['bPlaceBtn','wPlaceBtn'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';e.disabled=true;}});
+  ['bPassBtn','wPassBtn'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});
+  ['bUseCardBtn','wUseCardBtn'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  if(constructionMark&&constructionMark.forPlayer===currentPlayer){const fk=constructionMark.key;constructionMark=null;const[fr,fc]=fk.split(',').map(Number);if(board[fr][fc]===currentPlayer){forceConstr(fr,fc);return;}}
+  Object.entries(prophetCells).forEach(([k,info])=>{if(info.owner===currentPlayer){info.turnsLeft--;if(info.turnsLeft<=0){const[r,c]=k.split(',').map(Number);if(board[r][c]===0&&!isCellBanned(r,c)){board[r][c]=currentPlayer;if(checkWin(r,c,currentPlayer))showWin(currentPlayer,'예언자로 승리!');}delete prophetCells[k];}}});
+  const explodeNow=[];bombs=bombs.map(b=>({...b,turns:b.turns-1})).filter(b=>{if(b.turns<=0)explodeNow.push(b);return b.turns>0;});
+  explodeNow.forEach(b=>{const range=b.size===2?[[0,0],[0,1],[1,0],[1,1]]:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1]];range.forEach(([dr,dc])=>{const nr=b.r+dr,nc=b.c+dc;if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!isFort(nr,nc))board[nr][nc]=0;});setStatus('폭탄 폭발!');});
+  if(reserveNext[newKey]){reserveNext[newKey]=false;extraPlace=1;dealCards(newKey,1);phase='place';showPlaceBtn(true);setStatus('예약 착수! 돌을 2개 놓을 수 있습니다.');}
+  else{dealCards(newKey,1);setStatus(`${currentPlayer===1?'흑':'백'}의 차례입니다.`);}
+  startTimer();renderAll();
+}
+function forceConstr(fr,fc){
+  setStatus(`공사 예고! (${fr+1},${fc+1})의 돌을 인접 빈 칸으로 이동해야 합니다.`);
+  clickState={mode:'any',max:1,collected:[],callback:(cs)=>{const[nr,nc]=cs[0];if(board[nr][nc]!==0||Math.abs(nr-fr)>1||Math.abs(nc-fc)>1){setStatus('인접 빈 칸으로만!');forceConstr(fr,fc);return;}board[nr][nc]=board[fr][fc];board[fr][fc]=0;if(fortified.has(fr+','+fc)){fortified.delete(fr+','+fc);fortified.add(nr+','+nc);}clickState=null;setStatus('이동 완료. 카드 사용 또는 착수하세요.');drawBoard();renderAll();}};drawBoard();
+}
+function saveHistory(){boardHistory.push({board:JSON.parse(JSON.stringify(board)),banCells:JSON.parse(JSON.stringify(banCells)),sanctuaryZones:JSON.parse(JSON.stringify(sanctuaryZones)),voidZones:JSON.parse(JSON.stringify(voidZones)),bombs:JSON.parse(JSON.stringify(bombs)),fortified:[...fortified],traps:JSON.parse(JSON.stringify(traps))});if(boardHistory.length>10)boardHistory.shift();}
+
+// ── Card pick / peek ──────────────────────────────────
+function showCardPeek(cards,title,cb){document.getElementById('cpTitle').textContent=title;document.getElementById('cpDesc').textContent='공개된 카드:';document.getElementById('cpCancelBtn').style.display='none';document.getElementById('cpList').innerHTML=cards.map(c=>`<div class="card-pick-item" style="cursor:default;"><div class="cpname">${c.name} ${STAR_CHAR[c.star]}</div><div class="cpdesc">${c.desc}</div></div>`).join('');document.getElementById('cpConfirmBtn').textContent='확인';document.getElementById('cpConfirmBtn').onclick=()=>{closeModal('cardPickModal');document.getElementById('cpConfirmBtn').onclick=confirmCardPick;document.getElementById('cpCancelBtn').style.display='';if(cb)cb();};document.getElementById('cardPickModal').classList.add('show');}
+let cpCb=null,cpPicked=[],cpMax=1;
+function showPick(title,desc,cards,max,allowCancel,cb){cpCb=cb;cpPicked=[];cpMax=max;document.getElementById('cpTitle').textContent=title;document.getElementById('cpDesc').textContent=desc;document.getElementById('cpCancelBtn').style.display=allowCancel?'':'none';document.getElementById('cpConfirmBtn').textContent=`선택 완료 (${max}장)`;document.getElementById('cpConfirmBtn').onclick=confirmCardPick;const list=document.getElementById('cpList');list.innerHTML=cards.map((c,i)=>`<div class="card-pick-item" id="cpi_${i}" onclick="toggleCp(${i},'${c.uid}')"><div class="cpname">${c.name} ${STAR_CHAR[c.star]}</div><div class="cpdesc">${c.desc}</div></div>`).join('');list._cards=cards;document.getElementById('cardPickModal').classList.add('show');}
+function toggleCp(i,uid){const cards=document.getElementById('cpList')._cards;const card=cards[i];const el=document.getElementById('cpi_'+i);const a=cpPicked.findIndex(c=>c.uid===uid);if(a!==-1){cpPicked.splice(a,1);el.classList.remove('picked');}else if(cpPicked.length<cpMax){cpPicked.push(card);el.classList.add('picked');}}
+function confirmCardPick(){if(!cpPicked.length){setStatus('카드를 선택하세요!');return;}closeModal('cardPickModal');if(cpCb)cpCb(cpPicked);cpCb=null;}
+function cancelCardPick(){closeModal('cardPickModal');cpCb=null;}
+
+// ── Doomsday picker ───────────────────────────────────
+function showDoomsdayPicker(){
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:700;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:13px;padding:22px 18px;max-width:300px;width:90%;"><h3 style="font-family:'Black Han Sans';font-size:18px;color:#b8860b;margin-bottom:9px;">종말의 심판</h3><p style="font-size:13px;color:#6b6358;margin-bottom:12px;">제거할 영역을 선택하세요.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"><button onclick="doomApply('h','top',this.closest('[style]'))" style="padding:9px;background:#e3f2fd;border:1.5px solid #1565c0;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">가로 — 위쪽</button><button onclick="doomApply('h','bottom',this.closest('[style]'))" style="padding:9px;background:#e3f2fd;border:1.5px solid #1565c0;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">가로 — 아래쪽</button><button onclick="doomApply('v','left',this.closest('[style]'))" style="padding:9px;background:#fce4ec;border:1.5px solid #c62828;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">세로 — 왼쪽</button><button onclick="doomApply('v','right',this.closest('[style]'))" style="padding:9px;background:#fce4ec;border:1.5px solid #c62828;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">세로 — 오른쪽</button></div><button onclick="this.closest('[style]').remove()" style="width:100%;margin-top:9px;padding:7px;background:#f5f5f5;border:1px solid #ccc;border-radius:7px;cursor:pointer;font-size:13px;">취소</button></div>`;
+  document.body.appendChild(ov);
+}
+function doomApply(dir,side,ov){ov.remove();const half=Math.floor(BS/2);for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){let rm=false;if(dir==='h'&&side==='top'&&r<=half)rm=true;if(dir==='h'&&side==='bottom'&&r>=half)rm=true;if(dir==='v'&&side==='left'&&c<=half)rm=true;if(dir==='v'&&side==='right'&&c>=half)rm=true;if(rm&&!isFort(r,c))board[r][c]=0;}setStatus('종말의 심판!');endGoPlace();}
+
+// ── Status / quit ─────────────────────────────────────
+function setStatus(msg){const el=document.getElementById('statusBar');if(el)el.innerHTML=msg;}
+function confirmQuit(){document.getElementById('quitModal').classList.add('show');}
+function quitToMenu(){clearInterval(timerInterval);closeModal('quitModal');if(onlineRoomId&&db){try{db.ref('rooms/'+onlineRoomId).off();}catch(e){}}onlineRoomId=null;onlineMyRole=null;showMenuWithUser();}
+function startLocalGame(){onlineRoomId=null;onlineMyRole=null;const nick=currentUserData?currentUserData.nickname:'플레이어';showPage('page-game');initGame({nicknames:{black:nick+'(흑)',white:nick+'(백)'}});}
+
+// ── Online ────────────────────────────────────────────
+function isMyTurn(){if(!isOnlineGame)return true;return(onlineMyRole==='black'&&currentPlayer===1)||(onlineMyRole==='white'&&currentPlayer===2);}
+function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+function sendPlace(r,c){if(!db||!onlineRoomId)return;db.ref('rooms/'+onlineRoomId+'/lastAction').set({type:'place',r,c,by:onlineMyRole,ts:Date.now()});}
+function createOnlineRoom(){
+  if(!db){alert('Firebase 초기화 실패');return;}
+  const code=genCode();onlineRoomId=code;onlineMyRole='black';
+  const myNick=currentUserData?currentUserData.nickname:'흑';
+  db.ref('rooms/'+code).set({status:'waiting',blackNick:myNick,whiteNick:null,lastAction:null,createdAt:Date.now()}).then(()=>{
+    const disp=document.getElementById('roomCodeDisplay');disp.style.display='flex';
+    document.getElementById('roomCodeText').textContent=code;
+    db.ref('rooms/'+code+'/whiteNick').on('value',snap=>{if(snap.val()){document.getElementById('roomWaitMsg').textContent='상대방 입장! 게임 시작...';db.ref('rooms/'+code+'/status').set('playing');setTimeout(()=>startOnlineGame(code,'black',myNick,snap.val()),800);}});
+  }).catch(e=>alert('방 생성 실패: '+e.message));
+}
+function joinOnlineRoom(){
+  if(!db){alert('Firebase 초기화 실패');return;}
+  const code=document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  const msgEl=document.getElementById('joinMsg');
+  if(code.length!==6){msgEl.textContent='6자리 코드를 입력하세요.';msgEl.style.display='block';return;}
+  db.ref('rooms/'+code).once('value').then(snap=>{
+    const room=snap.val();
+    if(!room){msgEl.textContent='존재하지 않는 방입니다.';msgEl.style.display='block';return;}
+    if(room.status!=='waiting'){msgEl.textContent='이미 시작된 방입니다.';msgEl.style.display='block';return;}
+    const myNick=currentUserData?currentUserData.nickname:'백';
+    onlineRoomId=code;onlineMyRole='white';
+    db.ref('rooms/'+code+'/whiteNick').set(myNick).then(()=>{
+      msgEl.textContent='입장 성공! 대기 중...';msgEl.style.color='#2e7d32';msgEl.style.display='block';
+      db.ref('rooms/'+code+'/status').on('value',snap2=>{if(snap2.val()==='playing')setTimeout(()=>startOnlineGame(code,'white',room.blackNick,myNick),400);});
+    });
+  }).catch(e=>{msgEl.textContent='오류: '+e.message;msgEl.style.display='block';});
+}
+function startOnlineGame(code,role,blackNick,whiteNick){
+  showPage('page-game');
+  initGame({online:true,roomId:code,myRole:role,nicknames:{black:blackNick||'흑',white:whiteNick||'백'}});
+  db.ref('rooms/'+code+'/lastAction').on('value',snap=>{
+    const action=snap.val();if(!action)return;if(action.by===onlineMyRole)return;
+    if(action.type==='place'){
+      const{r,c}=action;const oppP=onlineMyRole==='black'?2:1;
+      board[r][c]=oppP;
+      if(checkWin(r,c,oppP)){showWin(oppP);return;}
+      currentPlayer=onlineMyRole==='black'?1:2;
+      phase='card';dealCards(currentKey(),1);
+      Object.entries(dangerMarks).forEach(([k,info])=>{info.turnsLeft--;if(info.turnsLeft<=0){const[r2,c2]=k.split(',').map(Number);if(!isFort(r2,c2))board[r2][c2]=0;delete dangerMarks[k];}});
+      turnCount++;startTimer();renderAll();setStatus('내 차례입니다.');
+    }
+  });
+  if(role==='white')setStatus('흑(상대)의 차례입니다. 대기 중...');
+  else setStatus('흑의 차례입니다. 카드를 사용하거나 착수만 하기를 누르세요.');
+}
+window.addEventListener('resize',()=>{if(document.getElementById('page-game').classList.contains('active'))resizeBoard();});
+
+// ── Auto-init Firebase on load ────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  drawMenuBoard();
+  initFirebase();
+  // Enter 키로 로그인/회원가입
+  ['authEmail','authPw','authPw2','authNick'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth();});
+  });
+  document.getElementById('nickInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitNickname();});
+});
+</script>
+</body>
+</html>
