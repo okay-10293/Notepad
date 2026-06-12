@@ -467,7 +467,6 @@
     if (!appInitialized) {
       initDragDrop()
       initPaste()
-      initAutoLogout()
       appInitialized = true
     }
   }
@@ -830,22 +829,6 @@ ${body}`
     loadAttachments(activeNote.id)
   }
 
-  // ── Auto logout 24h ──
-  function initAutoLogout() {
-    const key = 'notepad_last_active'
-    const now = Date.now()
-    const last = localStorage.getItem(key)
-    if (last && now - parseInt(last) > 24 * 60 * 60 * 1000) {
-      sb.auth.signOut()
-      return
-    }
-    localStorage.setItem(key, now)
-    setInterval(() => {
-      if (Date.now() - parseInt(localStorage.getItem(key)) > 24 * 60 * 60 * 1000) sb.auth.signOut()
-    }, 60 * 1000)
-    document.addEventListener('click', () => localStorage.setItem(key, Date.now()))
-    document.addEventListener('keydown', () => localStorage.setItem(key, Date.now()))
-  }
 
   // ── Utils ──
   function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
