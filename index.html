@@ -154,7 +154,8 @@
     }
     @media (max-width: 640px) {
       .sidebar { width: 100%; min-width: unset; }
-      #app { flex-direction: column; }
+      #app { flex-direction: column; height: auto; overflow-y: auto; }
+      .editor-pane { min-height: 60vh; }
       .land-nav { padding: 1rem 1.5rem; }
       .land-features, .land-how, .land-faq { padding: 2rem 1.5rem; }
       .land-footer { padding: 1.5rem; }
@@ -445,7 +446,8 @@
       if (error.message.includes('already')) return showErr('signupError', '이미 사용 중인 아이디입니다.')
       return showErr('signupError', '가입에 실패했습니다.')
     }
-    closeModal()
+    showOk('signupError', '✅ 가입 완료! 아이디와 비밀번호로 로그인하세요.')
+    setTimeout(() => switchModal('login'), 1200)
   }
 
   async function handleFindPw() {
@@ -473,13 +475,15 @@
   function showLanding() {
     document.getElementById('landing').style.display = 'flex'
     document.getElementById('app').style.display = 'none'
-    notes = []; activeNote = null; appInitialized = false
+    clearTimeout(saveTimer)
+    notes = []; activeNote = null; appInitialized = false; sortMode = 'date'
+    document.getElementById('sortSelect').value = 'date'
   }
 
   // ── Notes ──
   async function loadNotes() {
     const { data, error } = await sb.from('notes').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false })
-    if (!error) { notes = data || []; renderNotesList(notes) }
+    if (!error) { notes = data || []; applySort(); renderNotesList(notes) }
   }
 
   function renderNotesList(list) {
@@ -499,14 +503,22 @@
     }).join('')
   }
 
-  function filterNotes() {
+  function renderFilteredNotes() {
     const q = document.getElementById('searchInput').value.toLowerCase()
-    renderNotesList(notes.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q)))
+    if (q) {
+      renderNotesList(notes.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q)))
+    } else {
+      renderNotesList(notes)
+    }
+  }
+
+  function filterNotes() {
+    renderFilteredNotes()
   }
 
   async function newNote() {
     const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, title: '', body: '' }).select().single()
-    if (!error && data) { notes.unshift(data); renderNotesList(notes); selectNote(data.id) }
+    if (!error && data) { notes.unshift(data); applySort(); renderNotesList(notes); selectNote(data.id) }
   }
 
   function selectNote(id) {
@@ -520,6 +532,10 @@
     document.getElementById('saveStatus').textContent = '저장됨'
     loadAttachments(activeNote.id)
     renderNotesList(notes)
+    // 모바일(세로 레이아웃)에서 에디터 영역으로 스크롤
+    if (window.innerWidth <= 640) {
+      document.getElementById('editorPane').scrollIntoView({ behavior: 'smooth' })
+    }
   }
 
   function onEdit() {
@@ -536,24 +552,40 @@
     if (!error) {
       activeNote.title = title; activeNote.body = body; activeNote.updated_at = updatedAt
       notes = notes.map(n => n.id === activeNote.id ? activeNote : n)
-      notes.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-      const q = document.getElementById('searchInput').value.toLowerCase()
-      if (q) {
-        renderNotesList(notes.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q)))
-      } else {
-        renderNotesList(notes)
-      }
+      applySort()
+      renderFilteredNotes()
       document.getElementById('saveStatus').textContent = '저장됨'
+    }
+  }
+
+  async function deleteNoteAttachments(noteId) {
+    const { data } = await sb.storage.from('images').list(`${currentUser.id}/${noteId}`)
+    if (data && data.length) {
+      const paths = data.map(f => `${currentUser.id}/${noteId}/${f.name}`)
+      await sb.storage.from('images').remove(paths)
     }
   }
 
   async function deleteNote() {
     if (!activeNote || !confirm('이 노트를 삭제할까요?')) return
-    await sb.from('notes').delete().eq('id', activeNote.id)
-    notes = notes.filter(n => n.id !== activeNote.id); activeNote = null
+    const noteId = activeNote.id
+    await deleteNoteAttachments(noteId)
+    await sb.from('notes').delete().eq('id', noteId)
+    notes = notes.filter(n => n.id !== noteId); activeNote = null
     document.getElementById('editorEmpty').style.display = 'flex'
     document.getElementById('editorContent').style.display = 'none'
     renderNotesList(notes)
+  }
+
+  function getFileIcon(name) {
+    const ext = name.split('.').pop().toLowerCase()
+    if (ext === 'pdf') return '📕'
+    if (ext === 'txt') return '📝'
+    if (['doc','docx'].includes(ext)) return '📃'
+    if (['xls','xlsx'].includes(ext)) return '📊'
+    if (['ppt','pptx'].includes(ext)) return '📑'
+    if (['zip','rar','7z'].includes(ext)) return '🗜️'
+    return '📄'
   }
 
   // ── File Attachments ──
@@ -573,11 +605,13 @@
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
       const url = urlData.publicUrl
       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
+      // 원본 파일명: 서버 저장명(ts_i_safeName)에서 prefix 제거
+      const originalName = file.name.replace(/^\d+_\d+_/, '') || file.name
       const inner = isImage
         ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
-        : `<div class="attach-file" style="cursor:pointer;">📄 <span>${escHtml(file.name)}</span></div>`
+        : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
       // 원본 값은 data 속성에 저장 — onclick 인자 인젝션 완전 방지
-      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(file.name)}" data-path="${escHtml(path)}">${inner}<button class="attach-del">✕</button></div>`
+      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}">${inner}<button class="attach-del">✕</button></div>`
     }).join('')
     container.querySelectorAll('.attach-item').forEach(item => {
       const rawUrl  = unescHtml(item.dataset.url)
@@ -590,6 +624,7 @@
   }
 
   async function deleteAttachment(path) {
+    if (!activeNote) return
     if (!confirm('이 파일을 삭제할까요?')) return
     await sb.storage.from('images').remove([path])
     loadAttachments(activeNote.id)
@@ -645,9 +680,8 @@
       if (error.message.includes('already')) return showErr('settingsError', '이미 사용 중인 아이디입니다.')
       return showErr('settingsError', '변경에 실패했습니다.')
     }
-    document.getElementById('userEmail').textContent = newId
-    currentUser = { ...currentUser, email: newId + '@notepad.app' }
-    showOk('settingsError', '✅ 아이디가 변경되었습니다!')
+    showOk('settingsError', '✅ 아이디 변경 완료! 변경된 아이디로 다시 로그인하세요.')
+    setTimeout(() => handleLogout(), 1500)
   }
 
   async function changePassword() {
@@ -673,12 +707,14 @@
 
   async function handleContact() {
     const name = document.getElementById('contactName').value.trim()
+    const username = document.getElementById('contactUsername').value.trim()
     const email = document.getElementById('contactEmail').value.trim()
     const msg = document.getElementById('contactMsg').value.trim()
     if (!name || !email || !msg) return showErr('contactError', '모든 항목을 입력하세요.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('contactError', '올바른 이메일 형식을 입력하세요.')
     const subject = encodeURIComponent(`[Notepad 문의] ${name}`)
-    const body = encodeURIComponent(`이름: ${name}\n이메일: ${email}\n\n문의 내용:\n${msg}`)
+    const usernameStr = username ? `아이디: ${username}\n` : ''
+    const body = encodeURIComponent(`이름: ${name}\n${usernameStr}이메일: ${email}\n\n문의 내용:\n${msg}`)
     const mailLink = document.createElement('a')
     mailLink.href = `mailto:okayt10293@gmail.com?subject=${subject}&body=${body}`
     mailLink.click()
@@ -695,7 +731,7 @@
 
   // ── Download ──
   async function downloadFile(url, name) {
-    if (!confirm(name + '을 다운로드 하시겠습니까?')) return
+    if (!confirm(name + '을(를) 다운로드 하시겠습니까?')) return
     try {
       const res = await fetch(url)
       const blob = await res.blob()
@@ -708,19 +744,7 @@
       window.open(url)
     }
   }
-  function downloadNoteById(id, e) {
-    e.stopPropagation()
-    const note = notes.find(n => n.id === id)
-    if (!note) return
-    const text = '제목: ' + (note.title || '제목 없음') + '\n\n' + (note.body || '')
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = (note.title || '제목 없음') + '.txt'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+
   function downloadNote() {
     if (!activeNote) return
     const title = document.getElementById('noteTitle').value || '제목 없음'
@@ -740,13 +764,23 @@ ${body}`
 
 
   // ── Sort ──
+  function applySort() {
+    if (sortMode === 'name') {
+      notes.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'))
+    } else {
+      notes.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    }
+  }
+
   function sortNotes() {
     sortMode = document.getElementById('sortSelect').value
-    const sorted = [...notes].sort((a, b) => {
-      if (sortMode === 'name') return (a.title || '').localeCompare(b.title || '', 'ko')
-      return new Date(b.updated_at) - new Date(a.updated_at)
-    })
-    renderNotesList(sorted)
+    applySort()
+    const q = document.getElementById('searchInput').value.toLowerCase()
+    if (q) {
+      renderNotesList(notes.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q)))
+    } else {
+      renderNotesList(notes)
+    }
   }
 
   function toggleSelectMode() {
@@ -774,6 +808,7 @@ ${body}`
     if (!selectedIds.size) return
     if (!confirm(`선택한 ${selectedIds.size}개의 노트를 삭제할까요?`)) return
     for (const id of selectedIds) {
+      await deleteNoteAttachments(id)
       await sb.from('notes').delete().eq('id', id)
     }
     notes = notes.filter(n => !selectedIds.has(n.id))
@@ -813,16 +848,29 @@ ${body}`
     })
   }
 
-  async function uploadFilesRaw(files) {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
+  async function uploadFilesRaw(rawFiles) {
+    let files = Array.from(rawFiles)
+    const oversized = files.filter(f => f.size > MAX_FILE_SIZE)
+    if (oversized.length) {
+      alert(`파일이 너무 큽니다. 최대 10MB까지 첨부할 수 있습니다.\n\n${oversized.map(f => f.name).join('\n')}`)
+      files = files.filter(f => f.size <= MAX_FILE_SIZE)
+      if (!files.length) return
+    }
     document.getElementById('saveStatus').textContent = '업로드 중...'
     const ts = Date.now()
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const ext = file.name?.split('.').pop() || file.type.split('/')[1] || 'bin'
-      const name = file.name || `paste_${ts}_${i}.${ext}`
-      const safeName = name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      const originalName = file.name || `paste_${ts}_${i}.${ext}`
+      const safeName = originalName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      // 서버 저장명: 충돌 방지용 prefix, 원본명은 metadata로 보존
       const path = `${currentUser.id}/${activeNote.id}/${ts}_${i}_${safeName}`
-      const { error } = await sb.storage.from('images').upload(path, file, { upsert: false })
+      const { error } = await sb.storage.from('images').upload(path, file, {
+        upsert: false,
+        metadata: { originalName }
+      })
       if (error) console.error(error)
     }
     document.getElementById('saveStatus').textContent = '저장됨'
