@@ -901,13 +901,13 @@ ${body}`
     })
   }
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
   async function uploadFilesRaw(rawFiles) {
     let files = Array.from(rawFiles)
     const oversized = files.filter(f => f.size > MAX_FILE_SIZE)
     if (oversized.length) {
-      alert(`파일이 너무 큽니다. 최대 10MB까지 첨부할 수 있습니다.\n\n${oversized.map(f => f.name).join('\n')}`)
+      alert(`파일이 너무 큽니다. 최대 50MB까지 첨부할 수 있습니다.\n\n${oversized.map(f => f.name).join('\n')}`)
       files = files.filter(f => f.size <= MAX_FILE_SIZE)
       if (!files.length) return
     }
