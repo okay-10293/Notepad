@@ -378,6 +378,7 @@
             <input type="file" id="fileInput" multiple style="display:none;" onchange="uploadFiles(event)" />
           </label>
           <button class="icon-btn" onclick="downloadNote()" title="노트 다운로드">⬇ 다운로드</button>
+          <button class="icon-btn" id="downloadAllBtn" onclick="downloadAllAttachments()" title="첨부파일 전체 다운로드">📦 전체 다운로드</button>
           <button class="btn-danger" onclick="deleteNote()">삭제</button>
         </div>
       </div>
@@ -530,6 +531,8 @@
     document.getElementById('noteTitle').value = activeNote.title || ''
     document.getElementById('noteBody').value = activeNote.body || ''
     document.getElementById('saveStatus').textContent = '저장됨'
+    const dab = document.getElementById('downloadAllBtn')
+    if (dab) dab.style.display = 'none'
     loadAttachments(activeNote.id)
     renderNotesList(notes)
     // 모바일(세로 레이아웃)에서 에디터 영역으로 스크롤
@@ -598,8 +601,14 @@
 
   async function loadAttachments(noteId) {
     const container = document.getElementById('attachArea')
+    const btn = document.getElementById('downloadAllBtn')
     const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${noteId}`)
-    if (error || !data || !data.length) { container.innerHTML = ''; return }
+    if (error || !data || !data.length) {
+      container.innerHTML = ''
+      if (btn) btn.style.display = 'none'
+      return
+    }
+    if (btn) btn.style.display = ''
     container.innerHTML = data.map(file => {
       const path = `${currentUser.id}/${noteId}/${file.name}`
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
@@ -621,6 +630,50 @@
       if (clickEl) clickEl.addEventListener('click', () => downloadFile(rawUrl, rawName))
       item.querySelector('.attach-del').addEventListener('click', () => deleteAttachment(rawPath))
     })
+  }
+
+  // ── 첨부파일 전체 다운로드 ──
+  async function downloadAllAttachments() {
+    if (!activeNote) return
+    const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${activeNote.id}`)
+    if (error || !data || !data.length) {
+      alert('다운로드할 첨부파일이 없습니다.')
+      return
+    }
+
+    const btn = document.getElementById('downloadAllBtn')
+    const originalText = btn.textContent
+    btn.disabled = true
+
+    for (let i = 0; i < data.length; i++) {
+      const file = data[i]
+      const path = `${currentUser.id}/${activeNote.id}/${file.name}`
+      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
+      const url = urlData.publicUrl
+      const originalName = file.name.replace(/^\d+_\d+_/, '') || file.name
+
+      btn.textContent = `⏳ ${i + 1}/${data.length} 다운로드 중...`
+
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('fetch failed')
+        const blob = await res.blob()
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = originalName
+        a.click()
+        URL.revokeObjectURL(a.href)
+        // 브라우저가 다운로드를 처리할 시간을 줌
+        await new Promise(r => setTimeout(r, 800))
+      } catch (e) {
+        console.error('파일 다운로드 실패:', originalName, e)
+        window.open(url)
+        await new Promise(r => setTimeout(r, 800))
+      }
+    }
+
+    btn.textContent = originalText
+    btn.disabled = false
   }
 
   async function deleteAttachment(path) {
