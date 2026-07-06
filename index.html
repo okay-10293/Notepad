@@ -3,7 +3,7 @@
 <head>
   <meta name="naver-site-verification" content="9e03a9e3b1493547d8a028e17fea9032965c8e34" />
   <meta name="google-site-verification" content="TJQkf_GJ_qnSZjyXC1GaZMYe65FUmW0EDua6TGiO6Ps" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2538594772108776" crossorigin="anonymous"></script>
+  <!-- AdSense 스크립트는 head 영역에서 무조건 로드하지 않고, 로그인하지 않은 방문자가 랜딩 화면을 볼 때만 JS에서 동적으로 로드합니다 (loadAds() 참고). 로그인 후 앱(노트 편집) 화면에는 광고가 절대 노출되지 않도록 하기 위함입니다. -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="OkayNotepad는 PC, 스마트폰, 태블릿 어디서든 실시간으로 동기화되는 무료 클라우드 메모장입니다. 텍스트 노트 작성은 물론 이미지, PDF, 문서 파일 첨부(최대 50MB), 자동 저장, 노트 검색 기능을 무료로 제공합니다. 별도 앱 설치 없이 웹 브라우저만으로 즉시 사용 가능합니다." />
@@ -186,8 +186,15 @@
     <div onclick="document.querySelector('.land-features').scrollIntoView({behavior:'smooth'})" style="margin-top:1.5rem; width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-3); animation:bounce 2s infinite; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink-3)'">↓</div>
   </div>
 
-  <div class="ad-banner">
-    <!-- Google AdSense -->
+  <div class="ad-banner" id="adBanner">
+    <!-- 수동 광고 단위: data-ad-slot 값을 AdSense 대시보드에서 만든 실제 광고 단위 ID로 교체하세요.
+         (광고 만들기 > 디스플레이 광고, 이름 예: "랜딩 배너") 자동 광고(Auto ads)는 계정 설정에서 꺼두는 것을 권장합니다. -->
+    <ins class="adsbygoogle"
+         style="display:block; width:100%; height:100%"
+         data-ad-client="ca-pub-2538594772108776"
+         data-ad-slot="0000000000"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
   </div>
 
   <div class="land-features">
@@ -280,6 +287,30 @@
     <div class="faq-item" onclick="toggleFaq(this)">
       <div class="faq-q">오프라인에서도 사용할 수 있나요? <span>＋</span></div>
       <div class="faq-a">OkayNotepad는 클라우드 기반 서비스로, 노트 저장과 불러오기에 인터넷 연결이 필요합니다. 현재 오프라인 모드는 지원하지 않습니다.</div>
+    </div>
+  </div>
+
+  <div style="padding: 4rem 3rem; border-top: 1px solid var(--border); background: var(--surface); width: 100%;">
+    <div style="max-width: 860px; margin: 0 auto;">
+      <h2 class="section-title" style="text-align:left; font-size:1.4rem; margin-bottom:1.5rem;">노트를 더 똑똑하게 쓰는 팁</h2>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1.25rem;">
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+          <div style="font-size:0.9rem; font-weight:500; margin-bottom:0.4rem;">제목에 핵심 단어 넣기</div>
+          <div style="font-size:0.82rem; color:var(--ink-2); line-height:1.7; font-weight:300;">노트 제목에 날짜나 핵심 단어를 넣어두면 나중에 검색 한 번으로 바로 찾을 수 있어요.</div>
+        </div>
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+          <div style="font-size:0.9rem; font-weight:500; margin-bottom:0.4rem;">주제 하나에 노트 하나</div>
+          <div style="font-size:0.82rem; color:var(--ink-2); line-height:1.7; font-weight:300;">여러 내용을 한 노트에 몰아 쓰기보다 주제별로 나누면 필요한 정보를 더 빠르게 찾을 수 있습니다.</div>
+        </div>
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+          <div style="font-size:0.9rem; font-weight:500; margin-bottom:0.4rem;">사진은 그 자리에서 바로 첨부</div>
+          <div style="font-size:0.82rem; color:var(--ink-2); line-height:1.7; font-weight:300;">회의나 수업 중 찍은 화이트보드, 문서 사진을 그 자리에서 첨부해두면 나중에 갤러리를 뒤질 필요가 없어요.</div>
+        </div>
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+          <div style="font-size:0.9rem; font-weight:500; margin-bottom:0.4rem;">다 쓴 노트는 주기적으로 정리</div>
+          <div style="font-size:0.82rem; color:var(--ink-2); line-height:1.7; font-weight:300;">선택 삭제 기능으로 오래된 노트를 정리하면 검색 결과가 깔끔해지고 원하는 노트를 더 빨리 찾을 수 있어요.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -452,10 +483,24 @@
   let currentUser = null, notes = [], activeNote = null, saveTimer = null, appInitialized = false
   let sortMode = 'date', selectMode = false, selectedIds = new Set()
 
+  // ── AdSense: 로그인하지 않은 랜딩 화면에서만 로드 (앱 화면엔 절대 노출 안 함) ──
+  let adsLoaded = false
+  function loadAds() {
+    if (adsLoaded) return
+    adsLoaded = true
+    const s = document.createElement('script')
+    s.async = true
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2538594772108776'
+    s.crossOrigin = 'anonymous'
+    s.onload = () => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) { console.error(e) } }
+    document.head.appendChild(s)
+  }
+
   // ── Init ──
   async function init() {
     const { data: { session } } = await sb.auth.getSession()
     if (session) { currentUser = session.user; showApp() }
+    else { loadAds() }
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         // 이미 init()에서 세션 복원으로 showApp()을 호출한 경우 중복 실행 방지
@@ -532,6 +577,7 @@
     clearTimeout(saveTimer)
     notes = []; activeNote = null; appInitialized = false; sortMode = 'date'
     document.getElementById('sortSelect').value = 'date'
+    loadAds()
   }
 
   // ── Notes ──
