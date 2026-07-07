@@ -207,7 +207,12 @@
     var text = document.getElementById('initLoadingText')
     if (spinner) spinner.style.display = 'none'
     if (text) {
-      text.innerHTML = '불러오는 데 문제가 있어요.<br>네트워크 상태를 확인하고<br>' +
+      var errs = window.__scriptLoadErrors || []
+      var detail = errs.length
+        ? ('<br><span style="font-size:0.75rem; color:#c0392b;">불러오지 못한 항목: ' + errs.join(', ') + '</span>')
+        : ''
+      text.innerHTML = '불러오는 데 문제가 있어요.' + detail +
+        '<br>네트워크(와이파이/데이터)를 바꿔서 다시 시도해보세요.<br>' +
         '<button onclick="location.reload()" style="margin-top:0.6rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">새로고침</button>'
     }
   }, 7000)
@@ -566,9 +571,9 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('로그인/저장 기능 (cdn.jsdelivr.net)')"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('PDF 보기 기능 (cdnjs.cloudflare.com)')"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('PDF 저장 기능 (cdn.jsdelivr.net)')"></script>
 <script>
   const SUPABASE_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg'
