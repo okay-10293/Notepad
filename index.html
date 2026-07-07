@@ -629,11 +629,36 @@
 <script>
   const SUPABASE_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg'
-  const { createClient } = supabase
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+  // supabase 전역 객체가 없으면(라이브러리 로드 실패/차단) 여기서 바로 던지면
+  // 아래에 있는 모든 함수 정의와 init() 호출까지 전부 실행되지 않아 화면이 영원히 멈추므로 방어적으로 처리
+  let sb = null
+  if (typeof supabase !== 'undefined' && supabase && supabase.createClient) {
+    const { createClient } = supabase
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  } else {
+    window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('로그인/저장 기능 (cdn.jsdelivr.net에서 정상적으로 응답받지 못함)')
+  }
 
   let currentUser = null, notes = [], activeNote = null, saveTimer = null, appInitialized = false
   let sortMode = 'date', selectMode = false, selectedIds = new Set()
+
+  // 핵심 라이브러리(Supabase)가 없을 때 로딩 화면에 에러 상태를 띄움 (watchdog과 동일한 UI 재사용)
+  function showBootFailure(msg) {
+    if (window.__initWatchdog) clearTimeout(window.__initWatchdog)
+    const spinner = document.getElementById('initSpinner')
+    const text = document.getElementById('initLoadingText')
+    if (spinner) spinner.style.display = 'none'
+    if (text) {
+      const errs = window.__scriptLoadErrors || []
+      const detail = errs.length ? ('<br><span style="font-size:0.75rem; color:#c0392b;">불러오지 못한 항목: ' + errs.join(', ') + '</span>') : ''
+      text.innerHTML = msg + detail +
+        '<br>네트워크(와이파이/데이터)를 바꿔서 다시 시도해보세요.<br>' +
+        '<button onclick="location.reload()" style="margin-top:0.6rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">새로고침</button>' +
+        '<div style="margin-top:1rem; font-size:0.78rem; color:#6b6558;">이 화면이 계속 뜨면, 이 화면을 캡처해서<br>아래 문의하기로 보내주세요.</div>' +
+        '<button onclick="window.__watchdogContact()" style="margin-top:0.5rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">문의하기</button>'
+    }
+  }
 
   // ── AdSense: 로그인하지 않은 랜딩 화면에서만 로드 (앱 화면엔 절대 노출 안 함) ──
   let adsLoaded = false
@@ -652,6 +677,13 @@
   async function init() {
     // 메인 스크립트가 정상적으로 여기까지 도달했으므로 조기 안전장치는 해제
     if (window.__initWatchdog) clearTimeout(window.__initWatchdog)
+
+    if (!sb) {
+      // 로그인 기능의 핵심 라이브러리를 못 불러온 상태 - 억지로 진행하지 않고 바로 에러 화면 표시
+      showBootFailure('로그인 기능을 불러오지 못했어요.')
+      return
+    }
+
     const loadingEl = document.getElementById('initLoading')
     let settled = false
     // 세션 확인이 비정상적으로 오래 걸리는 경우를 대비한 안전장치 (8초)
