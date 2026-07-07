@@ -213,9 +213,26 @@
         : ''
       text.innerHTML = '불러오는 데 문제가 있어요.' + detail +
         '<br>네트워크(와이파이/데이터)를 바꿔서 다시 시도해보세요.<br>' +
-        '<button onclick="location.reload()" style="margin-top:0.6rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">새로고침</button>'
+        '<button onclick="location.reload()" style="margin-top:0.6rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">새로고침</button>' +
+        '<div style="margin-top:1rem; font-size:0.78rem; color:#6b6558;">이 화면이 계속 뜨면, 이 화면을 캡처해서<br>아래 문의하기로 보내주세요.</div>' +
+        '<button onclick="window.__watchdogContact()" style="margin-top:0.5rem; padding:0.4rem 1rem; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer;">문의하기</button>'
     }
   }, 7000)
+
+  // 메인 앱 스크립트가 아예 실행되지 못한 경우에도 동작해야 하므로,
+  // 외부 라이브러리나 앱 함수에 의존하지 않는 독립적인 문의하기(메일) 기능
+  window.__watchdogContact = function () {
+    var errs = (window.__scriptLoadErrors || []).join(', ') || '알 수 없음'
+    var subject = encodeURIComponent('[OkayNotepad] 로딩 오류 문의')
+    var body = encodeURIComponent(
+      '로딩 화면에서 계속 멈춰요.\n' +
+      '불러오지 못한 항목: ' + errs + '\n\n' +
+      '(화면 캡처를 첨부해서 보내주세요)\n\n' +
+      '문의 내용:\n'
+    )
+    window.location.href = 'mailto:okayt10293@gmail.com?subject=' + subject + '&body=' + body
+  }
+
 </script>
 
 <!-- ── Landing ── -->
@@ -594,11 +611,15 @@
       function () { exposePdfjsLib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js') },
       function () {
         window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 - 1차 경로(cdnjs.cloudflare.com) 실패, 대체 경로 시도 중')
-        loadScript(
-          'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.js',
-          function () { exposePdfjsLib('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.js') },
-          function () { window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)') }
-        )
+        // v4.x부터 jsdelivr는 구식(.js) 파일을 더 이상 제공하지 않고 ESM(.mjs)만 제공하므로 동적 import 사용
+        import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.mjs')
+          .then(function (mod) {
+            window.pdfjsLib = mod
+            mod.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs'
+          })
+          .catch(function () {
+            window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)')
+          })
       }
     )
   })()
