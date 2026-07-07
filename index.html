@@ -572,7 +572,38 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('로그인/저장 기능 (cdn.jsdelivr.net)')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('PDF 보기 기능 (cdnjs.cloudflare.com)')"></script>
+
+<!-- PDF 뷰어 라이브러리: cdnjs가 막혀 있는 네트워크(학교/회사/공유기 필터 등)에서도 동작하도록
+     1차(cdnjs) 실패 시 2차(jsdelivr)로 자동 전환해서 불러옴 -->
+<script>
+  (function () {
+    function loadScript(src, onload, onerror) {
+      const s = document.createElement('script')
+      s.src = src
+      s.onload = onload
+      s.onerror = onerror
+      document.head.appendChild(s)
+    }
+    function exposePdfjsLib(workerSrc) {
+      // jsdelivr의 legacy 빌드는 전역 이름이 cdnjs 빌드와 달라서 둘 다 확인해 window.pdfjsLib로 통일시킴
+      window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf']
+      if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+    }
+    loadScript(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js',
+      function () { exposePdfjsLib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js') },
+      function () {
+        window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 - 1차 경로(cdnjs.cloudflare.com) 실패, 대체 경로 시도 중')
+        loadScript(
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.js',
+          function () { exposePdfjsLib('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.js') },
+          function () { window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)') }
+        )
+      }
+    )
+  })()
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('PDF 저장 기능 (cdn.jsdelivr.net)')"></script>
 <script>
   const SUPABASE_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
@@ -1421,9 +1452,7 @@ ${body}`
     })
   })
 
-  if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js'
-  }
+  // (PDF.js worker 경로는 상단의 이중 CDN 로더에서 이미 올바르게 설정됨)
 
   init()
 </script>
