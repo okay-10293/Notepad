@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+  APP VERSION: v1.0.1
+  ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
+     화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
+     (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
+      캐시 때문에 옛날 버전이 떠도 바로 구분 가능)
+-->
 <html lang="ko">
 <head>
   <meta name="naver-site-verification" content="9e03a9e3b1493547d8a028e17fea9032965c8e34" />
@@ -193,6 +200,7 @@
 </head>
 <body>
 
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.1</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -825,7 +833,7 @@
     if (!list.length) { el.innerHTML = '<div class="empty-state">아직 노트가 없어요.<br>새 노트를 만들거나 파일을 올려보세요.</div>'; return }
     el.innerHTML = list.map(n => {
       const checked = selectedIds.has(n.id)
-      const activeClass = activeNote?.id === n.id ? 'active' : ''
+      const activeClass = (activeNote && activeNote.id === n.id) ? 'active' : ''
       const selectedStyle = checked ? 'style="background:var(--accent-light); border-color:var(--accent);"' : ''
       const checkbox = selectMode ? `<input type="checkbox" class="note-card-check" ${checked ? 'checked' : ''} onclick="toggleSelectNote('${n.id}', event)" />` : ''
       const clickFn = selectMode ? `toggleSelectNote('${n.id}', event)` : `selectNote('${n.id}')`
@@ -1014,7 +1022,7 @@
     document.getElementById('newPwConfirm').value = ''
     document.getElementById('linkEmail').value = ''
     // 이메일 연동 여부 확인
-    const linkedEmail = currentUser.user_metadata?.linked_email
+    const linkedEmail = currentUser.user_metadata && currentUser.user_metadata.linked_email
     if (linkedEmail) {
       document.getElementById('emailLinkedInfo').style.display = 'block'
       document.getElementById('emailLinkedInfo').textContent = '✅ 연동된 이메일: ' + linkedEmail
@@ -1252,7 +1260,7 @@ ${body}`
 
   // noteId를 명시하면 그 노트로, 생략하면 현재 열려있는 노트(activeNote)로 업로드
   async function uploadFilesRaw(rawFiles, noteId) {
-    noteId = noteId || activeNote?.id
+    noteId = noteId || (activeNote && activeNote.id)
     if (!noteId) return
     let files = Array.from(rawFiles)
     const oversized = files.filter(f => f.size > MAX_FILE_SIZE)
@@ -1266,7 +1274,7 @@ ${body}`
     const ts = Date.now()
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
-      const ext = file.name?.split('.').pop() || file.type.split('/')[1] || 'bin'
+      const ext = (file.name && file.name.split('.').pop()) || file.type.split('/')[1] || 'bin'
       const originalName = file.name || `paste_${ts}_${i}.${ext}`
       const safeName = originalName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
       // 서버 저장명: 충돌 방지용 prefix, 원본명은 metadata로 보존
