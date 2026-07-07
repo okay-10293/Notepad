@@ -149,6 +149,8 @@
     .attach-file { display: flex; align-items: center; gap: 0.4rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.8rem; color: var(--ink-2); cursor: pointer; text-decoration: none; max-width: 180px; height: 112px; flex-direction: column; justify-content: center; text-align: center; }
     .attach-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
     .attach-del { position: absolute; top: -6px; right: -6px; background: #c0392b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 20px; text-align: center; padding: 0; z-index: 2; }
+    .attach-download { position: absolute; top: -6px; left: -6px; background: var(--accent); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 20px; text-align: center; padding: 0; z-index: 2; }
+    .attach-download:hover { background: #2e4430; }
 
     /* ── PDF 필기 뷰어 ── */
     .pdf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
@@ -156,6 +158,11 @@
     .pdf-tools { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     #pdfPenColor { width: 32px; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: none; }
     #pdfPenWidth { width: 90px; cursor: pointer; }
+    #pdfPenOpacity { width: 90px; cursor: pointer; }
+    .pdf-tool-group { display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; border-right: 1px solid var(--border); }
+    .pdf-tool-group:last-of-type { border-right: none; }
+    .pdf-tool-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--ink-2); white-space: nowrap; }
+    .pdf-tools input:disabled { opacity: 0.35; cursor: not-allowed; }
     .pdf-pages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; background: var(--bg); }
     .pdf-page-wrap { position: relative; box-shadow: 0 2px 12px rgba(0,0,0,0.12); background: #fff; max-width: 100%; }
     .pdf-page-wrap canvas { display: block; max-width: 100%; height: auto; }
@@ -437,7 +444,7 @@
   <div class="shelf-view" id="shelfView">
     <div class="shelf-header">
       <div class="shelf-header-top">
-        <span class="sidebar-logo">📚 책장</span>
+        <span class="sidebar-logo">책장</span>
         <div style="display:flex; gap:0.5rem;">
           <button class="logout-btn" onclick="openSettings()">설정</button>
           <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
@@ -480,7 +487,6 @@
           <input type="file" id="fileInput" multiple style="display:none;" onchange="uploadFiles(event)" />
         </label>
         <button class="icon-btn" onclick="downloadNote()" title="노트 다운로드">⬇ 다운로드</button>
-        <button class="icon-btn" id="downloadAllBtn" onclick="downloadAllAttachments()" title="첨부파일 전체 다운로드">📦 전체 다운로드</button>
         <button class="btn-danger" onclick="deleteNote()">삭제</button>
       </div>
     </div>
@@ -515,10 +521,16 @@
     <button class="icon-btn" onclick="closePdfAnnotate()">✕ 닫기</button>
     <span class="pdf-filename" id="pdfFileName"></span>
     <div class="pdf-tools">
-      <button class="icon-btn active" id="pdfPenBtn" onclick="setPdfTool('pen')">✏️ 펜</button>
-      <input type="color" id="pdfPenColor" value="#e74c3c" title="펜 색상" />
-      <input type="range" id="pdfPenWidth" min="1" max="14" value="3" title="굵기" />
-      <button class="icon-btn" id="pdfEraserBtn" onclick="setPdfTool('eraser')">🧹 지우개</button>
+      <div class="pdf-tool-group">
+        <button class="icon-btn active" id="pdfPenBtn" onclick="setPdfTool('pen')">✏️ 펜</button>
+        <button class="icon-btn" id="pdfHighlighterBtn" onclick="setPdfTool('highlighter')">🖍️ 형광펜</button>
+        <button class="icon-btn" id="pdfEraserBtn" onclick="setPdfTool('eraser')">🧹 지우개</button>
+      </div>
+      <div class="pdf-tool-group">
+        <label class="pdf-tool-label">색상<input type="color" id="pdfPenColor" value="#e74c3c" title="색상" /></label>
+        <label class="pdf-tool-label">굵기<input type="range" id="pdfPenWidth" min="1" max="40" value="3" title="굵기" /></label>
+        <label class="pdf-tool-label">투명도<input type="range" id="pdfPenOpacity" min="10" max="100" value="100" title="투명도" /></label>
+      </div>
       <button class="icon-btn" onclick="clearPdfAnnotations()">전체 지우기</button>
       <button class="btn btn-primary" onclick="savePdfAnnotation()" id="pdfSaveBtn">책장에 저장</button>
     </div>
@@ -702,8 +714,6 @@
     document.getElementById('noteTitle').value = activeNote.title || ''
     document.getElementById('noteBody').value = activeNote.body || ''
     document.getElementById('saveStatus').textContent = '저장됨'
-    const dab = document.getElementById('downloadAllBtn')
-    if (dab) dab.style.display = 'none'
     loadAttachments(activeNote.id)
   }
 
@@ -765,14 +775,11 @@
 
   async function loadAttachments(noteId) {
     const container = document.getElementById('attachArea')
-    const btn = document.getElementById('downloadAllBtn')
     const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${noteId}`)
     if (error || !data || !data.length) {
       container.innerHTML = ''
-      if (btn) btn.style.display = 'none'
       return
     }
-    if (btn) btn.style.display = ''
     container.innerHTML = data.map(file => {
       const path = `${currentUser.id}/${noteId}/${file.name}`
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
@@ -784,7 +791,7 @@
         ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
         : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
       // 원본 값은 data 속성에 저장 — onclick 인자 인젝션 완전 방지
-      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}">${inner}<button class="attach-del">✕</button></div>`
+      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}"><button class="attach-download" title="다운로드">⬇</button>${inner}<button class="attach-del">✕</button></div>`
     }).join('')
     container.querySelectorAll('.attach-item').forEach(item => {
       const rawUrl  = unescHtml(item.dataset.url)
@@ -793,6 +800,10 @@
       const clickEl = item.querySelector('img, .attach-file')
       if (clickEl) clickEl.addEventListener('click', () => openAttachment(rawUrl, rawName, rawPath))
       item.querySelector('.attach-del').addEventListener('click', () => deleteAttachment(rawPath))
+      item.querySelector('.attach-download').addEventListener('click', (e) => {
+        e.stopPropagation()
+        downloadFile(rawUrl, rawName)
+      })
     })
   }
 
@@ -829,50 +840,6 @@
   function downloadCurrentFileInfo() {
     if (!fileInfoCurrent) return
     downloadFile(fileInfoCurrent.url, fileInfoCurrent.name)
-  }
-
-  // ── 첨부파일 전체 다운로드 ──
-  async function downloadAllAttachments() {
-    if (!activeNote) return
-    const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${activeNote.id}`)
-    if (error || !data || !data.length) {
-      alert('다운로드할 첨부파일이 없습니다.')
-      return
-    }
-
-    const btn = document.getElementById('downloadAllBtn')
-    const originalText = btn.textContent
-    btn.disabled = true
-
-    for (let i = 0; i < data.length; i++) {
-      const file = data[i]
-      const path = `${currentUser.id}/${activeNote.id}/${file.name}`
-      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
-      const url = urlData.publicUrl
-      const originalName = file.name.replace(/^\d+_\d+_/, '') || file.name
-
-      btn.textContent = `⏳ ${i + 1}/${data.length} 다운로드 중...`
-
-      try {
-        const res = await fetch(url)
-        if (!res.ok) throw new Error('fetch failed')
-        const blob = await res.blob()
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = originalName
-        a.click()
-        URL.revokeObjectURL(a.href)
-        // 브라우저가 다운로드를 처리할 시간을 줌
-        await new Promise(r => setTimeout(r, 800))
-      } catch (e) {
-        console.error('파일 다운로드 실패:', originalName, e)
-        window.open(url)
-        await new Promise(r => setTimeout(r, 800))
-      }
-    }
-
-    btn.textContent = originalText
-    btn.disabled = false
   }
 
   async function deleteAttachment(path) {
@@ -1163,8 +1130,13 @@ ${body}`
     }
   }
 
-  // ── PDF 필기(펜/지우개) 뷰어 ──
+  // ── PDF 필기(펜/형광펜/지우개) 뷰어 ──
   let pdfPagesData = [], pdfTool = 'pen', pdfHasUnsaved = false
+  // 도구별 설정(색상/굵기/투명도)을 따로 기억해서 전환해도 유지되도록 함
+  let pdfToolSettings = {
+    pen: { color: '#e74c3c', width: 3, opacity: 100 },
+    highlighter: { color: '#fff176', width: 18, opacity: 35 }
+  }
 
   async function openPdfAnnotate(url, name) {
     pdfHasUnsaved = false
@@ -1227,12 +1199,23 @@ ${body}`
       }
     }
     const strokeTo = (x1, y1, x2, y2) => {
-      ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
       if (pdfTool === 'eraser') {
+        ctx.lineCap = 'round'
         ctx.globalCompositeOperation = 'destination-out'
+        ctx.globalAlpha = 1
         ctx.lineWidth = 26
+      } else if (pdfTool === 'highlighter') {
+        // 형광펜: 굵고 반투명하게, 겹쳐 칠해도 너무 진해지지 않도록 multiply 블렌드 사용
+        ctx.lineCap = 'butt'
+        ctx.globalCompositeOperation = 'multiply'
+        ctx.globalAlpha = Number(document.getElementById('pdfPenOpacity').value) / 100
+        ctx.strokeStyle = document.getElementById('pdfPenColor').value
+        ctx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
       } else {
+        ctx.lineCap = 'round'
         ctx.globalCompositeOperation = 'source-over'
+        ctx.globalAlpha = Number(document.getElementById('pdfPenOpacity').value) / 100
         ctx.strokeStyle = document.getElementById('pdfPenColor').value
         ctx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
       }
@@ -1260,7 +1243,33 @@ ${body}`
   function setPdfTool(tool) {
     pdfTool = tool
     document.getElementById('pdfPenBtn').classList.toggle('active', tool === 'pen')
+    document.getElementById('pdfHighlighterBtn').classList.toggle('active', tool === 'highlighter')
     document.getElementById('pdfEraserBtn').classList.toggle('active', tool === 'eraser')
+
+    const colorInput = document.getElementById('pdfPenColor')
+    const widthInput = document.getElementById('pdfPenWidth')
+    const opacityInput = document.getElementById('pdfPenOpacity')
+    const isEraser = tool === 'eraser'
+    colorInput.disabled = isEraser
+    opacityInput.disabled = isEraser
+
+    if (!isEraser) {
+      // 펜/형광펜은 각자 마지막으로 쓰던 색상·굵기·투명도를 불러옴
+      const s = pdfToolSettings[tool]
+      colorInput.value = s.color
+      widthInput.value = s.width
+      opacityInput.value = s.opacity
+    }
+  }
+
+  // 펜/형광펜 설정이 바뀌면 해당 도구 설정으로 저장해둠 (도구 전환 시 유지됨)
+  function savePdfToolSetting() {
+    if (pdfTool !== 'pen' && pdfTool !== 'highlighter') return
+    pdfToolSettings[pdfTool] = {
+      color: document.getElementById('pdfPenColor').value,
+      width: Number(document.getElementById('pdfPenWidth').value),
+      opacity: Number(document.getElementById('pdfPenOpacity').value)
+    }
   }
 
   function clearPdfAnnotations() {
@@ -1330,6 +1339,11 @@ ${body}`
     if (!iso) return ''
     return new Date(iso).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
+
+  // ── PDF 펜 설정 변경 감지 ──
+  ;['pdfPenColor', 'pdfPenWidth', 'pdfPenOpacity'].forEach(id => {
+    document.getElementById(id).addEventListener('input', savePdfToolSetting)
+  })
 
   // ── Modal bg click ──
   ['authModal','contactModal','settingsModal','fileInfoModal'].forEach(id => {
