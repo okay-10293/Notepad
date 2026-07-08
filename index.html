@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.0.8
+  APP VERSION: v1.0.9
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -222,7 +222,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.8</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.9</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -1038,7 +1038,7 @@
       item.querySelector('.attach-del').addEventListener('click', () => deleteAttachment(rawPath))
       item.querySelector('.attach-download').addEventListener('click', (e) => {
         e.stopPropagation()
-        downloadFile(rawUrl, rawName)
+        downloadFile(rawPath, rawName)
       })
       item.querySelector('.attach-rename').addEventListener('click', (e) => {
         e.stopPropagation()
@@ -1055,7 +1055,7 @@
     } else if (ext === 'pdf') {
       openPdfAnnotate(url, name, path)
     } else {
-      openFileInfoModal(url, name)
+      openFileInfoModal(url, name, path)
     }
   }
 
@@ -1070,8 +1070,8 @@
   }
 
   let fileInfoCurrent = null
-  function openFileInfoModal(url, name) {
-    fileInfoCurrent = { url, name }
+  function openFileInfoModal(url, name, path) {
+    fileInfoCurrent = { url, name, path }
     document.getElementById('fileInfoIcon').textContent = getFileIcon(name)
     document.getElementById('fileInfoName').textContent = name
     document.getElementById('fileInfoModal').classList.add('open')
@@ -1079,7 +1079,7 @@
   function closeFileInfoModal() { document.getElementById('fileInfoModal').classList.remove('open') }
   function downloadCurrentFileInfo() {
     if (!fileInfoCurrent) return
-    downloadFile(fileInfoCurrent.url, fileInfoCurrent.name)
+    downloadFile(fileInfoCurrent.path, fileInfoCurrent.name)
   }
 
   async function deleteAttachment(path) {
@@ -1089,10 +1089,11 @@
     loadAttachments(activeNote.id)
   }
 
-  // 첨부파일 이름 바꾸기 — 저장 경로(key)는 그대로 두고, 화면에 표시되는
-  // originalName 메타데이터만 새 이름으로 바꾼다. Supabase Storage는 메타데이터만
-  // 따로 갱신하는 API가 없어서, 기존 파일 내용을 그대로 다시 불러와 같은 경로에
-  // upsert로 재업로드하면서 metadata만 새 값으로 바꾸는 방식으로 구현했다.
+  // 첨부파일 이름 바꾸기 — Storage 버킷의 RLS 정책이 보통 새 파일 업로드(INSERT)와
+  // 삭제(DELETE)만 허용하고 기존 파일 수정(UPDATE)은 막아두는 경우가 많아서,
+  // update()/upsert로 같은 경로에 덮어쓰려고 하면 "new row violates row-level
+  // security policy" 오류가 났다. 그래서 기존 파일을 새 이름으로 다시 "업로드"한 뒤
+  // 예전 파일은 "삭제"하는 방식(이미 정상 동작하는 두 기능만 사용)으로 바꿨다.
   async function renameAttachment(path, currentName) {
     if (!activeNote) return
     const input = prompt('새 파일 이름을 입력하세요', currentName)
@@ -1104,11 +1105,16 @@
       const res = await fetch(urlData.publicUrl)
       if (!res.ok) throw new Error('파일을 불러오지 못했어요 (' + res.status + ')')
       const blob = await res.blob()
-      const { error } = await sb.storage.from('images').update(path, blob, {
-        upsert: true,
+      const folder = path.substring(0, path.lastIndexOf('/'))
+      const safeName = trimmed.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      const newPath = `${folder}/${Date.now()}_0_${safeName}`
+      const { error: upErr } = await sb.storage.from('images').upload(newPath, blob, {
+        upsert: false,
         metadata: { originalName: trimmed }
       })
-      if (error) throw error
+      if (upErr) throw upErr
+      const { error: delErr } = await sb.storage.from('images').remove([path])
+      if (delErr) console.error('예전 파일 삭제 실패(새 이름으로는 저장됨):', delErr)
       loadAttachments(activeNote.id)
     } catch (e) {
       console.error(e)
@@ -1216,24 +1222,44 @@
   }
 
   // ── Download ──
-  // 예전에는 fetch로 먼저 파일을 통째로 받아 Blob으로 만든 뒤 다운로드했는데,
-  // 이 fetch가 끝날 때까지 기다리는 동안(await) 브라우저가 "사용자가 방금 클릭했다"는
-  // 상태(user activation)를 잃어버려서, 특히 모바일 사파리나 카카오톡 등 인앱 브라우저에서
-  // 다운로드 대신 그냥 파일이 열려버리는 문제가 있었다 (PDF는 미리보기가 되니 특히 눈에 띔).
-  // 그래서 fetch 없이, 클릭한 바로 그 순간(동기적으로) Supabase Storage의 ?download=
-  // 파라미터가 붙은 URL로 즉시 이동시킨다. 서버가 Content-Disposition: attachment 헤더를
-  // 내려주기 때문에 브라우저 자체 다운로드 기능이 동작해서 훨씬 안정적으로 저장된다.
-  function downloadFile(url, name) {
+  // 1순위: fetch로 파일을 직접 받아 로컬 Blob으로 만든 뒤 그 Blob URL(우리 페이지와
+  //        같은 출처로 취급됨)에 download 속성을 걸어 저장 — 대부분의 브라우저에서
+  //        가장 확실하게 "다운로드"로 동작하는 방식.
+  // 2순위(1순위가 CORS 등으로 실패했을 때만): Supabase의 공식 SDK 옵션
+  //        getPublicUrl(path, { download }) 으로 만든 URL로 이동 — 서버가
+  //        Content-Disposition: attachment 헤더를 내려줘서 다운로드를 강제한다.
+  //        (예전에는 이 URL을 직접 문자열로 조립했는데 형식이 서버와 맞지 않아
+  //         다운로드 대신 그냥 파일이 열려버리는 원인이 됐을 수 있어, 공식 SDK
+  //         옵션으로 만들도록 바꿨다.)
+  // ※ 카카오톡/네이버 등 일부 인앱 브라우저는 자체적으로 파일 다운로드 기능을
+  //   지원하지 않아 위 두 방법을 모두 써도 다운로드 대신 미리보기만 될 수 있다.
+  //   그런 경우 우측 상단 메뉴에서 "다른 브라우저로 열기"(Chrome/Safari 등)를
+  //   선택한 뒤 다시 시도하면 정상적으로 다운로드된다.
+  async function downloadFile(path, name) {
     const fileName = name || 'file'
-    const sep = url.includes('?') ? '&' : '?'
-    const a = document.createElement('a')
-    a.href = url + sep + 'download=' + encodeURIComponent(fileName)
-    a.download = fileName
-    a.rel = 'noopener'
-    a.target = '_self'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    try {
+      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
+      const res = await fetch(urlData.publicUrl)
+      if (!res.ok) throw new Error('다운로드 요청 실패: ' + res.status)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+      console.error('직접 다운로드 실패, 강제 다운로드 URL로 재시도:', e)
+      const { data: dlUrlData } = sb.storage.from('images').getPublicUrl(path, { download: fileName })
+      const a = document.createElement('a')
+      a.href = dlUrlData.publicUrl
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
   }
 
   function downloadNote() {
