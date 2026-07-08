@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.0.1
+  APP VERSION: v1.0.2
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -200,7 +200,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.1</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.2</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -598,10 +598,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('로그인/저장 기능 (cdn.jsdelivr.net)')"></script>
 
-<!-- PDF 뷰어 라이브러리: cdnjs가 막혀 있는 네트워크(학교/회사/공유기 필터 등)에서도 동작하도록
-     1차(cdnjs) 실패 시 2차(jsdelivr)로 자동 전환해서 불러옴 -->
+<!-- PDF 뷰어 라이브러리: 구버전(3.11.174) 사용 - 최신 버전(4.x)은 최근 추가된 JS 기능에
+     의존하고 옛날 방식(.js) 파일을 더 이상 제공하지 않아 오래된 Safari/iOS 등에서 아예 동작하지
+     않는 경우가 있어, 모든 브라우저에서 안정적으로 동작하는 이 버전으로 고정함.
+     cdnjs 실패 시 jsdelivr로 자동 전환 (양쪽 다 동일한 옛날 방식 .js 파일 제공) -->
 <script>
   (function () {
+    var PDFJS_VERSION = '3.11.174'
     function loadScript(src, onload, onerror) {
       const s = document.createElement('script')
       s.src = src
@@ -609,25 +612,19 @@
       s.onerror = onerror
       document.head.appendChild(s)
     }
-    function exposePdfjsLib(workerSrc) {
-      // jsdelivr의 legacy 빌드는 전역 이름이 cdnjs 빌드와 달라서 둘 다 확인해 window.pdfjsLib로 통일시킴
-      window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf']
+    function setWorker(workerSrc) {
       if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
     }
     loadScript(
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js',
-      function () { exposePdfjsLib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js') },
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.min.js',
+      function () { setWorker('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.worker.min.js') },
       function () {
         window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 - 1차 경로(cdnjs.cloudflare.com) 실패, 대체 경로 시도 중')
-        // v4.x부터 jsdelivr는 구식(.js) 파일을 더 이상 제공하지 않고 ESM(.mjs)만 제공하므로 동적 import 사용
-        import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.mjs')
-          .then(function (mod) {
-            window.pdfjsLib = mod
-            mod.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs'
-          })
-          .catch(function () {
-            window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)')
-          })
+        loadScript(
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.js',
+          function () { setWorker('https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.js') },
+          function () { window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)') }
+        )
       }
     )
   })()
