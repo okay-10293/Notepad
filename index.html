@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.0.6
+  APP VERSION: v1.0.7
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -219,7 +219,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.6</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.7</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -1176,21 +1176,36 @@
   }
 
   // ── Download ──
-  // Supabase Storage 공개 URL 뒤에 ?download= 파라미터를 붙이면 서버가 직접
-  // Content-Disposition: attachment 헤더를 내려줘서, 브라우저가 파일을 그냥 열어버리지 않고
-  // 항상 다운로드하도록 강제할 수 있다.
-  // (예전에는 fetch로 파일을 받아 Blob으로 변환하는 방식이었는데, 이 fetch가 실패하면
-  //  — 크로스 오리진 요청이 막히는 경우 등 — 그냥 새 탭에서 파일을 여는 것으로 대체되어버려서
-  //  PDF 등을 다운로드 대신 미리보기로 열어버리는 문제가 있었음)
-  function downloadFile(url, name) {
-    const sep = url.includes('?') ? '&' : '?'
-    const downloadUrl = url + sep + 'download=' + encodeURIComponent(name || 'file')
-    const a = document.createElement('a')
-    a.href = downloadUrl
-    a.rel = 'noopener'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+  // 1순위: fetch로 파일을 직접 받아 로컬 Blob으로 만든 뒤 download 속성으로 저장.
+  //        서버/CDN 캐시 설정과 무관하게 항상 동작하는 가장 확실한 방법.
+  // 2순위(1순위가 CORS 등으로 막혔을 때): Supabase Storage의 ?download= 파라미터를 붙인
+  //        URL로 이동 — 서버가 Content-Disposition: attachment 헤더를 내려줘서 다운로드를 강제한다.
+  //        (예전에는 이 fetch가 실패하면 그냥 새 탭에서 파일을 열어버려서, PDF 등이
+  //         다운로드 대신 미리보기로 열려버리는 문제가 있었음)
+  async function downloadFile(url, name) {
+    const fileName = name || 'file'
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('다운로드 요청 실패: ' + res.status)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+      console.error('직접 다운로드 실패, 강제 다운로드 URL로 재시도:', e)
+      const sep = url.includes('?') ? '&' : '?'
+      const a = document.createElement('a')
+      a.href = url + sep + 'download=' + encodeURIComponent(fileName)
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
   }
 
   function downloadNote() {
@@ -1573,9 +1588,13 @@ ${body}`
       }
       const fileName = document.getElementById('pdfFileName').textContent || 'file.pdf'
       const baseName = fileName.replace(/\.pdf$/i, '')
-      const safeName = baseName.replace(/[^a-zA-Z0-9.\-_가-힣]/g, '_')
+      // 저장 경로(key)는 Supabase Storage 서버가 영문/숫자/일부 기호만 허용하고
+      // 한글 등 비-ASCII 문자는 거부한다 ("Invalid key" 오류의 원인이었음).
+      // 화면에 보여줄 원본 파일명은 metadata.originalName에 한글 그대로 저장하고,
+      // 실제 저장 경로(key)에 들어가는 부분만 영문/숫자로 안전하게 치환한다.
+      const safeName = baseName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
       const ts = Date.now()
-      const path = `${currentUser.id}/${activeNote.id}/${ts}_0_${safeName}_주석.pdf`
+      const path = `${currentUser.id}/${activeNote.id}/${ts}_0_${safeName}_annotated.pdf`
       const { error } = await sb.storage.from('images').upload(path, new Blob([pdfBytes], { type: 'application/pdf' }), {
         upsert: false,
         metadata: { originalName: `${baseName}_주석.pdf` }
