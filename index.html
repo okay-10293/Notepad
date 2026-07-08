@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.2.0
+  APP VERSION: v1.3.0
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -222,7 +222,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.2.0</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.0</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -609,6 +609,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
     </button>
     <span class="pdf-filename" id="pdfFileName"></span>
+    <span id="pdfSaveStatus" style="font-size:0.75rem; color:var(--ink-3); margin-left:-0.5rem; white-space:nowrap;"></span>
     <div class="pdf-tools">
       <div class="pdf-tool-group">
         <button class="pdf-tool-btn active" id="pdfPenBtn" onclick="setPdfTool('pen')" title="펜">
@@ -654,10 +655,6 @@
       <button class="btn btn-ghost" onclick="downloadPdfAnnotation()" id="pdfDownloadBtn" style="display:flex; align-items:center; gap:0.4rem;">
         <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
         <span id="pdfDownloadBtnLabel">이 기기에 저장</span>
-      </button>
-      <button class="btn btn-primary" onclick="savePdfAnnotation()" id="pdfSaveBtn" style="display:flex; align-items:center; gap:0.4rem;">
-        <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
-        <span id="pdfSaveBtnLabel">책장에 저장</span>
       </button>
     </div>
   </div>
@@ -1022,7 +1019,11 @@
       // 원본 파일명: 업로드 시 저장해둔 metadata.originalName이 있으면 그걸 우선 사용
       // (한글 등 비-ASCII 이름도 그대로 보존됨), 없으면 서버 저장명(ts_i_safeName)에서
       // prefix를 제거해 대체 표시한다.
-      const originalName = (file.metadata && file.metadata.originalName) || file.name.replace(/^\d+_\d+_/, '') || file.name
+      // metadata는 서버로 HTTP 헤더에 실려 전달되는데, 헤더는 원래 한글 같은 비-ASCII
+      // 문자를 있는 그대로 담지 못한다(깨지거나 유실됨). 그래서 저장할 때는 항상
+      // encodeURIComponent로 안전한 ASCII 문자열로 바꿔서 넣어두고, 보여줄 때 여기서
+      // 다시 decodeURIComponent로 원래 한글 이름을 복원한다.
+      const originalName = safeDecodeName((file.metadata && file.metadata.originalName)) || file.name.replace(/^\d+_\d+_/, '') || file.name
       const inner = isImage
         ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
         : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
@@ -1086,6 +1087,8 @@
     if (!activeNote) return
     if (!confirm('이 파일을 삭제할까요?')) return
     await sb.storage.from('images').remove([path])
+    // PDF라면 같이 저장돼있던 필기 레이어(사이드카 파일)도 함께 정리한다.
+    try { await sb.storage.from('images').remove([pdfInkKey(path)]) } catch (e) { /* 없으면 무시 */ }
     loadAttachments(activeNote.id)
   }
 
@@ -1124,7 +1127,9 @@
       const newPath = `${folder}/${Date.now()}_0_${safeName}`
       const { error: upErr } = await sb.storage.from('images').upload(newPath, blob, {
         upsert: false,
-        metadata: { originalName: trimmed }
+        // encodeURIComponent: metadata는 HTTP 헤더로 전달되어 한글 등 비-ASCII 문자가
+        // 그대로 들어가면 깨지거나 사라질 수 있어, ASCII로 안전하게 인코딩해서 저장한다.
+        metadata: { originalName: encodeURIComponent(trimmed) }
       })
       if (upErr) throw upErr
       // 업로드한 새 파일이 실제로 원본과 같은 크기로 잘 올라갔는지 다시 한번 확인한
@@ -1136,6 +1141,16 @@
       }
       const { error: delErr } = await sb.storage.from('images').remove([path])
       if (delErr) console.error('예전 파일 삭제 실패(새 이름으로는 안전하게 저장됨):', delErr)
+      // PDF에 저장해둔 필기 레이어(사이드카 파일)가 있으면 새 경로로 함께 옮겨서
+      // 이름을 바꾼 뒤에도 필기 내용이 사라지지 않게 한다. 실패해도 파일 이름 변경
+      // 자체는 이미 끝났으니 조용히 넘어간다(치명적인 오류로 취급하지 않음).
+      try {
+        const { data: inkBlob } = await sb.storage.from('images').download(pdfInkKey(path))
+        if (inkBlob && inkBlob.size > 0) {
+          await sb.storage.from('images').upload(pdfInkKey(newPath), inkBlob, { upsert: false, contentType: 'application/json' })
+          await sb.storage.from('images').remove([pdfInkKey(path)])
+        }
+      } catch (e) { /* 필기 레이어가 없었거나 이동 실패 — 파일 이름 변경 자체는 정상 완료됨 */ }
       loadAttachments(activeNote.id)
     } catch (e) {
       console.error(e)
@@ -1452,7 +1467,8 @@ ${body}`
       const path = `${currentUser.id}/${noteId}/${ts}_${i}_${safeName}`
       const { error } = await sb.storage.from('images').upload(path, file, {
         upsert: false,
-        metadata: { originalName }
+        // 한글 파일명이 HTTP 메타데이터 헤더에서 깨지지 않도록 ASCII로 인코딩해서 저장
+        metadata: { originalName: encodeURIComponent(originalName) }
       })
       if (error) console.error(error)
     }
@@ -1464,14 +1480,128 @@ ${body}`
 
   // ── PDF 필기(펜/형광펜/지우개) 뷰어 ──
   let pdfPagesData = [], pdfTool = 'pen', pdfHasUnsaved = false
+  // 지금 열려 있는 PDF의 저장 경로(Storage key) — 필기 레이어를 불러오고
+  // "덮어쓰기 저장"할 때 어떤 파일에 대한 필기인지 식별하는 데 쓰인다.
+  let pdfCurrentPath = null
   // 도구별 설정(색상/굵기/투명도)을 따로 기억해서 전환해도 유지되도록 함
   let pdfToolSettings = {
     pen: { color: '#e74c3c', width: 3, opacity: 100 },
     highlighter: { color: '#fff176', width: 18, opacity: 35 }
   }
 
-  async function openPdfAnnotate(url, name) {
+  // 필기 레이어(투명 PNG)를 원본 PDF와 별도로 저장해두는 사이드카 파일의 경로.
+  // 원본 PDF 파일 자체는 절대 건드리지 않고, 필기만 이 파일에 따로 저장했다가
+  // 다시 열 때 얹어서 보여준다. 이렇게 하면 필기가 배경 이미지에 "합쳐지지" 않고
+  // 계속 독립된 레이어로 남아있어서, 나중에 다시 열어도 여전히 지우거나 고칠 수 있다.
+  function pdfInkKey(path) { return `${path}.ink.json` }
+
+  // 저장된 필기 레이어를 불러온다. 저장된 적이 없으면 null을 돌려준다(정상 상황).
+  async function loadPdfInkLayers(path) {
+    try {
+      const { data: blob, error } = await sb.storage.from('images').download(pdfInkKey(path))
+      if (error || !blob) return null
+      const text = await blob.text()
+      const json = JSON.parse(text)
+      return (json && Array.isArray(json.pages)) ? json.pages : null
+    } catch (e) {
+      return null
+    }
+  }
+
+  // 페이지별 필기 레이어(투명 PNG data URL 배열)를 사이드카 파일에 저장한다.
+  // Storage 버킷 RLS가 보통 기존 파일 수정(UPDATE)은 막고 업로드(INSERT)/삭제(DELETE)만
+  // 허용하므로, "덮어쓰기"는 기존 사이드카를 지우고 같은 이름으로 다시 올리는 방식으로 한다.
+  async function savePdfInkLayers(path, pagesDataUrls) {
+    const key = pdfInkKey(path)
+    const json = JSON.stringify({ pages: pagesDataUrls, savedAt: Date.now() })
+    if (json.length > MAX_FILE_SIZE) {
+      throw new Error('필기 내용이 너무 많아서 저장할 수 없어요. 일부 페이지의 필기를 지우고 다시 시도해주세요.')
+    }
+    try { await sb.storage.from('images').remove([key]) } catch (e) { /* 기존 사이드카가 없으면 무시 */ }
+    const blob = new Blob([json], { type: 'application/json' })
+    const { error } = await sb.storage.from('images').upload(key, blob, { upsert: false, contentType: 'application/json' })
+    if (error) throw error
+  }
+
+  // 저장해둔 필기 PNG를 캔버스 위에 그대로 얹는다 — 새로 그린 획과 똑같이 취급되어
+  // pointer 이벤트로 계속 지우거나 덧그릴 수 있다(배경에 "고정"되지 않음).
+  function drawSavedInkOnto(ctx, dataUrl, w, h) {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => { ctx.drawImage(img, 0, 0, w, h); resolve() }
+      img.onerror = () => resolve() // 손상된 데이터는 조용히 무시하고 빈 상태로 계속 진행
+      img.src = dataUrl
+    })
+  }
+
+  // ── 필기 자동 저장 ──
+  // 버튼을 눌러야만 저장되던 방식은, 저장을 깜빡하고 앱이 꺼지거나(브라우저 튕김,
+  // 실수로 닫기 등) 하면 방금 한 필기가 통째로 날아가는 문제가 있었다. 그래서
+  // 획을 하나 그리거나 지울 때마다 자동으로 저장되도록 바꿨다. 매 획마다 바로
+  // 서버로 보내면 요청이 너무 잦아지므로, 잠깐(1.2초) 손을 멈추면 그때 한 번
+  // 저장하는 디바운스 방식을 쓴다 — 그래도 최근 필기가 몇 초 안에 안전하게
+  // 저장되므로 갑자기 튕겨도 잃어버리는 내용이 거의 없다.
+  let pdfAutoSaveTimer = null
+  let pdfAutoSaveInFlight = false
+  let pdfAutoSaveQueued = false // 저장 중에 또 필기가 생기면, 끝나자마자 한 번 더 저장
+
+  function setPdfSaveStatus(text) {
+    const el = document.getElementById('pdfSaveStatus')
+    if (el) el.textContent = text
+  }
+
+  function schedulePdfAutoSave() {
+    pdfHasUnsaved = true
+    setPdfSaveStatus('저장 대기 중...')
+    if (pdfAutoSaveTimer) clearTimeout(pdfAutoSaveTimer)
+    pdfAutoSaveTimer = setTimeout(runPdfAutoSave, 1200)
+  }
+
+  async function runPdfAutoSave() {
+    pdfAutoSaveTimer = null
+    if (!pdfCurrentPath || !pdfPagesData.length) return
+    if (pdfAutoSaveInFlight) { pdfAutoSaveQueued = true; return }
+    pdfAutoSaveInFlight = true
+    setPdfSaveStatus('저장 중...')
+    try {
+      const pages = pdfPagesData.map(p => p.drawCanvas.toDataURL('image/png'))
+      await savePdfInkLayers(pdfCurrentPath, pages)
+      pdfHasUnsaved = false
+      setPdfSaveStatus('자동 저장됨')
+    } catch (e) {
+      console.error('자동 저장 실패:', e)
+      setPdfSaveStatus('저장 실패 · 잠시 후 재시도')
+      // 네트워크가 잠깐 끊겼을 수 있으니 잠시 후 다시 시도한다
+      pdfAutoSaveTimer = setTimeout(runPdfAutoSave, 4000)
+    } finally {
+      pdfAutoSaveInFlight = false
+      if (pdfAutoSaveQueued) {
+        pdfAutoSaveQueued = false
+        runPdfAutoSave()
+      }
+    }
+  }
+
+  // 필기 화면을 닫기 직전, 아직 저장 안 된(디바운스 대기 중인) 내용이 있으면
+  // 묻지 않고 바로 마저 저장한다 — 저장 여부를 사용자가 신경 쓸 필요가 없게 함.
+  async function flushPdfAutoSave() {
+    if (pdfAutoSaveTimer) { clearTimeout(pdfAutoSaveTimer); pdfAutoSaveTimer = null }
+    if (!pdfHasUnsaved || !pdfCurrentPath || !pdfPagesData.length) return
+    try {
+      const pages = pdfPagesData.map(p => p.drawCanvas.toDataURL('image/png'))
+      await savePdfInkLayers(pdfCurrentPath, pages)
+      pdfHasUnsaved = false
+    } catch (e) {
+      console.error('닫기 전 마지막 저장 실패:', e)
+    }
+  }
+
+  async function openPdfAnnotate(url, name, path) {
     pdfHasUnsaved = false
+    pdfCurrentPath = path || null
+    if (pdfAutoSaveTimer) { clearTimeout(pdfAutoSaveTimer); pdfAutoSaveTimer = null }
+    pdfAutoSaveQueued = false
+    setPdfSaveStatus('')
     document.getElementById('pdfFileName').textContent = name
     document.getElementById('pdfAnnotateOverlay').style.display = 'flex'
     const pagesEl = document.getElementById('pdfPages')
@@ -1485,8 +1615,14 @@ ${body}`
     }
     try {
       const pdf = await pdfjsLib.getDocument(url).promise
+      // 예전에 저장해둔 필기가 있으면 미리 불러와둔다(파일이 없으면 null).
+      const savedInk = pdfCurrentPath ? await loadPdfInkLayers(pdfCurrentPath) : null
       pagesEl.innerHTML = ''
       const containerWidth = Math.min(pagesEl.clientWidth - 48, 760)
+      // 화면 배율(레티나/고해상도 디스플레이)에 맞춰 원본 페이지를 더 높은 해상도로
+      // 렌더링해서, 처음 열었을 때부터 선명하게 보이도록 한다. 너무 큰 캔버스가
+      // 되지 않도록 최대 3배로 제한한다.
+      const dpr = Math.min(window.devicePixelRatio || 1, 3)
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
         const baseViewport = page.getViewport({ scale: 1 })
@@ -1498,9 +1634,15 @@ ${body}`
         wrap.style.width = viewport.width + 'px'
         wrap.style.height = viewport.height + 'px'
 
+        // baseCanvas는 화면 배율(dpr)만큼 더 높은 내부 해상도로 렌더링하고,
+        // CSS 표시 크기는 viewport 크기 그대로 유지해서 화면에서 선명하게 보이게 한다.
         const baseCanvas = document.createElement('canvas')
-        baseCanvas.width = viewport.width; baseCanvas.height = viewport.height
-        await page.render({ canvasContext: baseCanvas.getContext('2d'), viewport }).promise
+        baseCanvas.width = Math.round(viewport.width * dpr)
+        baseCanvas.height = Math.round(viewport.height * dpr)
+        baseCanvas.style.width = viewport.width + 'px'
+        baseCanvas.style.height = viewport.height + 'px'
+        const hiViewport = page.getViewport({ scale: scale * dpr })
+        await page.render({ canvasContext: baseCanvas.getContext('2d'), viewport: hiViewport }).promise
 
         const drawCanvas = document.createElement('canvas')
         drawCanvas.className = 'pdf-draw-canvas'
@@ -1523,6 +1665,11 @@ ${body}`
 
         pdfPagesData.push({ page, baseCanvas, drawCanvas, drawCtx, liveCanvas, liveCtx })
         initPdfPageDrawing(drawCtx, liveCanvas, liveCtx)
+
+        // 이전에 저장해둔 필기가 있으면 drawCanvas 위에 그대로 얹는다.
+        if (savedInk && savedInk[i - 1]) {
+          await drawSavedInkOnto(drawCtx, savedInk[i - 1], drawCanvas.width, drawCanvas.height)
+        }
       }
     } catch (e) {
       console.error(e)
@@ -1594,6 +1741,8 @@ ${body}`
       if (!drawing) return
       drawing = false
       if (pdfTool !== 'eraser') commitLiveStroke()
+      // 획 하나가 끝날 때마다(펜/형광펜/지우개 공통) 자동 저장을 예약한다.
+      schedulePdfAutoSave()
     }
     liveCanvas.addEventListener('pointerup', stop)
     liveCanvas.addEventListener('pointerleave', stop)
@@ -1659,13 +1808,16 @@ ${body}`
       p.drawCtx.clearRect(0, 0, p.drawCanvas.width, p.drawCanvas.height)
       if (p.liveCtx) p.liveCtx.clearRect(0, 0, p.liveCanvas.width, p.liveCanvas.height)
     })
-    pdfHasUnsaved = true
+    schedulePdfAutoSave()
   }
 
-  function closePdfAnnotate() {
-    if (pdfHasUnsaved && !confirm('저장하지 않은 필기가 있어요. 닫을까요?')) return
+  // 이제 필기가 자동으로 저장되므로, 닫을 때 "저장할까요?"라고 물어볼 필요가 없다.
+  // 대신 디바운스 대기 중이던 최근 필기가 있으면 닫기 전에 마저 저장부터 마친다.
+  async function closePdfAnnotate() {
+    await flushPdfAutoSave()
     document.getElementById('pdfAnnotateOverlay').style.display = 'none'
-    pdfPagesData = []; pdfHasUnsaved = false
+    pdfPagesData = []; pdfHasUnsaved = false; pdfCurrentPath = null
+    setPdfSaveStatus('')
   }
 
   // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다.
@@ -1715,49 +1867,9 @@ ${body}`
     return await newPdf.save()
   }
 
-  async function savePdfAnnotation() {
-    if (!activeNote) return
-    if (!pdfPagesData.length || !window.PDFLib) { alert('저장 기능을 사용할 수 없어요.'); return }
-    const fileName = document.getElementById('pdfFileName').textContent || 'file.pdf'
-    const baseName = fileName.replace(/\.pdf$/i, '')
-    const suggested = `${baseName}_주석`
-    // 필기한 내용을 책장에 새 파일로 저장할 때도, 기기에 다운로드할 때처럼 이름을
-    // 사용자가 직접 정할 수 있게 물어본다.
-    const input = prompt('저장할 파일 이름을 입력하세요', suggested)
-    if (input === null) return
-    const displayName = (input.trim() || suggested).replace(/\.pdf$/i, '')
-    const btn = document.getElementById('pdfSaveBtn')
-    const label = document.getElementById('pdfSaveBtnLabel')
-    const originalText = label.textContent
-    btn.disabled = true; label.textContent = '저장 중...'
-    try {
-      const pdfBytes = await buildAnnotatedPdfBytes()
-      if (pdfBytes.byteLength > MAX_FILE_SIZE) {
-        throw new Error(`파일이 너무 커요 (${Math.round(pdfBytes.byteLength / 1024 / 1024)}MB). 페이지 수를 줄이거나 나눠서 저장해주세요.`)
-      }
-      // 저장 경로(key)는 Supabase Storage 서버가 영문/숫자/일부 기호만 허용하고
-      // 한글 등 비-ASCII 문자는 거부한다 ("Invalid key" 오류의 원인이었음).
-      // 화면에 보여줄 원본 파일명은 metadata.originalName에 한글 그대로 저장하고,
-      // 실제 저장 경로(key)에 들어가는 부분만 영문/숫자로 안전하게 치환한다.
-      const safeName = displayName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-      const ts = Date.now()
-      const path = `${currentUser.id}/${activeNote.id}/${ts}_0_${safeName}_annotated.pdf`
-      const { error } = await sb.storage.from('images').upload(path, new Blob([pdfBytes], { type: 'application/pdf' }), {
-        upsert: false,
-        metadata: { originalName: `${displayName}.pdf` }
-      })
-      if (error) throw error
-      pdfHasUnsaved = false
-      loadAttachments(activeNote.id)
-      alert('책장에 새 파일로 저장했어요!\n첨부 목록에 필기한 내용이 추가돼요. (원본 파일은 그대로 남아있어요)')
-    } catch (e) {
-      console.error(e)
-      const detail = (e && e.message) ? e.message : String(e)
-      alert('저장에 실패했어요: ' + detail + '\n\n계속되면 문의하기로 알려주세요.')
-    } finally {
-      btn.disabled = false; label.textContent = originalText
-    }
-  }
+  // 필기는 이제 그릴 때마다 자동 저장되므로(schedulePdfAutoSave/runPdfAutoSave 참고),
+  // 별도의 수동 "저장" 버튼과 함수는 더 이상 필요하지 않아 제거했다.
+
 
   // 필기한 내용을 책장에 저장하지 않고, 이름을 정해서 바로 내 기기로 다운로드한다.
   async function downloadPdfAnnotation() {
@@ -1786,6 +1898,13 @@ ${body}`
   }
 
   // ── Utils ──
+  // 파일 메타데이터에 encodeURIComponent로 저장해둔 원본 파일명(한글 포함)을
+  // 다시 원래 문자열로 복원한다. 값이 없거나(%가 없는 예전 데이터 등) 디코딩에
+  // 실패하면 원래 값을 그대로 돌려준다(예전 방식으로 저장된 파일과의 호환성 유지).
+  function safeDecodeName(s) {
+    if (!s) return ''
+    try { return decodeURIComponent(s) } catch (e) { return s }
+  }
   function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
   function unescHtml(s) { return s.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&') }
   function formatDate(iso) {
