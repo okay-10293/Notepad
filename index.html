@@ -566,7 +566,7 @@
   <!-- 노트 단독 보기 -->
   <div class="editor-pane" id="noteView" style="display:none;">
     <div class="editor-toolbar">
-      <button class="icon-btn" onclick="backToShelf()" title="책장으로">← 책장</button>
+      <button class="icon-btn" onclick="goBackToShelf()" title="책장으로">← 책장</button>
       <input class="note-title-input" type="text" id="noteTitle" placeholder="제목 없음" oninput="onEdit()" />
       <div class="toolbar-actions">
         <span class="save-status" id="saveStatus">저장됨</span>
@@ -606,7 +606,7 @@
 <!-- ── PDF 필기 뷰어 ── -->
 <div id="pdfAnnotateOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:200; flex-direction:column;">
   <div class="pdf-toolbar">
-    <button class="pdf-tool-btn" onclick="closePdfAnnotate()" title="닫기">
+    <button class="pdf-tool-btn" onclick="goClosePdfAnnotate()" title="닫기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
     </button>
     <span class="pdf-filename" id="pdfFileName"></span>
@@ -721,6 +721,9 @@
 
   let currentUser = null, notes = [], activeNote = null, saveTimer = null, appInitialized = false
   let sortMode = 'date', selectMode = false, selectedIds = new Set()
+  // 브라우저 뒤로가기 히스토리(책장 → 노트 → PDF 필기)를 재생하는 동안에는
+  // selectNote/openPdfAnnotate 등이 또 새 history entry를 쌓지 않도록 막는 플래그
+  let restoringHistory = false
 
   // 핵심 라이브러리(Supabase)가 없을 때 로딩 화면에 에러 상태를 띄움 (watchdog과 동일한 UI 재사용)
   function showBootFailure(msg) {
@@ -867,6 +870,10 @@
     document.getElementById('userEmail').textContent = currentUser.email.replace('@notepad.app', '')
     document.getElementById('shelfView').style.display = 'flex'
     document.getElementById('noteView').style.display = 'none'
+    // 책장 화면을 히스토리의 기준점으로 삼는다 — 여기서 노트를 열 때마다 그 위로
+    // history entry가 쌓이고, 뒤로가기를 누르면 PDF 필기 → 노트 → 책장 순서로
+    // 돌아가도록 한다 (사이트 밖으로 바로 나가지 않게).
+    history.replaceState({ view: 'shelf' }, '')
     loadNotes()
     if (!appInitialized) {
       initDragDrop()
@@ -889,6 +896,52 @@
     document.getElementById('shelfView').style.display = 'flex'
     renderFilteredNotes()
   }
+  // "← 책장" 버튼 등 사용자가 직접 누르는 동작에서 호출한다. 노트 화면이 history에
+  // 쌓여있으면(브라우저 뒤로가기 한 칸) history.back()으로 물러나서, 이후에
+  // 실제로 뒤로가기 버튼을 눌러도 앞으로가기로 다시 노트가 열리는 등 자연스럽게
+  // 동작한다. 쌓인 게 없으면(예: 이미 책장 상태) 그냥 바로 화면만 전환한다.
+  function goBackToShelf() {
+    if (!restoringHistory && history.state && history.state.view && history.state.view !== 'shelf') {
+      history.back()
+    } else {
+      backToShelf()
+    }
+  }
+  // 브라우저/기기의 뒤로가기·앞으로가기를 누르면 여기로 들어온다. 목표 state가
+  // 요구하는 화면(책장/노트/PDF 필기)에 맞게 DOM만 맞추고, restoringHistory
+  // 플래그로 selectNote/openPdfAnnotate가 또 history를 쌓지 않게 막는다.
+  window.addEventListener('popstate', (e) => {
+    if (!currentUser) return // 로그인 전(랜딩 화면)에서는 이 히스토리 관리를 적용하지 않음
+    const state = e.state || { view: 'shelf' }
+    restoringHistory = true
+    Promise.resolve().then(async () => {
+      try {
+        const overlay = document.getElementById('pdfAnnotateOverlay')
+        if (state.view === 'pdf') {
+          const note = notes.find(n => n.id === state.noteId)
+          if (!note) { backToShelf(); return }
+          if (!activeNote || activeNote.id !== note.id) selectNote(note.id)
+          if (overlay.style.display !== 'flex' || pdfCurrentPath !== state.path) {
+            const { data } = sb.storage.from('images').getPublicUrl(state.path)
+            await openPdfAnnotate(data.publicUrl, state.name, state.path)
+          }
+        } else if (state.view === 'note') {
+          if (overlay.style.display === 'flex') await closePdfAnnotate()
+          const note = notes.find(n => n.id === state.noteId)
+          if (note) {
+            if (!activeNote || activeNote.id !== note.id) selectNote(note.id)
+          } else {
+            backToShelf()
+          }
+        } else {
+          if (overlay.style.display === 'flex') await closePdfAnnotate()
+          if (activeNote) backToShelf()
+        }
+      } finally {
+        restoringHistory = false
+      }
+    })
+  })
 
   // ── Notes ──
   async function loadNotes() {
@@ -947,6 +1000,9 @@
     document.getElementById('noteBody').value = activeNote.body || ''
     document.getElementById('saveStatus').textContent = '저장됨'
     loadAttachments(activeNote.id)
+    // 뒤로가기 히스토리 재생 중에는 새로 쌓지 않는다 (안 그러면 뒤로가기 한 번에
+    // 다시 앞으로 쌓이는 무한 루프/중복 entry가 생길 수 있음)
+    if (!restoringHistory) history.pushState({ view: 'note', noteId: activeNote.id }, '')
   }
 
   function onEdit() {
@@ -983,7 +1039,7 @@
     await deleteNoteAttachments(noteId)
     await sb.from('notes').delete().eq('id', noteId)
     notes = notes.filter(n => n.id !== noteId)
-    backToShelf()
+    goBackToShelf()
   }
 
   function getFileIcon(name) {
@@ -1395,7 +1451,7 @@ ${body}`
     notes = notes.filter(n => !selectedIds.has(n.id))
     selectedIds.clear()
     if (activeNote && !notes.find(n => n.id === activeNote.id)) {
-      backToShelf()
+      goBackToShelf()
     }
     toggleSelectMode()
   }
@@ -1619,6 +1675,12 @@ ${body}`
     setPdfSaveStatus('')
     document.getElementById('pdfFileName').textContent = name
     document.getElementById('pdfAnnotateOverlay').style.display = 'flex'
+    // 뒤로가기 히스토리 재생 중이 아니면(=사용자가 직접 첨부파일을 열었으면), PDF
+    // 필기 화면을 노트 위에 한 단계 더 쌓는다. 이후 뒤로가기를 누르면 노트로,
+    // 거기서 한 번 더 누르면 책장으로 순서대로 돌아간다.
+    if (!restoringHistory && activeNote) {
+      history.pushState({ view: 'pdf', noteId: activeNote.id, path: pdfCurrentPath, name }, '')
+    }
     const pagesEl = document.getElementById('pdfPages')
     pagesEl.innerHTML = '<div class="pdf-loading">PDF 불러오는 중...</div>'
     pdfPagesData = []
@@ -1833,6 +1895,15 @@ ${body}`
     document.getElementById('pdfAnnotateOverlay').style.display = 'none'
     pdfPagesData = []; pdfHasUnsaved = false; pdfCurrentPath = null
     setPdfSaveStatus('')
+  }
+  // PDF 필기 화면의 "닫기" 버튼에서 호출한다. history에 pdf 단계가 쌓여있으면
+  // history.back()으로 물러나서 노트 화면으로 돌아가고, 없으면 바로 닫는다.
+  async function goClosePdfAnnotate() {
+    if (!restoringHistory && history.state && history.state.view === 'pdf') {
+      history.back()
+    } else {
+      await closePdfAnnotate()
+    }
   }
 
   // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다.
