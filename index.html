@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.3.0
+  APP VERSION: v1.3.2
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -168,6 +168,7 @@
     .attach-rename { position: absolute; bottom: -6px; left: -6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.1); transition: all 0.15s; }
     .attach-rename svg { width: 12px; height: 12px; }
     .attach-rename:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .attach-rename-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: init-spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
 
     /* ── 다운로드 버튼 내 아이콘 공통 ── */
     .btn-icon-svg { width: 14px; height: 14px; flex-shrink: 0; vertical-align: -2px; }
@@ -222,7 +223,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.0</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.2</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -1011,7 +1012,14 @@
       container.innerHTML = ''
       return
     }
-    container.innerHTML = data.map(file => {
+    // *.ink.json은 PDF 필기 레이어를 저장해두는 내부용 사이드카 파일이라,
+    // 사용자에게는 진짜 첨부파일처럼 보이면 안 되므로 목록에서 제외한다.
+    const visibleFiles = data.filter(file => !file.name.endsWith('.ink.json'))
+    if (!visibleFiles.length) {
+      container.innerHTML = ''
+      return
+    }
+    container.innerHTML = visibleFiles.map(file => {
       const path = `${currentUser.id}/${noteId}/${file.name}`
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
       const url = urlData.publicUrl
@@ -1043,7 +1051,7 @@
       })
       item.querySelector('.attach-rename').addEventListener('click', (e) => {
         e.stopPropagation()
-        renameAttachment(rawPath, rawName)
+        renameAttachment(rawPath, rawName, item)
       })
     })
   }
@@ -1097,7 +1105,7 @@
   // update()/upsert로 같은 경로에 덮어쓰려고 하면 "new row violates row-level
   // security policy" 오류가 났다. 그래서 기존 파일을 새 이름으로 다시 "업로드"한 뒤
   // 예전 파일은 "삭제"하는 방식(이미 정상 동작하는 두 기능만 사용)으로 바꿨다.
-  async function renameAttachment(path, currentName) {
+  async function renameAttachment(path, currentName, itemEl) {
     if (!activeNote) return
     const input = prompt('새 파일 이름을 입력하세요', currentName)
     if (input === null) return
@@ -1112,6 +1120,15 @@
     const origExt = origExtMatch ? origExtMatch[0] : ''
     const hasExt = /\.[a-zA-Z0-9]+$/.test(trimmed)
     if (!hasExt && origExt) trimmed = trimmed + origExt
+
+    // 이름 바꾸기는 파일을 내려받아 새 이름으로 다시 올리고 원본을 지우는 여러
+    // 단계를 거쳐서 몇 초 걸릴 수 있다. 그동안 반응이 없는 것처럼 보이지 않도록,
+    // 해당 항목에 "이름 바꾸는 중..." 표시를 띄워둔다.
+    if (itemEl) {
+      itemEl.style.pointerEvents = 'none'
+      itemEl.style.opacity = '0.6'
+      itemEl.innerHTML = `<div class="attach-file" style="cursor:default;"><span class="attach-rename-spinner"></span>이름 바꾸는 중...</div>`
+    }
     try {
       // fetch(getPublicUrl)는 버킷이 비공개거나 네트워크 상황에 따라 "실패"가 아니라
       // 빈 내용/에러 페이지를 200 OK로 받아오는 경우가 있었다. 그 상태에서 그대로 새
@@ -1151,10 +1168,13 @@
           await sb.storage.from('images').remove([pdfInkKey(path)])
         }
       } catch (e) { /* 필기 레이어가 없었거나 이동 실패 — 파일 이름 변경 자체는 정상 완료됨 */ }
-      loadAttachments(activeNote.id)
     } catch (e) {
       console.error(e)
       alert('이름 변경에 실패했어요: ' + (e && e.message ? e.message : String(e)))
+    } finally {
+      // 성공하든 실패하든, 최신 상태로 다시 불러오면 "이름 바꾸는 중..." 표시가
+      // 자연스럽게 사라지고 실제 결과(바뀐 이름 또는 원래 이름)가 보인다.
+      loadAttachments(activeNote.id)
     }
   }
 
