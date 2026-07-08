@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.3.2
+  APP VERSION: v1.3.4
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -223,7 +223,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.2</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.4</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -505,9 +505,10 @@
     <div class="section-divider"></div>
     <div class="section-label">이메일 연동 <span style="font-size:0.75rem; color:var(--ink-3); font-weight:300;">(아이디/비번 찾기에 필요)</span></div>
     <div id="emailLinkedInfo" style="display:none; font-size:0.82rem; color:#2e7d32; margin-bottom:0.75rem;"></div>
+    <div id="emailPendingInfo" style="display:none; font-size:0.8rem; color:#b8860b; margin-bottom:0.75rem; font-weight:300; line-height:1.6;"></div>
     <div id="emailLinkForm">
       <div class="form-group"><label class="form-label">이메일 주소</label><input class="form-input" type="email" id="linkEmail" placeholder="이메일 입력" /></div>
-      <div style="text-align:right; margin-bottom:0.5rem;"><button class="btn btn-primary" onclick="handleLinkEmail()">이메일 연동</button></div>
+      <div style="text-align:right; margin-bottom:0.5rem;"><button class="btn btn-primary" id="linkEmailBtn" onclick="handleLinkEmail()">이메일 연동</button></div>
     </div>
 
     <div class="section-divider"></div>
@@ -782,7 +783,7 @@
       if (settled) return
       settled = true
       clearTimeout(fallback)
-      if (session) { currentUser = session.user; showApp() }
+      if (session) { currentUser = session.user; showApp(); reconcileLinkedEmail() }
       else { showLanding() }
     } catch (e) {
       if (!settled) {
@@ -798,10 +799,14 @@
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         // 이미 init()에서 세션 복원으로 showApp()을 호출한 경우 중복 실행 방지
-        if (currentUser && currentUser.id === session.user.id && appInitialized) return
-        currentUser = session.user; showApp()
+        if (currentUser && currentUser.id === session.user.id && appInitialized) { reconcileLinkedEmail(); return }
+        currentUser = session.user; showApp(); reconcileLinkedEmail()
       }
       else if (event === 'SIGNED_OUT') { currentUser = null; showLanding() }
+      // 이메일 연동 인증 메일의 링크를 클릭하면(같은 브라우저 탭이든, 새 탭/다른 기기든)
+      // Supabase가 세션을 갱신하며 이 이벤트를 발생시킨다. 이 시점에 실제로 계정 이메일이
+      // 바뀌었는지 확인해서 "연동 완료" 상태로 반영한다.
+      else if (event === 'USER_UPDATED') { currentUser = session.user; reconcileLinkedEmail() }
     })
   }
 
@@ -1241,30 +1246,105 @@
     document.getElementById('newPw').value = ''
     document.getElementById('newPwConfirm').value = ''
     document.getElementById('linkEmail').value = ''
-    // 이메일 연동 여부 확인
-    const linkedEmail = currentUser.user_metadata && currentUser.user_metadata.linked_email
-    if (linkedEmail) {
-      document.getElementById('emailLinkedInfo').style.display = 'block'
-      document.getElementById('emailLinkedInfo').textContent = '✅ 연동된 이메일: ' + linkedEmail
-    } else {
-      document.getElementById('emailLinkedInfo').style.display = 'none'
-    }
+    refreshEmailLinkUI()
     document.getElementById('settingsModal').classList.add('open')
   }
   function closeSettings() { document.getElementById('settingsModal').classList.remove('open') }
+
+  // ── 이메일 연동 상태 표시/저장 helper ──
+  // 인증이 끝나기 전까지는 "연동 완료"로 취급하지 않고, 어떤 이메일의 인증 메일을
+  // 보냈는지(pending)를 사용자별로 로컬에 기록해둔다. 새로고침하거나 다른 탭에서
+  // 인증 링크를 눌러도 상태를 잃지 않기 위함이다.
+  function pendingLinkEmailKey() { return currentUser ? ('pendingLinkEmail:' + currentUser.id) : null }
+  function getPendingLinkEmail() {
+    const key = pendingLinkEmailKey()
+    if (!key) return ''
+    try { return localStorage.getItem(key) || '' } catch (e) { return '' }
+  }
+  function setPendingLinkEmail(email) {
+    const key = pendingLinkEmailKey()
+    if (!key) return
+    try { localStorage.setItem(key, email) } catch (e) {}
+  }
+  function clearPendingLinkEmail() {
+    const key = pendingLinkEmailKey()
+    if (!key) return
+    try { localStorage.removeItem(key) } catch (e) {}
+  }
+
+  // 설정 화면의 "이메일 연동" 섹션을 현재 상태(미연동 / 인증 대기 중 / 연동 완료)에 맞게 갱신
+  function refreshEmailLinkUI() {
+    const linkedEmail = currentUser.user_metadata && currentUser.user_metadata.linked_email
+    const pendingEmail = getPendingLinkEmail()
+    const linkedInfoEl = document.getElementById('emailLinkedInfo')
+    const pendingInfoEl = document.getElementById('emailPendingInfo')
+    const linkBtn = document.getElementById('linkEmailBtn')
+
+    if (linkedEmail) {
+      linkedInfoEl.style.display = 'block'
+      linkedInfoEl.textContent = '✅ 연동된 이메일: ' + linkedEmail
+    } else {
+      linkedInfoEl.style.display = 'none'
+    }
+
+    // 인증 메일을 보냈지만 아직 링크를 클릭하지 않은 이메일이 있으면 대기 상태 안내
+    if (pendingEmail && pendingEmail !== linkedEmail) {
+      pendingInfoEl.style.display = 'block'
+      pendingInfoEl.textContent = `⏳ 인증 대기 중: ${pendingEmail} — 받으신 메일의 인증 링크를 클릭해야 연동이 완료돼요. (메일이 안 왔다면 같은 주소로 다시 "이메일 연동"을 눌러 재발송하세요)`
+      linkBtn.textContent = '인증 메일 재발송'
+    } else {
+      pendingInfoEl.style.display = 'none'
+      linkBtn.textContent = '이메일 연동'
+    }
+  }
+
+  // 인증 링크 클릭 등으로 실제 계정 이메일이 바뀌었는지 확인하고, 바뀌었다면
+  // "연동 완료" 상태(user_metadata.linked_email)로 확정 저장한다.
+  // 로그인용 가짜 이메일(@notepad.app) 형태가 아니라면 곧 실제 이메일로 인증이 끝났다는 뜻이다.
+  async function reconcileLinkedEmail() {
+    if (!currentUser || !currentUser.email) return
+    const isRealEmail = !currentUser.email.endsWith('@notepad.app')
+    const linkedEmail = currentUser.user_metadata && currentUser.user_metadata.linked_email
+    if (isRealEmail && currentUser.email !== linkedEmail) {
+      try {
+        const { data, error } = await sb.auth.updateUser({ data: { linked_email: currentUser.email } })
+        if (!error && data && data.user) currentUser = data.user
+      } catch (e) { console.error('이메일 연동 상태 동기화 실패:', e) }
+      clearPendingLinkEmail()
+      if (document.getElementById('settingsModal').classList.contains('open')) {
+        refreshEmailLinkUI()
+        showOk('settingsError', '✅ 이메일 인증이 완료되어 연동되었습니다!')
+      }
+    }
+  }
 
   async function handleLinkEmail() {
     const email = document.getElementById('linkEmail').value.trim()
     if (!email) return showErr('settingsError', '이메일을 입력하세요.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('settingsError', '올바른 이메일 형식을 입력하세요.')
-    const { error } = await sb.auth.updateUser({ data: { linked_email: email } })
-    if (error) return showErr('settingsError', '이메일 연동에 실패했습니다.')
-    const { error: emailError } = await sb.auth.updateUser({ email: email })
-    if (emailError) return showErr('settingsError', '이메일 업데이트에 실패했습니다: ' + emailError.message)
-    currentUser.user_metadata = Object.assign({}, currentUser.user_metadata, { linked_email: email })
-    document.getElementById('emailLinkedInfo').style.display = 'block'
-    document.getElementById('emailLinkedInfo').textContent = '✅ 연동된 이메일: ' + email
-    showOk('settingsError', '✅ 이메일이 연동되었습니다! 이메일 인증을 확인하세요.')
+    const linkedEmail = currentUser.user_metadata && currentUser.user_metadata.linked_email
+    if (email === linkedEmail) return showErr('settingsError', '이미 연동된 이메일입니다.')
+
+    const btn = document.getElementById('linkEmailBtn')
+    const originalText = btn.textContent
+    btn.disabled = true; btn.textContent = '전송 중...'
+    try {
+      // updateUser({ email })는 이메일을 바로 바꾸지 않고, 입력한 주소로 인증 메일을 보낸다.
+      // 사용자가 메일함에서 인증 링크를 눌러야만 실제로 연동이 확정된다
+      // (완료 시점은 reconcileLinkedEmail()에서 감지해 user_metadata.linked_email에 저장).
+      const { error } = await sb.auth.updateUser({ email })
+      if (error) return showErr('settingsError', '인증 메일 전송에 실패했습니다: ' + error.message)
+      setPendingLinkEmail(email)
+      document.getElementById('linkEmail').value = ''
+      refreshEmailLinkUI()
+      showOk('settingsError', `✅ ${email} 주소로 인증 메일을 보냈어요! 메일함에서 링크를 클릭해야 연동이 완료됩니다.`)
+    } catch (e) {
+      console.error('이메일 연동 요청 실패:', e)
+      showErr('settingsError', '인증 메일 전송에 실패했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      btn.disabled = false
+      if (btn.textContent === '전송 중...') btn.textContent = originalText
+    }
   }
 
   async function changeUsername() {
@@ -1372,6 +1452,14 @@
   async function downloadFile(path, name) {
     const fileName = name || 'file'
     try {
+      // PDF 첨부는 저장해둔 필기(펜/형광펜 낙서)가 있으면, 필기 화면을 열지 않고
+      // 바로 다운로드해도 "이 기기에 저장" 버튼과 동일하게 필기가 포함된 PDF를
+      // 받도록 한다. 필기가 없는 파일이면 null이 돌아오고, 그 경우 아래처럼
+      // 원본 파일을 그대로 받는다.
+      if (/\.pdf$/i.test(path)) {
+        const annotatedBlob = await buildAnnotatedDownloadBlob(path)
+        if (annotatedBlob) { await saveBlobToDevice(annotatedBlob, fileName); return }
+      }
       const { data: blob, error } = await sb.storage.from('images').download(path)
       if (error) throw error
       await saveBlobToDevice(blob, fileName)
@@ -1798,13 +1886,25 @@ ${body}`
       ctx.globalAlpha = 1
       ctx.globalCompositeOperation = 'source-over'
       liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height)
+      liveCanvas.style.opacity = '1'
     }
     liveCanvas.addEventListener('pointerdown', e => {
       drawing = true
       liveCanvas.setPointerCapture(e.pointerId)
       const p = pos(e); lastX = p.x; lastY = p.y
-      if (pdfTool === 'eraser') eraseDirectTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
-      else strokeLiveTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      if (pdfTool === 'eraser') {
+        liveCanvas.style.opacity = '1'
+        eraseDirectTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      } else {
+        // 획을 그리는 동안 라이브 캔버스 내부 픽셀은 여전히 alpha=1(완전 불투명)로
+        // 그린다 — 그래야 위 주석대로 획 안에서 겹치는 부분이 이중으로 진해지지
+        // 않는다. 대신 캔버스 "엘리먼트" 자체의 CSS 투명도를 처음부터 최종 목표
+        // 투명도로 맞춰둬서, 그리는 중간에도 실제 저장될 밝기가 그대로 보이게
+        // 한다. (이전에는 다 그릴 때까지 진하게 보이다가 손을 떼는 순간 갑자기
+        // 옅어지는 것처럼 보였다.)
+        liveCanvas.style.opacity = String(Number(document.getElementById('pdfPenOpacity').value) / 100)
+        strokeLiveTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      }
       pdfHasUnsaved = true
     })
     liveCanvas.addEventListener('pointermove', e => {
@@ -1906,51 +2006,103 @@ ${body}`
     }
   }
 
-  // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다.
-  // "책장에 저장"과 "이 기기에 저장(다운로드)"에서 공통으로 사용한다.
+  // 각 페이지의 원본 캔버스 + 필기 레이어를 합쳐 고해상도 JPEG 한 장으로 만든다.
+  // inkDrawable에는 draw 중인 캔버스(pdfPagesData의 drawCanvas)나, 저장소에서 불러온
+  // 필기 PNG를 얹은 Image 엘리먼트가 모두 들어올 수 있다 — 둘 다 drawImage로 그릴 수
+  // 있어서 "필기 화면이 열려 있을 때"와 "닫혀 있을 때(다운로드만 할 때)" 양쪽에서
+  // 완전히 같은 합성 로직을 공유한다.
+  async function renderAnnotatedPageToJpg(page, inkDrawable) {
+    // 화면에는 컨테이너 폭(최대 760px)에 맞춰 축소한 캔버스를 보여주는데, 저장할
+    // 때는 훨씬 높은 배율로 PDF 페이지를 다시 렌더링해서(최대 2200px 정도) 화질을
+    // 크게 개선하고, 필기 레이어만 그 크기에 맞춰 확대해서 합성한다.
+    const baseViewport1x = page.getViewport({ scale: 1 })
+    const MAX_DIM = 2200
+    let exportScale = 2.2
+    if (baseViewport1x.width * exportScale > MAX_DIM) exportScale = MAX_DIM / baseViewport1x.width
+    if (exportScale < 1) exportScale = 1
+    const hiViewport = page.getViewport({ scale: exportScale })
+    const hiCanvas = document.createElement('canvas')
+    hiCanvas.width = Math.round(hiViewport.width)
+    hiCanvas.height = Math.round(hiViewport.height)
+    await page.render({ canvasContext: hiCanvas.getContext('2d'), viewport: hiViewport }).promise
+
+    const merge = document.createElement('canvas')
+    merge.width = hiCanvas.width; merge.height = hiCanvas.height
+    const mctx = merge.getContext('2d')
+    // JPEG는 투명도가 없으므로 먼저 흰 배경을 깔아준다
+    mctx.fillStyle = '#fff'
+    mctx.fillRect(0, 0, merge.width, merge.height)
+    mctx.drawImage(hiCanvas, 0, 0)
+    if (inkDrawable) {
+      const iw = inkDrawable.width, ih = inkDrawable.height
+      if (iw && ih) mctx.drawImage(inkDrawable, 0, 0, iw, ih, 0, 0, merge.width, merge.height)
+    }
+    // PNG 대신 JPEG로 압축 — 페이지를 통째로 이미지화하면 PNG는 용량이 매우 커져서
+    // 저장(업로드)이 실패하거나 느려지는 원인이 되므로, 필기 용도로 충분한 화질(0.9)의
+    // JPEG로 훨씬 가볍게 만든다.
+    return await new Promise((resolve, reject) => {
+      merge.toBlob(async blob => {
+        if (!blob) return reject(new Error('페이지를 이미지로 변환하지 못했어요 (toBlob 실패)'))
+        resolve(new Uint8Array(await blob.arrayBuffer()))
+      }, 'image/jpeg', 0.9)
+    })
+  }
+
+  // 저장된 필기 PNG(data URL)를 Image 엘리먼트로 미리 로드해둔다.
+  function loadInkImage(dataUrl) {
+    if (!dataUrl) return Promise.resolve(null)
+    return new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null) // 손상된 데이터는 조용히 무시
+      img.src = dataUrl
+    })
+  }
+
+  // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다. 지금 필기
+  // 화면이 열려 있는 상태(pdfPagesData)를 기준으로 하므로, 아직 자동 저장 전인
+  // 최신 획까지도 그대로 반영된다. "이 기기에 저장" 버튼에서 사용한다.
   async function buildAnnotatedPdfBytes() {
     const { PDFDocument } = PDFLib
     const newPdf = await PDFDocument.create()
     for (const p of pdfPagesData) {
-      // 화면에는 컨테이너 폭(최대 760px)에 맞춰 축소한 baseCanvas를 보여주는데, 예전에는
-      // 저장할 때도 이 "화면용" 저해상도 캔버스를 그대로 이미지화해서 원본보다 해상도가
-      // 뚝 떨어지는 문제가 있었다. 이제 저장 시점에는 PDF 페이지를 훨씬 높은 배율로
-      // 다시 렌더링해서(최대 2200px 정도) 화질을 크게 개선하고, 사용자가 그린 필기
-      // 레이어(drawCanvas)만 그 크기에 맞춰 확대해서 합성한다.
-      const baseViewport1x = p.page.getViewport({ scale: 1 })
-      const MAX_DIM = 2200
-      let exportScale = 2.2
-      if (baseViewport1x.width * exportScale > MAX_DIM) exportScale = MAX_DIM / baseViewport1x.width
-      if (exportScale < 1) exportScale = 1
-      const hiViewport = p.page.getViewport({ scale: exportScale })
-      const hiCanvas = document.createElement('canvas')
-      hiCanvas.width = Math.round(hiViewport.width)
-      hiCanvas.height = Math.round(hiViewport.height)
-      await p.page.render({ canvasContext: hiCanvas.getContext('2d'), viewport: hiViewport }).promise
-
-      const merge = document.createElement('canvas')
-      merge.width = hiCanvas.width; merge.height = hiCanvas.height
-      const mctx = merge.getContext('2d')
-      // JPEG는 투명도가 없으므로 먼저 흰 배경을 깔아준다
-      mctx.fillStyle = '#fff'
-      mctx.fillRect(0, 0, merge.width, merge.height)
-      mctx.drawImage(hiCanvas, 0, 0)
-      // 필기 레이어는 화면 해상도로 그려져 있으므로, 고해상도 캔버스 크기에 맞게 확대해서 합성
-      mctx.drawImage(p.drawCanvas, 0, 0, p.drawCanvas.width, p.drawCanvas.height, 0, 0, merge.width, merge.height)
-      // PNG 대신 JPEG로 압축 — 페이지를 통째로 이미지화하면 PNG는 용량이 매우 커져서
-      // 저장(업로드)이 실패하거나 느려지는 원인이 되므로, 필기 용도로 충분한 화질(0.9)의
-      // JPEG로 훨씬 가볍게 만든다.
-      const jpgBytes = await new Promise((resolve, reject) => {
-        merge.toBlob(async blob => {
-          if (!blob) return reject(new Error('페이지를 이미지로 변환하지 못했어요 (toBlob 실패)'))
-          resolve(new Uint8Array(await blob.arrayBuffer()))
-        }, 'image/jpeg', 0.9)
-      })
+      const jpgBytes = await renderAnnotatedPageToJpg(p.page, p.drawCanvas)
       const jpgImage = await newPdf.embedJpg(jpgBytes)
-      const page = newPdf.addPage([merge.width, merge.height])
-      page.drawImage(jpgImage, { x: 0, y: 0, width: merge.width, height: merge.height })
+      const page = newPdf.addPage([jpgImage.width, jpgImage.height])
+      page.drawImage(jpgImage, { x: 0, y: 0, width: jpgImage.width, height: jpgImage.height })
     }
     return await newPdf.save()
+  }
+
+  // 필기 화면을 열지 않은 상태(첨부파일 목록의 작은 다운로드 버튼 등)에서도, 저장소에
+  // 저장해둔 필기 레이어가 있으면 원본 PDF와 합쳐서 새 PDF를 만들어준다. 위
+  // buildAnnotatedPdfBytes()와 같은 renderAnnotatedPageToJpg()를 그대로 재사용하므로
+  // "이 기기에 저장" 버튼과 완전히 동일한 방식으로 합성된다. 필기가 아예 없는
+  // 파일이면 null을 돌려주고, 이 경우 호출한 쪽에서 원본 파일을 그대로 받으면 된다.
+  async function buildAnnotatedDownloadBlob(path) {
+    if (!window.pdfjsLib || !window.PDFLib) return null
+    let inkPages = null
+    try { inkPages = await loadPdfInkLayers(path) } catch (e) { return null }
+    if (!inkPages || !inkPages.length || !inkPages.some(p => p)) return null
+    try {
+      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
+      const pdf = await pdfjsLib.getDocument(urlData.publicUrl).promise
+      const { PDFDocument } = PDFLib
+      const newPdf = await PDFDocument.create()
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const inkImg = await loadInkImage(inkPages[i - 1])
+        const jpgBytes = await renderAnnotatedPageToJpg(page, inkImg)
+        const jpgImage = await newPdf.embedJpg(jpgBytes)
+        const newPage = newPdf.addPage([jpgImage.width, jpgImage.height])
+        newPage.drawImage(jpgImage, { x: 0, y: 0, width: jpgImage.width, height: jpgImage.height })
+      }
+      const bytes = await newPdf.save()
+      return new Blob([bytes], { type: 'application/pdf' })
+    } catch (e) {
+      console.error('필기 포함 PDF 생성 실패, 원본 파일로 대신 받습니다:', e)
+      return null
+    }
   }
 
   // 필기는 이제 그릴 때마다 자동 저장되므로(schedulePdfAutoSave/runPdfAutoSave 참고),
