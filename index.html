@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.0.7
+  APP VERSION: v1.0.8
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -165,6 +165,9 @@
     .attach-download { position: absolute; top: -6px; left: -6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.1); transition: all 0.15s; }
     .attach-download svg { width: 12px; height: 12px; }
     .attach-download:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .attach-rename { position: absolute; bottom: -6px; left: -6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.1); transition: all 0.15s; }
+    .attach-rename svg { width: 12px; height: 12px; }
+    .attach-rename:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* ── 다운로드 버튼 내 아이콘 공통 ── */
     .btn-icon-svg { width: 14px; height: 14px; flex-shrink: 0; vertical-align: -2px; }
@@ -219,7 +222,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.7</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.0.8</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -648,6 +651,10 @@
           <span>전체 지우기</span>
         </button>
       </div>
+      <button class="btn btn-ghost" onclick="downloadPdfAnnotation()" id="pdfDownloadBtn" style="display:flex; align-items:center; gap:0.4rem;">
+        <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span id="pdfDownloadBtnLabel">이 기기에 저장</span>
+      </button>
       <button class="btn btn-primary" onclick="savePdfAnnotation()" id="pdfSaveBtn" style="display:flex; align-items:center; gap:0.4rem;">
         <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
         <span id="pdfSaveBtnLabel">책장에 저장</span>
@@ -1012,13 +1019,15 @@
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
       const url = urlData.publicUrl
       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
-      // 원본 파일명: 서버 저장명(ts_i_safeName)에서 prefix 제거
-      const originalName = file.name.replace(/^\d+_\d+_/, '') || file.name
+      // 원본 파일명: 업로드 시 저장해둔 metadata.originalName이 있으면 그걸 우선 사용
+      // (한글 등 비-ASCII 이름도 그대로 보존됨), 없으면 서버 저장명(ts_i_safeName)에서
+      // prefix를 제거해 대체 표시한다.
+      const originalName = (file.metadata && file.metadata.originalName) || file.name.replace(/^\d+_\d+_/, '') || file.name
       const inner = isImage
         ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
         : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
       // 원본 값은 data 속성에 저장 — onclick 인자 인젝션 완전 방지
-      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}"><button class="attach-download" title="다운로드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 20h14"/></svg></button>${inner}<button class="attach-del">✕</button></div>`
+      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}"><button class="attach-download" title="다운로드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 20h14"/></svg></button>${inner}<button class="attach-rename" title="이름 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="attach-del">✕</button></div>`
     }).join('')
     container.querySelectorAll('.attach-item').forEach(item => {
       const rawUrl  = unescHtml(item.dataset.url)
@@ -1030,6 +1039,10 @@
       item.querySelector('.attach-download').addEventListener('click', (e) => {
         e.stopPropagation()
         downloadFile(rawUrl, rawName)
+      })
+      item.querySelector('.attach-rename').addEventListener('click', (e) => {
+        e.stopPropagation()
+        renameAttachment(rawPath, rawName)
       })
     })
   }
@@ -1074,6 +1087,33 @@
     if (!confirm('이 파일을 삭제할까요?')) return
     await sb.storage.from('images').remove([path])
     loadAttachments(activeNote.id)
+  }
+
+  // 첨부파일 이름 바꾸기 — 저장 경로(key)는 그대로 두고, 화면에 표시되는
+  // originalName 메타데이터만 새 이름으로 바꾼다. Supabase Storage는 메타데이터만
+  // 따로 갱신하는 API가 없어서, 기존 파일 내용을 그대로 다시 불러와 같은 경로에
+  // upsert로 재업로드하면서 metadata만 새 값으로 바꾸는 방식으로 구현했다.
+  async function renameAttachment(path, currentName) {
+    if (!activeNote) return
+    const input = prompt('새 파일 이름을 입력하세요', currentName)
+    if (input === null) return
+    const trimmed = input.trim()
+    if (!trimmed || trimmed === currentName) return
+    try {
+      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
+      const res = await fetch(urlData.publicUrl)
+      if (!res.ok) throw new Error('파일을 불러오지 못했어요 (' + res.status + ')')
+      const blob = await res.blob()
+      const { error } = await sb.storage.from('images').update(path, blob, {
+        upsert: true,
+        metadata: { originalName: trimmed }
+      })
+      if (error) throw error
+      loadAttachments(activeNote.id)
+    } catch (e) {
+      console.error(e)
+      alert('이름 변경에 실패했어요: ' + (e && e.message ? e.message : String(e)))
+    }
   }
 
   // ── Settings ──
@@ -1176,36 +1216,24 @@
   }
 
   // ── Download ──
-  // 1순위: fetch로 파일을 직접 받아 로컬 Blob으로 만든 뒤 download 속성으로 저장.
-  //        서버/CDN 캐시 설정과 무관하게 항상 동작하는 가장 확실한 방법.
-  // 2순위(1순위가 CORS 등으로 막혔을 때): Supabase Storage의 ?download= 파라미터를 붙인
-  //        URL로 이동 — 서버가 Content-Disposition: attachment 헤더를 내려줘서 다운로드를 강제한다.
-  //        (예전에는 이 fetch가 실패하면 그냥 새 탭에서 파일을 열어버려서, PDF 등이
-  //         다운로드 대신 미리보기로 열려버리는 문제가 있었음)
-  async function downloadFile(url, name) {
+  // 예전에는 fetch로 먼저 파일을 통째로 받아 Blob으로 만든 뒤 다운로드했는데,
+  // 이 fetch가 끝날 때까지 기다리는 동안(await) 브라우저가 "사용자가 방금 클릭했다"는
+  // 상태(user activation)를 잃어버려서, 특히 모바일 사파리나 카카오톡 등 인앱 브라우저에서
+  // 다운로드 대신 그냥 파일이 열려버리는 문제가 있었다 (PDF는 미리보기가 되니 특히 눈에 띔).
+  // 그래서 fetch 없이, 클릭한 바로 그 순간(동기적으로) Supabase Storage의 ?download=
+  // 파라미터가 붙은 URL로 즉시 이동시킨다. 서버가 Content-Disposition: attachment 헤더를
+  // 내려주기 때문에 브라우저 자체 다운로드 기능이 동작해서 훨씬 안정적으로 저장된다.
+  function downloadFile(url, name) {
     const fileName = name || 'file'
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('다운로드 요청 실패: ' + res.status)
-      const blob = await res.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = objectUrl
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(objectUrl)
-    } catch (e) {
-      console.error('직접 다운로드 실패, 강제 다운로드 URL로 재시도:', e)
-      const sep = url.includes('?') ? '&' : '?'
-      const a = document.createElement('a')
-      a.href = url + sep + 'download=' + encodeURIComponent(fileName)
-      a.rel = 'noopener'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-    }
+    const sep = url.includes('?') ? '&' : '?'
+    const a = document.createElement('a')
+    a.href = url + sep + 'download=' + encodeURIComponent(fileName)
+    a.download = fileName
+    a.rel = 'noopener'
+    a.target = '_self'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
   function downloadNote() {
@@ -1421,12 +1449,21 @@ ${body}`
         drawCanvas.style.width = viewport.width + 'px'; drawCanvas.style.height = viewport.height + 'px'
         const drawCtx = drawCanvas.getContext('2d')
 
+        // 획을 그리는 동안에는 이 "라이브" 캔버스에 불투명하게 그리다가, 손을 뗄 때
+        // 한 번에 drawCanvas로 합성한다. (형광펜 끊김 문제 해결 — 아래 initPdfPageDrawing 참고)
+        const liveCanvas = document.createElement('canvas')
+        liveCanvas.className = 'pdf-draw-canvas'
+        liveCanvas.width = viewport.width; liveCanvas.height = viewport.height
+        liveCanvas.style.width = viewport.width + 'px'; liveCanvas.style.height = viewport.height + 'px'
+        const liveCtx = liveCanvas.getContext('2d')
+
         wrap.appendChild(baseCanvas)
         wrap.appendChild(drawCanvas)
+        wrap.appendChild(liveCanvas)
         pagesEl.appendChild(wrap)
 
-        pdfPagesData.push({ baseCanvas, drawCanvas, drawCtx })
-        initPdfPageDrawing(drawCanvas, drawCtx)
+        pdfPagesData.push({ baseCanvas, drawCanvas, drawCtx, liveCanvas, liveCtx })
+        initPdfPageDrawing(drawCtx, liveCanvas, liveCtx)
       }
     } catch (e) {
       console.error(e)
@@ -1434,55 +1471,74 @@ ${body}`
     }
   }
 
-  function initPdfPageDrawing(canvas, ctx) {
+  // 형광펜(반투명 굵은 선)을 그릴 때, 예전에는 손가락/마우스가 움직일 때마다 짧은
+  // 선 조각을 매번 "반투명 상태 그대로" 겹쳐 그렸다. 그러면 선이 꺾이거나 조금씩
+  // 겹치는 지점마다 반투명 색이 두 번, 세 번 겹쳐 칠해지면서 그 부분만 더 진해지고
+  // 경계가 울퉁불퉁해져서, 획 전체가 "뚝뚝 끊기는" 것처럼 보였다.
+  // 그래서 지금은: 한 번의 획(누른 순간 ~ 뗄 때까지)은 별도의 라이브 캔버스에
+  // 완전 불투명(alpha=1) 색으로 이어그리고, 손을 뗀 순간에 그 획 전체를 원하는
+  // 투명도로 딱 한 번만 실제 캔버스에 합성한다. 이렇게 하면 획 내부에서 겹치는
+  // 부분이 생겨도 이중으로 진해지지 않아 매끄럽게 이어진다.
+  function initPdfPageDrawing(ctx, liveCanvas, liveCtx) {
     let drawing = false, lastX = 0, lastY = 0
     const pos = e => {
-      const rect = canvas.getBoundingClientRect()
+      const rect = liveCanvas.getBoundingClientRect()
       return {
-        x: (e.clientX - rect.left) * (canvas.width / rect.width),
-        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+        x: (e.clientX - rect.left) * (liveCanvas.width / rect.width),
+        y: (e.clientY - rect.top) * (liveCanvas.height / rect.height)
       }
     }
-    const strokeTo = (x1, y1, x2, y2) => {
+    const strokeLiveTo = (x1, y1, x2, y2) => {
+      liveCtx.lineJoin = 'round'
+      liveCtx.lineCap = 'round'
+      liveCtx.globalCompositeOperation = 'source-over'
+      liveCtx.globalAlpha = 1
+      liveCtx.strokeStyle = document.getElementById('pdfPenColor').value
+      liveCtx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
+      liveCtx.beginPath(); liveCtx.moveTo(x1, y1); liveCtx.lineTo(x2, y2); liveCtx.stroke()
+    }
+    // 지우개는 실시간으로 지워지는 걸 바로 봐야 하므로 라이브 캔버스를 거치지 않고
+    // 실제 캔버스에 바로 지운다 (겹침으로 인한 이중 블렌딩 문제가 애초에 없음).
+    const eraseDirectTo = (x1, y1, x2, y2) => {
       ctx.lineJoin = 'round'
-      if (pdfTool === 'eraser') {
-        ctx.lineCap = 'round'
-        ctx.globalCompositeOperation = 'destination-out'
-        ctx.globalAlpha = 1
-        ctx.lineWidth = 26
-      } else if (pdfTool === 'highlighter') {
-        // 형광펜: 굵고 반투명하게, 겹쳐 칠해도 너무 진해지지 않도록 multiply 블렌드 사용
-        ctx.lineCap = 'butt'
-        ctx.globalCompositeOperation = 'multiply'
-        ctx.globalAlpha = Number(document.getElementById('pdfPenOpacity').value) / 100
-        ctx.strokeStyle = document.getElementById('pdfPenColor').value
-        ctx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
-      } else {
-        ctx.lineCap = 'round'
-        ctx.globalCompositeOperation = 'source-over'
-        ctx.globalAlpha = Number(document.getElementById('pdfPenOpacity').value) / 100
-        ctx.strokeStyle = document.getElementById('pdfPenColor').value
-        ctx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
-      }
+      ctx.lineCap = 'round'
+      ctx.globalCompositeOperation = 'destination-out'
+      ctx.globalAlpha = 1
+      ctx.lineWidth = 26
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
     }
-    canvas.addEventListener('pointerdown', e => {
+    const commitLiveStroke = () => {
+      const opacity = Number(document.getElementById('pdfPenOpacity').value) / 100
+      ctx.globalAlpha = opacity
+      ctx.globalCompositeOperation = pdfTool === 'highlighter' ? 'multiply' : 'source-over'
+      ctx.drawImage(liveCanvas, 0, 0)
+      ctx.globalAlpha = 1
+      ctx.globalCompositeOperation = 'source-over'
+      liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height)
+    }
+    liveCanvas.addEventListener('pointerdown', e => {
       drawing = true
-      canvas.setPointerCapture(e.pointerId)
+      liveCanvas.setPointerCapture(e.pointerId)
       const p = pos(e); lastX = p.x; lastY = p.y
-      strokeTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      if (pdfTool === 'eraser') eraseDirectTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      else strokeLiveTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
       pdfHasUnsaved = true
     })
-    canvas.addEventListener('pointermove', e => {
+    liveCanvas.addEventListener('pointermove', e => {
       if (!drawing) return
       const p = pos(e)
-      strokeTo(lastX, lastY, p.x, p.y)
+      if (pdfTool === 'eraser') eraseDirectTo(lastX, lastY, p.x, p.y)
+      else strokeLiveTo(lastX, lastY, p.x, p.y)
       lastX = p.x; lastY = p.y
     })
-    const stop = () => { drawing = false }
-    canvas.addEventListener('pointerup', stop)
-    canvas.addEventListener('pointerleave', stop)
-    canvas.addEventListener('pointercancel', stop)
+    const stop = () => {
+      if (!drawing) return
+      drawing = false
+      if (pdfTool !== 'eraser') commitLiveStroke()
+    }
+    liveCanvas.addEventListener('pointerup', stop)
+    liveCanvas.addEventListener('pointerleave', stop)
+    liveCanvas.addEventListener('pointercancel', stop)
   }
 
   function setPdfTool(tool) {
@@ -1540,7 +1596,10 @@ ${body}`
   function clearPdfAnnotations() {
     if (!pdfPagesData.length) return
     if (!confirm('모든 필기 내용을 지울까요?')) return
-    pdfPagesData.forEach(p => p.drawCtx.clearRect(0, 0, p.drawCanvas.width, p.drawCanvas.height))
+    pdfPagesData.forEach(p => {
+      p.drawCtx.clearRect(0, 0, p.drawCanvas.width, p.drawCanvas.height)
+      if (p.liveCtx) p.liveCtx.clearRect(0, 0, p.liveCanvas.width, p.liveCanvas.height)
+    })
     pdfHasUnsaved = true
   }
 
@@ -1548,6 +1607,36 @@ ${body}`
     if (pdfHasUnsaved && !confirm('저장하지 않은 필기가 있어요. 닫을까요?')) return
     document.getElementById('pdfAnnotateOverlay').style.display = 'none'
     pdfPagesData = []; pdfHasUnsaved = false
+  }
+
+  // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다.
+  // "책장에 저장"과 "이 기기에 저장(다운로드)"에서 공통으로 사용한다.
+  async function buildAnnotatedPdfBytes() {
+    const { PDFDocument } = PDFLib
+    const newPdf = await PDFDocument.create()
+    for (const p of pdfPagesData) {
+      const merge = document.createElement('canvas')
+      merge.width = p.baseCanvas.width; merge.height = p.baseCanvas.height
+      const mctx = merge.getContext('2d')
+      // JPEG는 투명도가 없으므로 먼저 흰 배경을 깔아준다
+      mctx.fillStyle = '#fff'
+      mctx.fillRect(0, 0, merge.width, merge.height)
+      mctx.drawImage(p.baseCanvas, 0, 0)
+      mctx.drawImage(p.drawCanvas, 0, 0)
+      // PNG 대신 JPEG로 압축 — 페이지를 통째로 이미지화하면 PNG는 용량이 매우 커져서
+      // 저장(업로드)이 실패하거나 느려지는 원인이 되므로, 필기 용도로 충분한 화질(0.85)의
+      // JPEG로 훨씬 가볍게 만든다.
+      const jpgBytes = await new Promise((resolve, reject) => {
+        merge.toBlob(async blob => {
+          if (!blob) return reject(new Error('페이지를 이미지로 변환하지 못했어요 (toBlob 실패)'))
+          resolve(new Uint8Array(await blob.arrayBuffer()))
+        }, 'image/jpeg', 0.85)
+      })
+      const jpgImage = await newPdf.embedJpg(jpgBytes)
+      const page = newPdf.addPage([merge.width, merge.height])
+      page.drawImage(jpgImage, { x: 0, y: 0, width: merge.width, height: merge.height })
+    }
+    return await newPdf.save()
   }
 
   async function savePdfAnnotation() {
@@ -1558,31 +1647,7 @@ ${body}`
     const originalText = label.textContent
     btn.disabled = true; label.textContent = '저장 중...'
     try {
-      const { PDFDocument } = PDFLib
-      const newPdf = await PDFDocument.create()
-      for (const p of pdfPagesData) {
-        const merge = document.createElement('canvas')
-        merge.width = p.baseCanvas.width; merge.height = p.baseCanvas.height
-        const mctx = merge.getContext('2d')
-        // JPEG는 투명도가 없으므로 먼저 흰 배경을 깔아준다
-        mctx.fillStyle = '#fff'
-        mctx.fillRect(0, 0, merge.width, merge.height)
-        mctx.drawImage(p.baseCanvas, 0, 0)
-        mctx.drawImage(p.drawCanvas, 0, 0)
-        // PNG 대신 JPEG로 압축 — 페이지를 통째로 이미지화하면 PNG는 용량이 매우 커져서
-        // 저장(업로드)이 실패하거나 느려지는 원인이 되므로, 필기 용도로 충분한 화질(0.85)의
-        // JPEG로 훨씬 가볍게 만든다.
-        const jpgBytes = await new Promise((resolve, reject) => {
-          merge.toBlob(async blob => {
-            if (!blob) return reject(new Error('페이지를 이미지로 변환하지 못했어요 (toBlob 실패)'))
-            resolve(new Uint8Array(await blob.arrayBuffer()))
-          }, 'image/jpeg', 0.85)
-        })
-        const jpgImage = await newPdf.embedJpg(jpgBytes)
-        const page = newPdf.addPage([merge.width, merge.height])
-        page.drawImage(jpgImage, { x: 0, y: 0, width: merge.width, height: merge.height })
-      }
-      const pdfBytes = await newPdf.save()
+      const pdfBytes = await buildAnnotatedPdfBytes()
       if (pdfBytes.byteLength > MAX_FILE_SIZE) {
         throw new Error(`파일이 너무 커요 (${Math.round(pdfBytes.byteLength / 1024 / 1024)}MB). 페이지 수를 줄이거나 나눠서 저장해주세요.`)
       }
@@ -1607,6 +1672,39 @@ ${body}`
       console.error(e)
       const detail = (e && e.message) ? e.message : String(e)
       alert('저장에 실패했어요: ' + detail + '\n\n계속되면 문의하기로 알려주세요.')
+    } finally {
+      btn.disabled = false; label.textContent = originalText
+    }
+  }
+
+  // 필기한 내용을 책장에 저장하지 않고, 이름을 정해서 바로 내 기기로 다운로드한다.
+  async function downloadPdfAnnotation() {
+    if (!pdfPagesData.length || !window.PDFLib) { alert('다운로드 기능을 사용할 수 없어요.'); return }
+    const fileName = document.getElementById('pdfFileName').textContent || 'file.pdf'
+    const baseName = fileName.replace(/\.pdf$/i, '')
+    const suggested = `${baseName}_필기`
+    const input = prompt('저장할 파일 이름을 입력하세요', suggested)
+    if (input === null) return
+    const trimmed = (input.trim() || suggested).replace(/\.pdf$/i, '')
+    const btn = document.getElementById('pdfDownloadBtn')
+    const label = document.getElementById('pdfDownloadBtnLabel')
+    const originalText = label.textContent
+    btn.disabled = true; label.textContent = '만드는 중...'
+    try {
+      const pdfBytes = await buildAnnotatedPdfBytes()
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = `${trimmed}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+      console.error(e)
+      const detail = (e && e.message) ? e.message : String(e)
+      alert('다운로드에 실패했어요: ' + detail)
     } finally {
       btn.disabled = false; label.textContent = originalText
     }
