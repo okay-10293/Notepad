@@ -1024,14 +1024,11 @@
       const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
       const url = urlData.publicUrl
       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
-      // 원본 파일명: 업로드 시 저장해둔 metadata.originalName이 있으면 그걸 우선 사용
-      // (한글 등 비-ASCII 이름도 그대로 보존됨), 없으면 서버 저장명(ts_i_safeName)에서
-      // prefix를 제거해 대체 표시한다.
-      // metadata는 서버로 HTTP 헤더에 실려 전달되는데, 헤더는 원래 한글 같은 비-ASCII
-      // 문자를 있는 그대로 담지 못한다(깨지거나 유실됨). 그래서 저장할 때는 항상
-      // encodeURIComponent로 안전한 ASCII 문자열로 바꿔서 넣어두고, 보여줄 때 여기서
-      // 다시 decodeURIComponent로 원래 한글 이름을 복원한다.
-      const originalName = safeDecodeName((file.metadata && file.metadata.originalName)) || file.name.replace(/^\d+_\d+_/, '') || file.name
+      // 원본 파일명: 저장 경로(키) 안에 인코딩해둔 이름을 복원한다. (metadata에는
+      // 더 이상 의존하지 않음 — list()가 커스텀 metadata를 안 돌려주는 Supabase
+      // 버그 때문에 예전 방식은 한글 이름이 밑줄 범벅으로 보이는 문제가 있었다.
+      // 자세한 설명은 decodeOriginalName 근처 주석 참고.)
+      const originalName = decodeOriginalName(file.name)
       const inner = isImage
         ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
         : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
@@ -1140,13 +1137,12 @@
       if (dlErr) throw dlErr
       if (!blob || blob.size === 0) throw new Error('원본 파일을 불러오지 못했어요 (빈 파일). 안전을 위해 이름 변경을 중단했어요.')
       const folder = path.substring(0, path.lastIndexOf('/'))
-      const safeName = trimmed.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+      // 한글 등 비-ASCII 이름은 Storage 키에 그대로 못 넣으므로(Invalid key 오류),
+      // buildSafeStorageName으로 안전하게 인코딩해서 경로 자체에 담아둔다.
+      const safeName = buildSafeStorageName(trimmed)
       const newPath = `${folder}/${Date.now()}_0_${safeName}`
       const { error: upErr } = await sb.storage.from('images').upload(newPath, blob, {
-        upsert: false,
-        // encodeURIComponent: metadata는 HTTP 헤더로 전달되어 한글 등 비-ASCII 문자가
-        // 그대로 들어가면 깨지거나 사라질 수 있어, ASCII로 안전하게 인코딩해서 저장한다.
-        metadata: { originalName: encodeURIComponent(trimmed) }
+        upsert: false
       })
       if (upErr) throw upErr
       // 업로드한 새 파일이 실제로 원본과 같은 크기로 잘 올라갔는지 다시 한번 확인한
@@ -1482,13 +1478,12 @@ ${body}`
       const file = files[i]
       const ext = (file.name && file.name.split('.').pop()) || file.type.split('/')[1] || 'bin'
       const originalName = file.name || `paste_${ts}_${i}.${ext}`
-      const safeName = originalName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-      // 서버 저장명: 충돌 방지용 prefix, 원본명은 metadata로 보존
+      // 서버 저장명: 충돌 방지용 prefix 뒤에 원본명을 안전하게 인코딩해서 담아둔다
+      // (자세한 이유는 decodeOriginalName 근처 주석 참고)
+      const safeName = buildSafeStorageName(originalName)
       const path = `${currentUser.id}/${noteId}/${ts}_${i}_${safeName}`
       const { error } = await sb.storage.from('images').upload(path, file, {
-        upsert: false,
-        // 한글 파일명이 HTTP 메타데이터 헤더에서 깨지지 않도록 ASCII로 인코딩해서 저장
-        metadata: { originalName: encodeURIComponent(originalName) }
+        upsert: false
       })
       if (error) console.error(error)
     }
@@ -1924,6 +1919,55 @@ ${body}`
   function safeDecodeName(s) {
     if (!s) return ''
     try { return decodeURIComponent(s) } catch (e) { return s }
+  }
+  // ── 파일명 인코딩 (한글 등 비-ASCII 이름을 Storage 키에 안전하게 저장) ──
+  // Supabase Storage는 오브젝트 키에 원본 유니코드 문자(한글 등)를 그대로 넣으면
+  // "Invalid key" 오류로 업로드 자체가 실패한다. 그래서 예전에는 키를 밑줄로
+  // 뭉개서 저장하고 원래 이름은 업로드 시 넣어둔 커스텀 metadata(originalName)에
+  // 따로 보관했었는데, list()로 파일 목록을 불러올 때는 그 커스텀 metadata를
+  // 돌려주지 않는 Supabase의 알려진 버그가 있다
+  // (https://github.com/supabase/storage/issues/759). 그 결과 목록에는 항상
+  // "안전하게 뭉개진(밑줄 범벅)" 이름만 보이는 문제가 있었다.
+  // 이를 피하기 위해 metadata에는 의존하지 않고, 원본 이름(확장자 제외)을
+  // base64url로 인코딩해서 저장 경로(키) 문자열 안에 직접 담아둔다. 확장자는
+  // 이미지/PDF 인식과 콘텐츠 타입 자동 추론이 그대로 동작하도록 항상 평문
+  // (.pdf, .jpg 등) 그대로 붙여둔다. 목록을 불러올 때는 그 경로에서 다시
+  // 디코딩해서 원본 이름을 복원한다.
+  function encodeNameForKey(stem) {
+    try {
+      const bytes = new TextEncoder().encode(stem)
+      let bin = ''
+      bytes.forEach(b => { bin += String.fromCharCode(b) })
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    } catch (e) { return stem.replace(/[^a-zA-Z0-9\-_]/g, '_') }
+  }
+  function decodeNameFromKey(seg) {
+    try {
+      let b64 = seg.replace(/-/g, '+').replace(/_/g, '/')
+      while (b64.length % 4) b64 += '='
+      const bin = atob(b64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      // fatal: true — 예전 방식(밑줄 범벅)으로 저장된 옛 파일을 실수로 이상한
+      // 문자열로 잘못 디코딩하지 않고, 디코딩 실패로 확실히 처리하기 위함.
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    } catch (e) { return null }
+  }
+  // 원본 파일명 → Storage 키에 쓸 안전한 조각(확장자는 평문 유지)
+  function buildSafeStorageName(originalName) {
+    const extMatch = originalName.match(/\.[a-zA-Z0-9]+$/)
+    const ext = extMatch ? extMatch[0] : ''
+    const stem = ext ? originalName.slice(0, -ext.length) : originalName
+    return `${encodeNameForKey(stem)}${ext}`
+  }
+  // Storage에 저장된 파일명(타임스탬프 접두사 포함) → 원본 파일명 복원
+  function decodeOriginalName(storageFileName) {
+    const withoutPrefix = storageFileName.replace(/^\d+_\d+_/, '')
+    const extMatch = withoutPrefix.match(/\.[a-zA-Z0-9]+$/)
+    const ext = extMatch ? extMatch[0] : ''
+    const stemPart = ext ? withoutPrefix.slice(0, -ext.length) : withoutPrefix
+    const decoded = decodeNameFromKey(stemPart)
+    return (decoded !== null && decoded.length > 0 ? decoded : stemPart) + ext
   }
   function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
   function unescHtml(s) { return s.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&') }
