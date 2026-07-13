@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.4.1
+  APP VERSION: v1.4.2
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -252,7 +252,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.1</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.2</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -2491,15 +2491,31 @@ ${body}`
       spotlight.style.width = (r.width + pad * 2) + 'px'
       spotlight.style.height = (r.height + pad * 2) + 'px'
       card.classList.remove('center-card')
-      // 화면 아래쪽 절반에 타겟이 있으면 카드를 위에, 아니면 아래에 배치
-      const spaceBelow = window.innerHeight - r.bottom
-      const showBelow = spaceBelow > 180
-      card.style.top = (showBelow ? r.bottom + 14 : Math.max(14, r.top - 14)) + 'px'
-      card.style.transform = showBelow ? 'none' : 'translateY(-100%)'
+      card.style.transform = 'none'
+
+      // 텍스트를 이미 채워둔 상태라 카드의 실제 렌더링 크기(offsetWidth/Height)를
+      // 정확히 잴 수 있다 — 이전에는 고정값(카드폭 300, 임계높이 180)으로 대충
+      // 계산해서, 화면 위쪽 근처의 타겟 위에 말풍선을 띄울 때 카드 높이가 그
+      // 값보다 크면 화면 밖으로 넘어가 잘리는 문제가 있었다.
+      const margin = 14
+      const gap = 14
+      const cardW = card.offsetWidth
+      const cardH = card.offsetHeight
+
+      // 기본은 타겟 아래에 배치, 아래 공간이 부족하면 위에 배치를 시도
+      let top = r.bottom + gap
+      if (top + cardH > window.innerHeight - margin) {
+        const topAbove = r.top - gap - cardH
+        if (topAbove >= margin) top = topAbove
+      }
+      // 그래도 화면을 벗어나면 화면 안쪽으로 완전히 붙여넣는다(위/아래 모두 부족한 아주 좁은 화면 대비)
+      if (top < margin) top = margin
+      if (top + cardH > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - cardH - margin)
+      card.style.top = top + 'px'
+
       let left = r.left
-      const cardWidth = 300
-      if (left + cardWidth > window.innerWidth - 14) left = window.innerWidth - cardWidth - 14
-      if (left < 14) left = 14
+      if (left + cardW > window.innerWidth - margin) left = window.innerWidth - cardW - margin
+      if (left < margin) left = margin
       card.style.left = left + 'px'
     } else {
       spotlight.style.display = 'none'
