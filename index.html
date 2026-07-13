@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.3.6
+  APP VERSION: v1.4.0
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -221,11 +221,38 @@
       .note-textarea, .attach-area { padding-left: 1.25rem; padding-right: 1.25rem; }
       .pdf-filename { max-width: 140px; }
     }
+    /* ── 튜토리얼(가이드 투어) ── */
+    #tutorialOverlay { position: fixed; inset: 0; z-index: 20000; display: none; }
+    #tutorialOverlay.active { display: block; }
+    .tut-spotlight {
+      position: fixed; border-radius: 10px;
+      box-shadow: 0 0 0 9999px rgba(26,23,19,0.62);
+      transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+      pointer-events: none; z-index: 1;
+    }
+    .tut-spotlight.center { box-shadow: 0 0 0 9999px rgba(26,23,19,0.62); }
+    .tut-card {
+      position: fixed; z-index: 2; background: var(--surface); color: var(--ink);
+      border-radius: 12px; padding: 1rem 1.1rem; max-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      transition: top 0.25s ease, left 0.25s ease;
+      font-size: 0.9rem; line-height: 1.5;
+    }
+    .tut-card.center-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 340px; text-align: center; }
+    .tut-step-count { font-size: 0.75rem; color: var(--ink-3); margin-bottom: 0.35rem; }
+    .tut-title { font-weight: 700; margin-bottom: 0.3rem; }
+    .tut-desc { color: var(--ink-2); margin-bottom: 0.8rem; }
+    .tut-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .tut-btn { border: none; background: var(--accent); color: #fff; border-radius: 7px; padding: 0.35rem 0.75rem; font-size: 0.82rem; cursor: pointer; }
+    .tut-btn.ghost { background: transparent; color: var(--ink-3); padding: 0.35rem 0.4rem; }
+    .tut-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    @media (max-width: 640px) {
+      .tut-card { max-width: calc(100vw - 2rem); }
+    }
   </style>
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.6</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.0</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -537,14 +564,15 @@
       <div class="shelf-header-top">
         <span class="sidebar-logo">책장</span>
         <div style="display:flex; gap:0.5rem;">
-          <button class="logout-btn" onclick="openSettings()">설정</button>
+          <button class="logout-btn" id="tutGuideBtn" onclick="startTutorial()" title="튜토리얼 다시 보기">가이드</button>
+          <button class="logout-btn" id="tutSettingsBtn" onclick="openSettings()">설정</button>
           <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
         </div>
       </div>
       <div class="user-info" id="userEmail"></div>
       <div class="shelf-header-actions">
-        <button class="icon-btn" onclick="newNote()">+ 새 노트</button>
-        <label class="icon-btn" style="cursor:pointer;">
+        <button class="icon-btn" id="tutNewNoteBtn" onclick="newNote()">+ 새 노트</button>
+        <label class="icon-btn" id="tutFileNoteBtn" style="cursor:pointer;">
           📎 파일로 새 노트
           <input type="file" id="shelfFileInput" multiple style="display:none;" onchange="handleShelfFileInput(event)" />
         </label>
@@ -569,11 +597,11 @@
   <!-- 노트 단독 보기 -->
   <div class="editor-pane" id="noteView" style="display:none;">
     <div class="editor-toolbar">
-      <button class="icon-btn" onclick="goBackToShelf()" title="책장으로">← 책장</button>
+      <button class="icon-btn" id="tutBackToShelfBtn" onclick="goBackToShelf()" title="책장으로">← 책장</button>
       <input class="note-title-input" type="text" id="noteTitle" placeholder="제목 없음" oninput="onEdit()" />
       <div class="toolbar-actions">
         <span class="save-status" id="saveStatus">저장됨</span>
-        <label class="icon-btn" style="cursor:pointer;">
+        <label class="icon-btn" id="tutFileAttachBtn" style="cursor:pointer;">
           📎 파일 첨부
           <input type="file" id="fileInput" multiple style="display:none;" onchange="uploadFiles(event)" />
         </label>
@@ -584,6 +612,23 @@
     <div class="attach-area" id="attachArea"></div>
     <div id="dropZone" style="display:none; position:absolute; inset:0; background:rgba(61,90,62,0.08); border:2px dashed var(--accent); border-radius:8px; z-index:10; align-items:center; justify-content:center; font-size:1rem; color:var(--accent); pointer-events:none;">📎 파일을 여기에 놓으세요</div>
     <textarea class="note-textarea" id="noteBody" placeholder="여기에 메모를 적어보세요..." oninput="onEdit()"></textarea>
+  </div>
+</div>
+
+<!-- ── 튜토리얼(가이드 투어) ── -->
+<div id="tutorialOverlay">
+  <div class="tut-spotlight" id="tutSpotlight"></div>
+  <div class="tut-card" id="tutCard">
+    <div class="tut-step-count" id="tutStepCount"></div>
+    <div class="tut-title" id="tutTitle"></div>
+    <div class="tut-desc" id="tutDesc"></div>
+    <div class="tut-actions">
+      <button class="tut-btn ghost" id="tutSkipBtn" onclick="skipTutorial()">건너뛰기</button>
+      <div style="display:flex; gap:0.4rem;">
+        <button class="tut-btn ghost" id="tutPrevBtn" onclick="tutorialPrev()">이전</button>
+        <button class="tut-btn" id="tutNextBtn" onclick="tutorialNext()">다음</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -876,7 +921,7 @@
   }
 
   // ── Views ──
-  function showApp() {
+  async function showApp() {
     document.getElementById('landing').style.display = 'none'
     document.getElementById('app').style.display = 'flex'
     document.getElementById('userEmail').textContent = currentUser.email.replace('@notepad.app', '')
@@ -886,13 +931,23 @@
     // history entry가 쌓이고, 뒤로가기를 누르면 PDF 필기 → 노트 → 책장 순서로
     // 돌아가도록 한다 (사이트 밖으로 바로 나가지 않게).
     history.replaceState({ view: 'shelf' }, '')
-    loadNotes()
+    await loadNotes()
     if (!appInitialized) {
       initDragDrop()
       initPaste()
       initShelfDragDrop()
       appInitialized = true
     }
+    // 이 계정으로 처음 들어온 거라면 짧게 가이드 투어를 자동으로 보여준다.
+    // (한 번 보고 나면 다시 자동으로는 안 뜨고, 필요하면 '가이드' 버튼으로
+    // 언제든 다시 볼 수 있음)
+    try {
+      const seenKey = `notepad_tutorial_seen_${currentUser.id}`
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, '1')
+        setTimeout(() => startTutorial(), 500)
+      }
+    } catch (e) {}
   }
   function showLanding() {
     document.getElementById('landing').style.display = 'flex'
@@ -2299,6 +2354,158 @@ ${body}`
   } catch (e) { console.error('모달 배경 클릭 이벤트 연결 실패:', e) }
 
   // (PDF.js worker 경로는 상단의 이중 CDN 로더에서 이미 올바르게 설정됨)
+
+  // ── 튜토리얼(가이드 투어) ──
+  // 실제 화면의 버튼을 스포트라이트로 비추면서 말풍선으로 하나씩 설명하는
+  // 방식. selector가 있으면 그 요소를 찾아 화면에 보이도록 스크롤한 뒤
+  // 하이라이트하고, selector가 없으면 화면 가운데에 카드만 띄운다(인트로/아웃트로).
+  // beforeShow에서 뷰 전환(노트 열기 등)이 필요한 스텝을 처리한다.
+  let tutSteps = []
+  let tutIndex = 0
+  let tutDemoNoteId = null
+
+  function buildTutorialSteps() {
+    return [
+      {
+        title: '오케이노트에 오신 걸 환영해요 👋',
+        desc: '실제 화면을 하나씩 짚어가면서 빠르게 사용법을 안내할게요. 아무 때나 "건너뛰기"를 눌러 종료할 수 있어요.'
+      },
+      { view: 'shelf', selector: '#tutNewNoteBtn', title: '새 노트 만들기', desc: '여기를 누르면 빈 노트가 바로 만들어지고 편집 화면으로 이동해요.' },
+      { view: 'shelf', selector: '#tutFileNoteBtn', title: '파일로 새 노트 만들기', desc: '이미 갖고 있는 파일(이미지, PDF 등)을 바로 올려서 그 파일이 첨부된 노트를 만들 수 있어요. 책장 화면에 파일을 그냥 드래그해서 놓아도 똑같이 동작해요.' },
+      { view: 'shelf', selector: '#searchInput', title: '노트 검색', desc: '제목이나 내용으로 노트를 빠르게 찾을 수 있어요.' },
+      { view: 'shelf', selector: '#sortSelect', title: '정렬', desc: '최신순 또는 이름순으로 노트 목록을 정렬할 수 있어요.' },
+      { view: 'shelf', selector: '#selectModeBtn', title: '여러 개 선택하기', desc: '이 버튼을 누르면 노트를 여러 개 체크해서 한 번에 삭제할 수 있어요.' },
+      { view: 'shelf', selector: '#tutSettingsBtn', title: '설정', desc: '비밀번호 변경 등 계정 관련 설정은 여기서 할 수 있어요.' },
+      { view: 'note', selector: '#saveStatus', title: '자동 저장', desc: '노트를 열어봤어요. 제목이나 내용을 입력하면 잠시 후 자동으로 저장되고, 여기에 저장 상태가 표시돼요. 따로 저장 버튼을 누를 필요 없어요.' },
+      { view: 'note', selector: '#tutFileAttachBtn', title: '파일 첨부', desc: '이미지나 PDF 같은 파일을 노트에 첨부할 수 있어요. PDF는 열어서 직접 필기(그리기)도 할 수 있답니다.' },
+      { view: 'note', selector: '#tutBackToShelfBtn', title: '책장으로 돌아가기', desc: '다 쓴 노트는 여기를 눌러서 책장(노트 목록)으로 돌아갈 수 있어요.' },
+      {
+        title: '이제 준비됐어요! ✨',
+        desc: '이 튜토리얼은 왼쪽 위 "가이드" 버튼을 누르면 언제든 다시 볼 수 있어요. 즐겁게 사용해 주세요!',
+        beforeShow: async () => { await cleanupTutorialDemoNote(); if (activeNote) await backToShelf() }
+      }
+    ]
+  }
+
+  // 스텝의 view에 맞춰 실제 화면을 전환한다. "이전" 버튼으로 노트 화면 스텝에서
+  // 책장 화면 스텝으로(혹은 반대로) 되돌아갈 때도 항상 맞는 화면이 떠 있도록
+  // 앞으로 가든 뒤로 가든 매번 호출한다.
+  async function ensureTutorialView(view) {
+    if (view === 'note') return ensureTutorialDemoNoteOpen()
+    if (view === 'shelf' && activeNote) return backToShelf()
+  }
+
+  // 노트 화면을 보여줘야 하는 스텝을 위해, 노트가 하나도 없을 수도 있으니
+  // 튜토리얼 전용 임시 예시 노트를 만들어서 연다. 이미 열려있는 노트가 있으면
+  // 굳이 새로 만들지 않고 그걸 그대로 사용한다.
+  async function ensureTutorialDemoNoteOpen() {
+    if (activeNote && activeNote.id === tutDemoNoteId) return
+    if (tutDemoNoteId) {
+      // "이전" 버튼으로 책장을 갔다가 다시 노트 스텝으로 돌아온 경우, 이미
+      // 만들어둔 예시 노트가 있으면 새로 만들지 않고 그걸 다시 연다.
+      await selectNote(tutDemoNoteId)
+      return
+    }
+    if (activeNote) return // 사용자가 이미 자기 노트를 보고 있다면 그걸 그대로 사용
+    const { data, error } = await sb.from('notes').insert({
+      user_id: currentUser.id,
+      title: '🎓 튜토리얼 예시 노트',
+      body: '이 노트는 튜토리얼 설명을 위해 잠깐 만들어진 예시예요.\n튜토리얼이 끝나면 자동으로 정리돼요 — 자유롭게 둘러보세요!'
+    }).select().single()
+    if (!error && data) {
+      tutDemoNoteId = data.id
+      notes.unshift(data); applySort(); renderNotesList(notes)
+      await selectNote(data.id)
+    }
+  }
+
+  async function cleanupTutorialDemoNote() {
+    if (!tutDemoNoteId) return
+    const id = tutDemoNoteId
+    tutDemoNoteId = null
+    try {
+      await deleteNoteAttachments(id)
+      await sb.from('notes').delete().eq('id', id)
+      notes = notes.filter(n => n.id !== id)
+      renderFilteredNotes()
+    } catch (e) { console.error('튜토리얼 예시 노트 정리 실패:', e) }
+  }
+
+  function startTutorial() {
+    tutSteps = buildTutorialSteps()
+    tutIndex = 0
+    document.getElementById('tutorialOverlay').classList.add('active')
+    renderTutorialStep()
+  }
+
+  async function skipTutorial() {
+    document.getElementById('tutorialOverlay').classList.remove('active')
+    const wasOnDemoNote = activeNote && activeNote.id === tutDemoNoteId
+    await cleanupTutorialDemoNote()
+    // 예시 노트를 보고 있던 도중에 건너뛴 경우 책장으로 정리
+    if (wasOnDemoNote) await backToShelf()
+  }
+
+  async function tutorialNext() {
+    if (tutIndex >= tutSteps.length - 1) {
+      document.getElementById('tutorialOverlay').classList.remove('active')
+      return
+    }
+    tutIndex++
+    await renderTutorialStep()
+  }
+
+  async function tutorialPrev() {
+    if (tutIndex <= 0) return
+    tutIndex--
+    await renderTutorialStep()
+  }
+
+  async function renderTutorialStep() {
+    const step = tutSteps[tutIndex]
+    if (!step) return
+    try {
+      if (step.view) await ensureTutorialView(step.view)
+      if (step.beforeShow) await step.beforeShow()
+    } catch (e) { console.error('튜토리얼 단계 준비 실패:', e) }
+
+    const card = document.getElementById('tutCard')
+    const spotlight = document.getElementById('tutSpotlight')
+    document.getElementById('tutStepCount').textContent = `${tutIndex + 1} / ${tutSteps.length}`
+    document.getElementById('tutTitle').textContent = step.title
+    document.getElementById('tutDesc').textContent = step.desc
+    document.getElementById('tutPrevBtn').disabled = tutIndex === 0
+    document.getElementById('tutNextBtn').textContent = tutIndex === tutSteps.length - 1 ? '완료' : '다음'
+
+    const target = step.selector ? document.querySelector(step.selector) : null
+    if (target) {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      // 스크롤 애니메이션이 끝날 시간을 살짝 준 뒤 위치를 잰다
+      await new Promise(r => setTimeout(r, 220))
+      const r = target.getBoundingClientRect()
+      const pad = 6
+      spotlight.style.display = 'block'
+      spotlight.style.top = (r.top - pad) + 'px'
+      spotlight.style.left = (r.left - pad) + 'px'
+      spotlight.style.width = (r.width + pad * 2) + 'px'
+      spotlight.style.height = (r.height + pad * 2) + 'px'
+      card.classList.remove('center-card')
+      // 화면 아래쪽 절반에 타겟이 있으면 카드를 위에, 아니면 아래에 배치
+      const spaceBelow = window.innerHeight - r.bottom
+      const showBelow = spaceBelow > 180
+      card.style.top = (showBelow ? r.bottom + 14 : Math.max(14, r.top - 14)) + 'px'
+      card.style.transform = showBelow ? 'none' : 'translateY(-100%)'
+      let left = r.left
+      const cardWidth = 300
+      if (left + cardWidth > window.innerWidth - 14) left = window.innerWidth - cardWidth - 14
+      if (left < 14) left = 14
+      card.style.left = left + 'px'
+    } else {
+      spotlight.style.display = 'none'
+      card.classList.add('center-card')
+      card.style.transform = 'translate(-50%, -50%)'
+    }
+  }
 
   try {
     init()
