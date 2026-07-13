@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.4.2
+  APP VERSION: v1.4.3
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -236,6 +236,7 @@
       border-radius: 12px; padding: 1rem 1.1rem; max-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       transition: top 0.25s ease, left 0.25s ease;
       font-size: 0.9rem; line-height: 1.5;
+      max-height: calc(100vh - 2rem); overflow-y: auto;
     }
     .tut-card.center-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 340px; text-align: center; }
     .tut-step-count { font-size: 0.75rem; color: var(--ink-3); margin-bottom: 0.35rem; }
@@ -252,7 +253,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.2</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.3</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
