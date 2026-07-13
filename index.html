@@ -1410,24 +1410,40 @@
   }
 
   // ── Download ──
-  // 사파리(특히 아이폰)는 PDF나 이미지처럼 브라우저가 바로 열어서 보여줄 수 있는
-  // 파일 형식에 대해 <a download> 속성을 무시하고 그냥 화면에 열어버리는 경우가
-  // 많다. 이는 브라우저 자체의 제약이라 완전히 우회할 방법은 없지만, 사파리가
-  // 지원하는 파일 공유 시트(Web Share API - navigator.share)를 쓰면 사용자가
-  // 공유 버튼에서 "파일에 저장"을 선택해 기기에 실제로 저장할 수 있다. 그래서
-  // 공유 시트가 가능하면 그걸 우선 쓰고, 지원하지 않는 환경(대부분의 PC 브라우저
-  // 등)에서는 기존 방식(Blob URL + a[download])으로 자동 저장되도록 했다.
+  // 아이폰/아이패드의 사파리는 PDF나 이미지처럼 브라우저가 바로 열어서 보여줄 수
+  // 있는 파일 형식에 대해 <a download> 속성을 무시하고 그냥 화면에 열어버리는
+  // 경우가 많다. 이는 iOS 사파리만의 제약이라 완전히 우회할 방법은 없지만,
+  // iOS가 지원하는 파일 공유 시트(Web Share API - navigator.share)를 쓰면
+  // 사용자가 공유 버튼에서 "파일에 저장"을 선택해 기기에 실제로 저장할 수 있다.
+  //
+  // 그런데 이 공유 시트 방식을 iOS가 아닌 기기(안드로이드, PC 등)에도 똑같이
+  // 적용하면 오히려 문제가 된다 — 안드로이드 크롬 등은 canShare가 true를
+  // 돌려줘도 공유 시트에 "기기에 저장"과 같은 명확한 옵션이 없거나 메신저 앱
+  // 목록만 뜨는 경우가 많아, 사용자 입장에서는 "저장이 안 된다"고 느끼게 된다.
+  // 반면 <a download> + Blob URL 방식은 안드로이드/PC의 대부분 브라우저에서
+  // 즉시 다운로드 폴더에 파일을 저장해주는 훨씬 안정적인 방법이다.
+  //
+  // 그래서 iOS(아이폰/아이패드)에서만 공유 시트를 우선 시도하고, 그 외 모든
+  // 기기는 바로 표준 다운로드 방식을 사용하도록 분기한다.
+  function isIOSDevice() {
+    // 아이패드는 iPadOS 13+부터 데스크톱 사파리로 위장해 userAgent에 "iPad"가
+    // 안 찍히므로, 맥으로 보이면서 터치를 지원하는 경우도 아이패드로 간주한다.
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  }
   async function saveBlobToDevice(blob, fileName) {
-    try {
-      const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' })
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file] })
-        return
+    if (isIOSDevice()) {
+      try {
+        const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] })
+          return
+        }
+      } catch (e) {
+        // 사용자가 공유 시트를 취소한 경우엔 그냥 종료 (다시 일반 다운로드로 뜨지 않게)
+        if (e && e.name === 'AbortError') return
+        console.error('공유 시트로 저장 실패, 일반 다운로드로 재시도:', e)
       }
-    } catch (e) {
-      // 사용자가 공유 시트를 취소한 경우엔 그냥 종료 (다시 일반 다운로드로 뜨지 않게)
-      if (e && e.name === 'AbortError') return
-      console.error('공유 시트로 저장 실패, 일반 다운로드로 재시도:', e)
     }
     const objectUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
