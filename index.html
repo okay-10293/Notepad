@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.3.5
+  APP VERSION: v1.3.6
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -203,6 +203,8 @@
       .pdf-toolbar { padding: 0.5rem 0.75rem; }
       .pdf-tool-group { padding-right: 0.4rem; margin-right: 0.4rem; }
       .pdf-tool-btn span { display: none; }
+      .pen-swatch { width: 26px; height: 26px; }
+      .pen-swatches { gap: 0.45rem; }
     }
 
     @keyframes bounce {
@@ -223,7 +225,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.5</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.3.6</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -1035,8 +1037,17 @@
       clearTimeout(saveTimer)
       saveTimer = null
       await saveNote()
+    } else if (noteSaveRetryTimer) {
+      // 저장 실패 후 재시도를 기다리는 중이었다면, 노트를 떠나기 전에 지금
+      // activeNote 기준으로 한 번 더 즉시 시도해본다 (재시도 시점이 늦어져서
+      // 그 사이 다른 노트로 넘어가버리면 엉뚱한 노트에 저장되는 문제를 방지).
+      clearTimeout(noteSaveRetryTimer)
+      noteSaveRetryTimer = null
+      await saveNote()
     }
   }
+
+  let noteSaveRetryTimer = null
 
   async function saveNote() {
     if (!activeNote) return
@@ -1045,11 +1056,20 @@
     const updatedAt = new Date().toISOString()
     const { error } = await sb.from('notes').update({ title, body, updated_at: updatedAt }).eq('id', activeNote.id)
     if (!error) {
+      if (noteSaveRetryTimer) { clearTimeout(noteSaveRetryTimer); noteSaveRetryTimer = null }
       activeNote.title = title; activeNote.body = body; activeNote.updated_at = updatedAt
       notes = notes.map(n => n.id === activeNote.id ? activeNote : n)
       applySort()
       renderFilteredNotes()
       document.getElementById('saveStatus').textContent = '저장됨'
+    } else {
+      // 저장이 실패하면 화면에 "저장 중..."이 그대로 남아 마치 저장된 것처럼
+      // 보이는 문제가 있었다. 실패를 분명히 알리고, 네트워크가 잠깐 끊겼을 수
+      // 있으니 잠시 후 같은 내용으로 자동 재시도한다(PDF 필기 자동저장과 동일한 방식).
+      console.error('노트 저장 실패:', error)
+      document.getElementById('saveStatus').textContent = '저장 실패 · 재시도 중...'
+      if (noteSaveRetryTimer) clearTimeout(noteSaveRetryTimer)
+      noteSaveRetryTimer = setTimeout(() => { noteSaveRetryTimer = null; saveNote() }, 4000)
     }
   }
 
@@ -1068,6 +1088,7 @@
     // 노트이므로 저장할 필요가 없고, 안 지우면 삭제 후에도 불필요한 업데이트
     // 요청이 한 번 더 나간다).
     clearTimeout(saveTimer); saveTimer = null
+    clearTimeout(noteSaveRetryTimer); noteSaveRetryTimer = null
     await deleteNoteAttachments(noteId)
     await sb.from('notes').delete().eq('id', noteId)
     notes = notes.filter(n => n.id !== noteId)
@@ -1659,10 +1680,15 @@ ${body}`
       if (!files.length) return
     }
     const isOpenNote = activeNote && activeNote.id === noteId
-    if (isOpenNote) document.getElementById('saveStatus').textContent = '업로드 중...'
+    // 파일이 여러 개거나 용량이 크면 업로드에 시간이 걸리는데, 예전에는 "업로드
+    // 중..."만 뜨고 몇 개 중 몇 번째인지 안 보여서 멈춘 것처럼 보일 수 있었다.
+    // 파일이 1개일 때는 굳이 개수를 안 보여줘도 되므로 그대로 둔다.
+    const showProgress = isOpenNote && files.length > 1
+    if (isOpenNote) document.getElementById('saveStatus').textContent = showProgress ? `업로드 중... (1/${files.length})` : '업로드 중...'
     const ts = Date.now()
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
+      if (showProgress) document.getElementById('saveStatus').textContent = `업로드 중... (${i + 1}/${files.length})`
       const ext = (file.name && file.name.split('.').pop()) || file.type.split('/')[1] || 'bin'
       const originalName = file.name || `paste_${ts}_${i}.${ext}`
       // 서버 저장명: 충돌 방지용 prefix 뒤에 원본명을 안전하게 인코딩해서 담아둔다
