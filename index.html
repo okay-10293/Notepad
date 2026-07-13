@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.4.4
+  APP VERSION: v1.4.5
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -227,14 +227,12 @@
     .tut-spotlight {
       position: fixed; border-radius: 10px;
       box-shadow: 0 0 0 9999px rgba(26,23,19,0.62);
-      transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
       pointer-events: none; z-index: 1;
     }
     .tut-spotlight.center { box-shadow: 0 0 0 9999px rgba(26,23,19,0.62); }
     .tut-card {
       position: fixed; z-index: 2; background: var(--surface); color: var(--ink);
       border-radius: 12px; padding: 1rem 1.1rem; max-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      transition: top 0.15s ease, left 0.15s ease;
       font-size: 0.9rem; line-height: 1.5;
       max-height: calc(100vh - 2rem); overflow-y: auto;
     }
@@ -253,7 +251,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.4</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.5</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -2529,6 +2527,12 @@ ${body}`
     } else {
       spotlight.style.display = 'none'
       card.classList.add('center-card')
+      // 이전 스텝(특정 버튼을 가리키는 스텝)에서 top/left를 px로 직접 지정해둔
+      // 채로 남아있으면, 인라인 스타일이 CSS 클래스보다 우선순위가 높아서
+      // center-card의 50%/50% 정렬이 무시되고 이전 위치가 그대로 남는 문제가
+      // 있었다. 명시적으로 초기화해서 항상 화면 정중앙에 오도록 한다.
+      card.style.top = '50%'
+      card.style.left = '50%'
       card.style.transform = 'translate(-50%, -50%)'
     }
   }
