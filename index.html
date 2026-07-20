@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.4.5
+  APP VERSION: v1.4.6
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -251,7 +251,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.5</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.6</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -771,6 +771,10 @@
   // 브라우저 뒤로가기 히스토리(책장 → 노트 → PDF 필기)를 재생하는 동안에는
   // selectNote/openPdfAnnotate 등이 또 새 history entry를 쌓지 않도록 막는 플래그
   let restoringHistory = false
+  // 튜토리얼이 내부적으로 노트를 열고 닫을 때는 실제 브라우저 히스토리에
+  // 쌓이지 않도록 막는 플래그 (안 막으면 튜토리얼이 끝난 뒤 뒤로가기를 눌렀을 때
+  // 이미 지워진 튜토리얼용 예시 노트 상태가 여러 번 걸리는 문제가 있었다)
+  let tutorialActive = false
 
   // 핵심 라이브러리(Supabase)가 없을 때 로딩 화면에 에러 상태를 띄움 (watchdog과 동일한 UI 재사용)
   function showBootFailure(msg) {
@@ -1055,7 +1059,7 @@
 
   async function newNote() {
     const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, title: '', body: '' }).select().single()
-    if (!error && data) { notes.unshift(data); applySort(); renderNotesList(notes); selectNote(data.id) }
+    if (!error && data) { notes.unshift(data); applySort(); renderFilteredNotes(); selectNote(data.id) }
   }
 
   async function selectNote(id) {
@@ -1070,9 +1074,11 @@
     document.getElementById('noteBody').value = activeNote.body || ''
     document.getElementById('saveStatus').textContent = '저장됨'
     loadAttachments(activeNote.id)
-    // 뒤로가기 히스토리 재생 중에는 새로 쌓지 않는다 (안 그러면 뒤로가기 한 번에
-    // 다시 앞으로 쌓이는 무한 루프/중복 entry가 생길 수 있음)
-    if (!restoringHistory) history.pushState({ view: 'note', noteId: activeNote.id }, '')
+    // 뒤로가기 히스토리 재생 중이거나 튜토리얼이 내부적으로 화면을 전환하는
+    // 중에는 새로 쌓지 않는다 (안 그러면 뒤로가기 한 번에 다시 앞으로 쌓이는
+    // 무한 루프/중복 entry나, 튜토리얼 종료 후 뒤로가기 시 이미 지워진 예시
+    // 노트 상태가 여러 번 걸리는 문제가 생길 수 있음)
+    if (!restoringHistory && !tutorialActive) history.pushState({ view: 'note', noteId: activeNote.id }, '')
   }
 
   function onEdit() {
@@ -1618,12 +1624,7 @@ ${body}`
   function sortNotes() {
     sortMode = document.getElementById('sortSelect').value
     applySort()
-    const q = document.getElementById('searchInput').value.toLowerCase()
-    if (q) {
-      renderNotesList(notes.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q)))
-    } else {
-      renderNotesList(notes)
-    }
+    renderFilteredNotes()
   }
 
   function toggleSelectMode() {
@@ -1631,20 +1632,20 @@ ${body}`
     selectedIds.clear()
     document.getElementById('selectModeBtn').textContent = selectMode ? '취소' : '선택'
     document.getElementById('bulkActions').style.display = selectMode ? 'flex' : 'none'
-    renderNotesList(notes)
+    renderFilteredNotes()
   }
 
   function toggleSelectNote(id, e) {
     e.stopPropagation()
     if (selectedIds.has(id)) selectedIds.delete(id)
     else selectedIds.add(id)
-    renderNotesList(notes)
+    renderFilteredNotes()
   }
 
   function selectAll() {
     if (selectedIds.size === notes.length) selectedIds.clear()
     else notes.forEach(n => selectedIds.add(n.id))
-    renderNotesList(notes)
+    renderFilteredNotes()
   }
 
   async function bulkDelete() {
@@ -2414,7 +2415,7 @@ ${body}`
     }).select().single()
     if (!error && data) {
       tutDemoNoteId = data.id
-      notes.unshift(data); applySort(); renderNotesList(notes)
+      notes.unshift(data); applySort(); renderFilteredNotes()
       await selectNote(data.id)
     }
   }
@@ -2431,34 +2432,46 @@ ${body}`
     } catch (e) { console.error('튜토리얼 예시 노트 정리 실패:', e) }
   }
 
-  function startTutorial() {
+  async function startTutorial() {
     tutSteps = buildTutorialSteps()
     tutIndex = 0
+    tutorialActive = true
     document.getElementById('tutorialOverlay').classList.add('active')
-    renderTutorialStep()
+    tutTransitioning = true
+    try { await renderTutorialStep() } finally { tutTransitioning = false }
   }
 
   async function skipTutorial() {
     document.getElementById('tutorialOverlay').classList.remove('active')
+    tutorialActive = false
     const wasOnDemoNote = activeNote && activeNote.id === tutDemoNoteId
     await cleanupTutorialDemoNote()
     // 예시 노트를 보고 있던 도중에 건너뛴 경우 책장으로 정리
     if (wasOnDemoNote) await backToShelf()
   }
 
+  // 다음/이전을 빠르게 연타하면 이전 스텝의 화면 전환(노트 열기/책장 이동 등)이
+  // 끝나기도 전에 다음 전환이 겹쳐서 시작돼 상태가 꼬일 수 있다. 전환 중에는
+  // 버튼 입력을 무시해서 항상 한 번에 한 스텝씩만 처리되도록 한다.
+  let tutTransitioning = false
+
   async function tutorialNext() {
+    if (tutTransitioning) return
     if (tutIndex >= tutSteps.length - 1) {
       document.getElementById('tutorialOverlay').classList.remove('active')
+      tutorialActive = false
       return
     }
     tutIndex++
-    await renderTutorialStep()
+    tutTransitioning = true
+    try { await renderTutorialStep() } finally { tutTransitioning = false }
   }
 
   async function tutorialPrev() {
-    if (tutIndex <= 0) return
+    if (tutTransitioning || tutIndex <= 0) return
     tutIndex--
-    await renderTutorialStep()
+    tutTransitioning = true
+    try { await renderTutorialStep() } finally { tutTransitioning = false }
   }
 
   async function renderTutorialStep() {
