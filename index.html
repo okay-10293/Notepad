@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.4.6
+  APP VERSION: v1.5.0
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -251,7 +251,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.4.6</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.0</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -299,6 +299,7 @@
   <nav class="land-nav">
     <span class="logo">OkayNotepad</span>
     <div class="land-nav-btns">
+      <button class="btn btn-ghost" onclick="startDemoMode()">체험해보기</button>
       <button class="btn btn-ghost" onclick="openModal('login')">로그인</button>
       <button class="btn btn-primary" onclick="openModal('signup')">무료 시작</button>
     </div>
@@ -310,7 +311,7 @@
     <p class="hero-sub">컴퓨터에서 쓴 메모를 핸드폰에서 바로 확인하세요.<br>로그인 하나로 모든 기기에서 동기화됩니다.</p>
     <div class="hero-btns">
       <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
-      <button class="btn btn-ghost btn-lg" onclick="openModal('login')">로그인</button>
+      <button class="btn btn-ghost btn-lg" onclick="startDemoMode()">로그인 없이 체험하기</button>
     </div>
     <div onclick="document.querySelector('.land-features').scrollIntoView({behavior:'smooth'})" style="margin-top:1.5rem; width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-3); animation:bounce 2s infinite; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink-3)'">↓</div>
   </div>
@@ -557,6 +558,11 @@
 
 <!-- ── App ── -->
 <div id="app">
+  <div id="demoBanner" style="display:none; position:sticky; top:0; z-index:500; background:var(--accent); color:#fff; padding:0.55rem 1rem; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:0.9rem; flex-wrap:wrap; text-align:center;">
+    <span>🔍 지금 <b>체험판</b>을 보고 계세요 — 여기서 쓰는 내용은 실제로 저장되지 않아요</span>
+    <button onclick="exitDemoMode(); openModal('signup')" style="background:#fff; color:var(--accent); border:none; border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; font-weight:600; cursor:pointer;">무료로 시작하기</button>
+    <button onclick="exitDemoMode()" style="background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.6); border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; cursor:pointer;">체험 종료</button>
+  </div>
   <!-- 책장: 노트 목록 -->
   <div class="shelf-view" id="shelfView">
     <div class="shelf-header">
@@ -771,6 +777,10 @@
   // 브라우저 뒤로가기 히스토리(책장 → 노트 → PDF 필기)를 재생하는 동안에는
   // selectNote/openPdfAnnotate 등이 또 새 history entry를 쌓지 않도록 막는 플래그
   let restoringHistory = false
+  // 로그인 없이 실제 UI를 눌러볼 수 있는 체험 모드. true인 동안엔 노트 작성/삭제/
+  // 검색 등은 브라우저 메모리에서만 동작하고(새로고침하면 초기화), 서버에 실제로
+  // 저장하는 파일 첨부·설정 변경 같은 기능은 막고 가입을 유도한다.
+  let demoMode = false
   // 튜토리얼이 내부적으로 노트를 열고 닫을 때는 실제 브라우저 히스토리에
   // 쌓이지 않도록 막는 플래그 (안 막으면 튜토리얼이 끝난 뒤 뒤로가기를 눌렀을 때
   // 이미 지워진 튜토리얼용 예시 노트 상태가 여러 번 걸리는 문제가 있었다)
@@ -917,6 +927,7 @@
   }
 
   async function handleLogout() {
+    if (demoMode) { exitDemoMode(); return }
     // 로그아웃(세션 종료)되고 나면 그 이후엔 저장 요청이 인증 없이 나가서
     // 실패하므로, 세션이 살아있는 지금 대기 중인 저장을 먼저 끝낸다.
     await flushNoteSave()
@@ -960,6 +971,69 @@
     document.getElementById('sortSelect').value = 'date'
     loadAds()
   }
+
+  // ── 체험 모드(로그인 없이 둘러보기) ──
+  // 로그인 화면 뒤에 실제로 어떤 앱인지 전혀 안 보이면 방문자도, (에드센스 등)
+  // 심사자도 콘텐츠를 판단할 게 마케팅 문구뿐이라 신뢰하기 어렵다. 그래서 실제
+  // 앱 화면을 그대로 띄우고 예시 노트 2개를 자유롭게 만들고/쓰고/지워볼 수 있게
+  // 하되, 전부 브라우저 메모리에서만 동작해서(새로고침하면 사라짐) 서버에는
+  // 아무것도 남지 않는다. 파일 첨부·PDF 필기·설정처럼 실제 계정이 있어야만
+  // 의미 있는 기능은 안내 메시지로 가입을 유도한다.
+  function getDemoNotesSeed() {
+    const now = new Date().toISOString()
+    return [
+      {
+        id: 'demo-1', title: '📝 이렇게 메모하시면 돼요', updated_at: now, created_at: now,
+        body: '제목과 본문을 입력하면 실제 서비스에서는 저장 버튼 없이 자동으로 저장돼요.\n\n이 텍스트를 자유롭게 지우고 직접 타이핑해보세요! (체험판이라 실제로 저장되진 않아요)\n\n왼쪽 위 "← 책장" 버튼을 누르면 노트 목록으로 돌아갈 수 있어요.'
+      },
+      {
+        id: 'demo-2', title: '📎 파일 첨부 & PDF 필기', updated_at: now, created_at: now,
+        body: '실제 계정으로 로그인하면 이 노트에 이미지, PDF, 문서 파일을 첨부할 수 있어요.\n\n특히 첨부한 PDF는 펜과 형광펜으로 직접 필기까지 할 수 있답니다 — 수업 자료나 계약서에 인쇄 없이 바로 표시해보세요.\n\n체험판에서는 이 기능이 제한돼 있어요. 무료로 가입하면 바로 사용할 수 있어요!'
+      }
+    ]
+  }
+
+  // demoMode일 때 서버 저장이 필요한 기능(파일 첨부, 설정 변경 등)에서 호출한다.
+  // true를 반환하면 호출부는 곧바로 return해서 실제 동작을 막는다.
+  function demoBlocked(msg) {
+    if (!demoMode) return false
+    if (confirm((msg || '체험판에서는 사용할 수 없는 기능이에요.') + '\n\n무료로 가입하면 전부 이용하실 수 있어요. 지금 가입하시겠어요?')) {
+      exitDemoMode()
+      openModal('signup')
+    }
+    return true
+  }
+
+  function startDemoMode() {
+    demoMode = true
+    currentUser = { id: 'demo-user', email: 'demo@notepad.app' }
+    notes = getDemoNotesSeed()
+    activeNote = null
+    document.getElementById('landing').style.display = 'none'
+    document.getElementById('app').style.display = 'flex'
+    document.getElementById('demoBanner').style.display = 'flex'
+    document.getElementById('userEmail').textContent = '체험판'
+    document.getElementById('shelfView').style.display = 'flex'
+    document.getElementById('noteView').style.display = 'none'
+    history.replaceState({ view: 'shelf' }, '')
+    applySort()
+    renderFilteredNotes()
+    if (!appInitialized) {
+      initDragDrop()
+      initPaste()
+      initShelfDragDrop()
+      appInitialized = true
+    }
+  }
+
+  function exitDemoMode() {
+    demoMode = false
+    currentUser = null
+    notes = []; activeNote = null
+    document.getElementById('demoBanner').style.display = 'none'
+    showLanding()
+  }
+
   async function backToShelf() {
     await flushNoteSave()
     activeNote = null
@@ -1058,6 +1132,12 @@
   }
 
   async function newNote() {
+    if (demoMode) {
+      const now = new Date().toISOString()
+      const note = { id: 'demo-' + Date.now(), title: '', body: '', updated_at: now, created_at: now }
+      notes.unshift(note); applySort(); renderFilteredNotes(); selectNote(note.id)
+      return
+    }
     const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, title: '', body: '' }).select().single()
     if (!error && data) { notes.unshift(data); applySort(); renderFilteredNotes(); selectNote(data.id) }
   }
@@ -1114,6 +1194,15 @@
     const title = document.getElementById('noteTitle').value
     const body = document.getElementById('noteBody').value
     const updatedAt = new Date().toISOString()
+    if (demoMode) {
+      // 체험판은 서버에 저장하지 않고 메모리 상에서만 반영한다.
+      activeNote.title = title; activeNote.body = body; activeNote.updated_at = updatedAt
+      notes = notes.map(n => n.id === activeNote.id ? activeNote : n)
+      applySort()
+      renderFilteredNotes()
+      document.getElementById('saveStatus').textContent = '저장됨'
+      return
+    }
     const { error } = await sb.from('notes').update({ title, body, updated_at: updatedAt }).eq('id', activeNote.id)
     if (!error) {
       if (noteSaveRetryTimer) { clearTimeout(noteSaveRetryTimer); noteSaveRetryTimer = null }
@@ -1149,6 +1238,11 @@
     // 요청이 한 번 더 나간다).
     clearTimeout(saveTimer); saveTimer = null
     clearTimeout(noteSaveRetryTimer); noteSaveRetryTimer = null
+    if (demoMode) {
+      notes = notes.filter(n => n.id !== noteId)
+      goBackToShelf()
+      return
+    }
     await deleteNoteAttachments(noteId)
     await sb.from('notes').delete().eq('id', noteId)
     notes = notes.filter(n => n.id !== noteId)
@@ -1176,6 +1270,7 @@
 
   async function loadAttachments(noteId) {
     const container = document.getElementById('attachArea')
+    if (demoMode) { container.innerHTML = ''; return }
     const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${noteId}`)
     if (error || !data || !data.length) {
       container.innerHTML = ''
@@ -1345,6 +1440,7 @@
 
   // ── Settings ──
   function openSettings() {
+    if (demoBlocked('체험판에서는 계정 설정을 사용할 수 없어요.')) return
     const username = currentUser.email.replace('@notepad.app', '')
     document.getElementById('settingsUser').textContent = '현재 아이디: ' + username
     document.getElementById('settingsError').style.display = 'none'
@@ -1651,9 +1747,11 @@ ${body}`
   async function bulkDelete() {
     if (!selectedIds.size) return
     if (!confirm(`선택한 ${selectedIds.size}개의 노트를 삭제할까요?`)) return
-    for (const id of selectedIds) {
-      await deleteNoteAttachments(id)
-      await sb.from('notes').delete().eq('id', id)
+    if (!demoMode) {
+      for (const id of selectedIds) {
+        await deleteNoteAttachments(id)
+        await sb.from('notes').delete().eq('id', id)
+      }
     }
     notes = notes.filter(n => !selectedIds.has(n.id))
     selectedIds.clear()
@@ -1698,6 +1796,7 @@ ${body}`
 
   // 파일마다 새 노트를 만들고(제목=파일명) 그 노트에 파일을 첨부
   async function createFileNotes(files) {
+    if (demoBlocked('체험판에서는 파일로 새 노트를 만들 수 없어요.')) return
     for (const file of files) {
       const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, title: file.name, body: '' }).select().single()
       if (error || !data) { console.error(error); continue }
@@ -1725,6 +1824,7 @@ ${body}`
 
   // noteId를 명시하면 그 노트로, 생략하면 현재 열려있는 노트(activeNote)로 업로드
   async function uploadFilesRaw(rawFiles, noteId) {
+    if (demoBlocked('체험판에서는 파일 첨부를 사용할 수 없어요.')) return
     noteId = noteId || (activeNote && activeNote.id)
     if (!noteId) return
     let files = Array.from(rawFiles)
@@ -2408,11 +2508,20 @@ ${body}`
       return
     }
     if (activeNote) return // 사용자가 이미 자기 노트를 보고 있다면 그걸 그대로 사용
-    const { data, error } = await sb.from('notes').insert({
-      user_id: currentUser.id,
+    const seed = {
       title: '🎓 튜토리얼 예시 노트',
       body: '이 노트는 튜토리얼 설명을 위해 잠깐 만들어진 예시예요.\n튜토리얼이 끝나면 자동으로 정리돼요 — 자유롭게 둘러보세요!'
-    }).select().single()
+    }
+    if (demoMode) {
+      // 체험판에서는 서버에 저장하지 않고 메모리 상의 임시 노트로만 만든다.
+      const now = new Date().toISOString()
+      const data = { id: 'demo-tut-' + Date.now(), ...seed, updated_at: now, created_at: now }
+      tutDemoNoteId = data.id
+      notes.unshift(data); applySort(); renderFilteredNotes()
+      await selectNote(data.id)
+      return
+    }
+    const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, ...seed }).select().single()
     if (!error && data) {
       tutDemoNoteId = data.id
       notes.unshift(data); applySort(); renderFilteredNotes()
@@ -2424,6 +2533,7 @@ ${body}`
     if (!tutDemoNoteId) return
     const id = tutDemoNoteId
     tutDemoNoteId = null
+    if (demoMode) { notes = notes.filter(n => n.id !== id); renderFilteredNotes(); return }
     try {
       await deleteNoteAttachments(id)
       await sb.from('notes').delete().eq('id', id)
