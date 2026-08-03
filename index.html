@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.2
+  APP VERSION: v1.5.3
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -61,17 +61,48 @@
     .btn-primary:hover { background: #2e4430; }
     .btn-lg { padding: 0.75rem 2rem; font-size: 0.95rem; border-radius: 8px; }
 
-    .land-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5rem 2rem; gap: 1.5rem; }
+    .land-hero-grid { flex: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; align-items: center; gap: 2.5rem; padding: 4rem 3rem; max-width: 1180px; margin: 0 auto; width: 100%; }
+    .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 1.35rem; text-align: left; }
     .hero-tag { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); background: var(--accent-light); padding: 0.3rem 0.9rem; border-radius: 99px; }
-    .hero-title { font-family: 'Gowun Batang', serif; font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1.2; color: var(--ink); max-width: 600px; }
-    .hero-sub { font-size: 1rem; color: var(--ink-2); max-width: 420px; line-height: 1.7; font-weight: 300; }
-    .hero-btns { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .hero-title { font-family: 'Gowun Batang', serif; font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.28; color: var(--ink); }
+    .hero-sub { font-size: 1rem; color: var(--ink-2); max-width: 420px; line-height: 1.75; font-weight: 300; }
+    .hero-btns { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
-    .ad-banner { background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 0.8rem; margin: 0 3rem 2rem; height: 90px; }
+    /* 노트 미리보기(시그니처 비주얼) - 실제 앱 화면을 흉내낸 종이 카드 */
+    .hero-visual { position: relative; min-height: 340px; display: flex; align-items: center; justify-content: center; }
+    .note-mock { width: 270px; border-radius: 12px; }
+    .note-mock-back { position: absolute; height: 300px; background: var(--accent-light); transform: rotate(8deg) translate(20px, 14px); box-shadow: 0 20px 44px rgba(26,23,19,0.10); }
+    .note-mock-front {
+      position: relative; background: var(--surface); border: 1px solid var(--border); padding: 1.5rem 1.35rem 1.3rem;
+      box-shadow: 0 22px 48px rgba(26,23,19,0.16); transform: rotate(-3.5deg);
+      animation: mock-float 7s ease-in-out infinite;
+    }
+    @keyframes mock-float { 0%, 100% { transform: rotate(-3.5deg) translateY(0); } 50% { transform: rotate(-3.5deg) translateY(-9px); } }
+    @media (prefers-reduced-motion: reduce) { .note-mock-front { animation: none; } }
+    .note-mock-spiral { position: absolute; top: -9px; left: 26px; right: 26px; display: flex; justify-content: space-between; }
+    .note-mock-spiral span { width: 13px; height: 13px; border-radius: 50%; background: var(--bg); border: 2px solid var(--border); }
+    .note-mock-bar { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 0.9rem; }
+    .note-mock-save { font-size: 0.68rem; color: var(--accent); background: var(--accent-light); padding: 0.18rem 0.55rem; border-radius: 99px; font-weight: 500; }
+    .note-mock-title { font-family: 'Gowun Batang', serif; font-size: 1.1rem; margin-bottom: 0.85rem; color: var(--ink); }
+    .note-mock-lines { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.1rem; }
+    .note-mock-line { height: 8px; border-radius: 4px; background: var(--border); }
+    .note-mock-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); padding: 0.35rem 0.65rem; border-radius: 7px; }
+    @media (max-width: 860px) {
+      .land-hero-grid { grid-template-columns: 1fr; padding: 3rem 1.75rem 2.5rem; text-align: center; }
+      .hero-copy { align-items: center; text-align: center; }
+      .hero-btns { justify-content: center; }
+      .hero-visual { min-height: 300px; margin-top: 1rem; }
+    }
+
+    /* 광고: 콘텐츠보다 눈에 띄지 않도록 별도 섹션으로 분리, 상단 라벨로 명확히 구분 */
+    .ad-section { padding: 1.75rem 3rem; border-top: 1px solid var(--border); background: var(--surface); }
+    .ad-section-inner { max-width: 860px; margin: 0 auto; }
+    .ad-eyebrow { font-size: 0.68rem; letter-spacing: 0.08em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 0.6rem; }
+    .ad-banner { display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 0.8rem; height: 90px; }
 
     .land-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; padding: 3rem; border-top: 1px solid var(--border); }
     .feature { display: flex; flex-direction: column; gap: 0.5rem; }
-    .feature-icon { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .feature-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-bottom: 0.25rem; }
     .feature-title { font-size: 0.9rem; font-weight: 500; color: var(--ink); }
     .feature-desc { font-size: 0.82rem; color: var(--ink-2); line-height: 1.6; font-weight: 300; }
 
@@ -207,15 +238,11 @@
       .pen-swatches { gap: 0.45rem; }
     }
 
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(5px); }
-    }
     @media (max-width: 640px) {
       .land-nav { padding: 1rem 1.5rem; }
       .land-features, .land-how, .land-faq { padding: 2rem 1.5rem; }
       .land-footer { padding: 1.5rem; }
-      .ad-banner { margin: 0 1.5rem 1.5rem; }
+      .ad-section { padding: 1.5rem 1.5rem; }
       .shelf-grid { grid-template-columns: 1fr; padding: 1rem; }
       .shelf-header { padding: 1rem 1.25rem 0.75rem; }
       .note-textarea, .attach-area { padding-left: 1.25rem; padding-right: 1.25rem; }
@@ -251,7 +278,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.2</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.3</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -305,26 +332,31 @@
     </div>
   </nav>
 
-  <div class="land-hero">
-    <span class="hero-tag">클라우드 노트</span>
-    <h1 class="hero-title">어디서든 OK,<br>내 노트는 항상 여기에</h1>
-    <p class="hero-sub">컴퓨터에서 쓴 메모를 핸드폰에서 바로 확인하세요.<br>로그인 하나로 모든 기기에서 동기화됩니다.</p>
-    <div class="hero-btns">
-      <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
-      <button class="btn btn-ghost btn-lg" onclick="startDemoMode()">로그인 없이 체험하기</button>
+  <div class="land-hero-grid">
+    <div class="hero-copy">
+      <span class="hero-tag">클라우드 메모장</span>
+      <h1 class="hero-title">쓰는 순간,<br>모든 기기에 있어요</h1>
+      <p class="hero-sub">컴퓨터에서 쓴 메모를 핸드폰에서 바로 확인하세요.<br>로그인 하나로 모든 기기에서 자동으로 동기화됩니다.</p>
+      <div class="hero-btns">
+        <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
+        <button class="btn btn-ghost btn-lg" onclick="startDemoMode()">로그인 없이 체험하기</button>
+      </div>
     </div>
-    <div onclick="document.querySelector('.land-features').scrollIntoView({behavior:'smooth'})" style="margin-top:1.5rem; width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-3); animation:bounce 2s infinite; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink-3)'">↓</div>
-  </div>
-
-  <div class="ad-banner" id="adBanner">
-    <!-- 수동 광고 단위: data-ad-slot 값을 AdSense 대시보드에서 만든 실제 광고 단위 ID로 교체하세요.
-         (광고 만들기 > 디스플레이 광고, 이름 예: "랜딩 배너") 자동 광고(Auto ads)는 계정 설정에서 꺼두는 것을 권장합니다. -->
-    <ins class="adsbygoogle"
-         style="display:block; width:100%; height:100%"
-         data-ad-client="ca-pub-2538594772108776"
-         data-ad-slot="0000000000"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="note-mock note-mock-back"></div>
+      <div class="note-mock note-mock-front">
+        <div class="note-mock-spiral"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="note-mock-bar"><span class="note-mock-save">저장됨</span></div>
+        <div class="note-mock-title">🛒 이번 주 장보기</div>
+        <div class="note-mock-lines">
+          <div class="note-mock-line" style="width:88%"></div>
+          <div class="note-mock-line" style="width:64%"></div>
+          <div class="note-mock-line" style="width:76%"></div>
+          <div class="note-mock-line" style="width:42%"></div>
+        </div>
+        <div class="note-mock-chip">📎 장보기목록.pdf</div>
+      </div>
+    </div>
   </div>
 
   <div class="land-features">
@@ -449,6 +481,22 @@
           <div style="font-size:0.9rem; font-weight:500; margin-bottom:0.4rem;">PDF는 형광펜으로 핵심만 표시</div>
           <div style="font-size:0.82rem; color:var(--ink-2); line-height:1.7; font-weight:300;">첨부한 PDF를 열어 중요한 부분에 형광펜으로 밑줄을 긋거나 펜으로 메모해두면, 나중에 다시 볼 때 훨씬 빠르게 핵심을 파악할 수 있어요.</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ad-section">
+    <div class="ad-section-inner">
+      <div class="ad-eyebrow">광고</div>
+      <div class="ad-banner" id="adBanner">
+        <!-- 수동 광고 단위: data-ad-slot 값을 AdSense 대시보드에서 만든 실제 광고 단위 ID로 교체하세요.
+             (광고 만들기 > 디스플레이 광고, 이름 예: "랜딩 배너") 자동 광고(Auto ads)는 계정 설정에서 꺼두는 것을 권장합니다. -->
+        <ins class="adsbygoogle"
+             style="display:block; width:100%; height:100%"
+             data-ad-client="ca-pub-2538594772108776"
+             data-ad-slot="0000000000"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
       </div>
     </div>
   </div>
