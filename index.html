@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.3
+  APP VERSION: v1.5.4
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -93,6 +93,15 @@
       .hero-btns { justify-content: center; }
       .hero-visual { min-height: 300px; margin-top: 1rem; }
     }
+
+    .hero-scroll-hint {
+      width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      color: var(--ink-3); margin: 0 auto 2.5rem; animation: bounce 2s infinite; transition: all 0.15s;
+    }
+    .hero-scroll-hint:hover { border-color: var(--accent); color: var(--accent); }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+    @media (prefers-reduced-motion: reduce) { .hero-scroll-hint { animation: none; } }
 
     /* 광고: 콘텐츠보다 눈에 띄지 않도록 별도 섹션으로 분리, 상단 라벨로 명확히 구분 */
     .ad-section { padding: 1.75rem 3rem; border-top: 1px solid var(--border); background: var(--surface); }
@@ -278,7 +287,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.3</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.4</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -335,7 +344,7 @@
   <div class="land-hero-grid">
     <div class="hero-copy">
       <span class="hero-tag">클라우드 메모장</span>
-      <h1 class="hero-title">쓰는 순간,<br>모든 기기에 있어요</h1>
+      <h1 class="hero-title">쓰는 순간,<br>모든 기기에 저장</h1>
       <p class="hero-sub">컴퓨터에서 쓴 메모를 핸드폰에서 바로 확인하세요.<br>로그인 하나로 모든 기기에서 자동으로 동기화됩니다.</p>
       <div class="hero-btns">
         <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
@@ -358,6 +367,8 @@
       </div>
     </div>
   </div>
+
+  <div class="hero-scroll-hint" onclick="document.querySelector('.land-features').scrollIntoView({behavior:'smooth'})" title="아래로 스크롤">↓</div>
 
   <div class="land-features">
     <div class="feature"><div class="feature-icon">☁️</div><div class="feature-title">실시간 클라우드 동기화</div><div class="feature-desc">노트를 저장하는 순간 모든 기기에 자동으로 반영됩니다. 인터넷만 연결되어 있으면 PC에서 쓴 메모를 스마트폰에서 바로 확인할 수 있어요.</div></div>
