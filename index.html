@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.1
+  APP VERSION: v1.5.2
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -251,7 +251,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.1</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.2</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -956,11 +956,23 @@
     // 이 계정으로 처음 들어온 거라면 짧게 가이드 투어를 자동으로 보여준다.
     // (한 번 보고 나면 다시 자동으로는 안 뜨고, 필요하면 '가이드' 버튼으로
     // 언제든 다시 볼 수 있음)
+    // 예전에는 이 "본 적 있음" 여부를 localStorage에만 저장했는데, 그러면
+    // 브라우저/기기 단위로만 기억되어 같은 계정으로 다른 컴퓨터·다른
+    // 브라우저에서 로그인할 때마다 튜토리얼이 다시 뜨는 문제가 있었다.
+    // 계정(user_metadata)에 저장해서 어느 기기로 로그인하든 동일하게 적용되도록 한다.
     try {
-      const seenKey = `notepad_tutorial_seen_${currentUser.id}`
-      if (!localStorage.getItem(seenKey)) {
-        localStorage.setItem(seenKey, '1')
-        setTimeout(() => startTutorial(), 500)
+      const legacyKey = `notepad_tutorial_seen_${currentUser.id}`
+      let legacySeen = false
+      try { legacySeen = !!localStorage.getItem(legacyKey) } catch (e) {}
+      if (!currentUser.user_metadata || !currentUser.user_metadata.tutorial_seen) {
+        // 예전 방식(localStorage)으로 이미 이 브라우저에서 본 적이 있다면
+        // 굳이 또 보여주지 않고, 계정 단위 기록으로 조용히 승격만 시킨다.
+        if (!legacySeen) setTimeout(() => startTutorial(), 500)
+        try {
+          const { data, error } = await sb.auth.updateUser({ data: { tutorial_seen: true } })
+          if (!error && data && data.user) currentUser = data.user
+        } catch (e) { console.error('튜토리얼 시청 여부 저장 실패:', e) }
+        try { localStorage.removeItem(legacyKey) } catch (e) {}
       }
     } catch (e) {}
   }
