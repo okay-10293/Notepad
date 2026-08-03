@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.0
+  APP VERSION: v1.5.1
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -251,7 +251,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.0</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.1</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -945,6 +945,7 @@
     // history entry가 쌓이고, 뒤로가기를 누르면 PDF 필기 → 노트 → 책장 순서로
     // 돌아가도록 한다 (사이트 밖으로 바로 나가지 않게).
     history.replaceState({ view: 'shelf' }, '')
+    await cleanupOrphanedTutorialDemoNote()
     await loadNotes()
     if (!appInitialized) {
       initDragDrop()
@@ -2524,6 +2525,11 @@ ${body}`
     const { data, error } = await sb.from('notes').insert({ user_id: currentUser.id, ...seed }).select().single()
     if (!error && data) {
       tutDemoNoteId = data.id
+      // 탭을 그냥 닫는 등 튜토리얼이 끝까지 진행되지 못하고 중간에 이탈하면
+      // cleanupTutorialDemoNote()가 호출되지 못해 이 예시 노트가 실제 계정에
+      // 영구히 남을 수 있다. id를 저장해두고 다음 로그인 때 한 번 더 정리를
+      // 시도한다 (cleanupOrphanedTutorialDemoNote 참고).
+      try { localStorage.setItem(`notepad_tutorial_demo_note_${currentUser.id}`, data.id) } catch (e) {}
       notes.unshift(data); applySort(); renderFilteredNotes()
       await selectNote(data.id)
     }
@@ -2539,7 +2545,27 @@ ${body}`
       await sb.from('notes').delete().eq('id', id)
       notes = notes.filter(n => n.id !== id)
       renderFilteredNotes()
+      try { localStorage.removeItem(`notepad_tutorial_demo_note_${currentUser.id}`) } catch (e) {}
     } catch (e) { console.error('튜토리얼 예시 노트 정리 실패:', e) }
+  }
+
+  // 지난 방문에서 튜토리얼 도중 탭을 닫는 등으로 예시 노트가 미처 정리되지
+  // 못한 채 남아있을 수 있다. 로그인 직후, 노트 목록을 불러오기 전에 한 번
+  // 더 정리를 시도해서 실제 계정에 예시 노트가 계속 쌓이지 않게 한다.
+  async function cleanupOrphanedTutorialDemoNote() {
+    if (demoMode) return
+    const key = `notepad_tutorial_demo_note_${currentUser.id}`
+    let orphanId
+    try { orphanId = localStorage.getItem(key) } catch (e) { return }
+    if (!orphanId) return
+    try {
+      await deleteNoteAttachments(orphanId)
+      await sb.from('notes').delete().eq('id', orphanId)
+    } catch (e) {
+      console.error('지난 튜토리얼 예시 노트 정리 실패:', e)
+    } finally {
+      try { localStorage.removeItem(key) } catch (e) {}
+    }
   }
 
   async function startTutorial() {
