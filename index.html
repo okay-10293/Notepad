@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.4
+  APP VERSION: v1.5.5
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -287,7 +287,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.4</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.5</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -350,6 +350,7 @@
         <button class="btn btn-primary btn-lg" onclick="openModal('signup')">무료로 시작하기</button>
         <button class="btn btn-ghost btn-lg" onclick="startDemoMode()">로그인 없이 체험하기</button>
       </div>
+      <span class="modal-switch">이미 계정이 있으신가요? <a onclick="openModal('login')">로그인</a></span>
     </div>
     <div class="hero-visual" aria-hidden="true">
       <div class="note-mock note-mock-back"></div>
