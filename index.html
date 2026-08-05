@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  APP VERSION: v1.5.6
+  APP VERSION: v1.5.7
   ※ 앞으로 이 코드를 업데이트할 때마다(기능 추가/버그 수정 등) 반드시 이 버전 번호를 올리고,
      화면 왼쪽 아래에 표시되는 #appVersion 텍스트도 같은 번호로 함께 수정할 것.
      (사용자가 지금 어떤 버전을 보고 있는지 화면만 보고 바로 확인할 수 있게 하기 위함 -
@@ -102,6 +102,24 @@
     .hero-scroll-hint:hover { border-color: var(--accent); color: var(--accent); }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
     @media (prefers-reduced-motion: reduce) { .hero-scroll-hint { animation: none; } }
+
+    /* 첫 방문자용 슬라이드 소개 화면 (로그인/로그아웃과 무관하게, 이 브라우저에서
+       한 번도 안 봤을 때만 랜딩 화면보다 먼저 뜬다) */
+    #introSlides { display: none; position: fixed; inset: 0; z-index: 50; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+    .intro-slide { display: none; flex-direction: column; align-items: center; text-align: center; max-width: 420px; gap: 0.9rem; animation: intro-fade 0.35s ease; }
+    @keyframes intro-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { .intro-slide { animation: none; } }
+    .intro-icon { width: 84px; height: 84px; border-radius: 22px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 2.3rem; margin-bottom: 0.4rem; }
+    .intro-title { font-family: 'Gowun Batang', serif; font-size: 1.55rem; color: var(--ink); line-height: 1.35; }
+    .intro-desc { font-size: 0.9rem; color: var(--ink-2); line-height: 1.75; font-weight: 300; }
+    .intro-dots { display: flex; gap: 0.5rem; margin-top: 2.25rem; }
+    .intro-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: all 0.2s; }
+    .intro-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+    .intro-actions { display: flex; align-items: center; gap: 1.1rem; margin-top: 1.5rem; }
+    .intro-skip { background: none; border: none; color: var(--ink-3); font-size: 0.85rem; cursor: pointer; padding: 0.5rem; font-family: inherit; }
+    .intro-skip:hover { color: var(--ink-2); }
+    .intro-prev { position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: var(--ink-3); font-size: 0.85rem; cursor: pointer; padding: 0.5rem; visibility: hidden; }
+    .intro-prev.visible { visibility: visible; }
 
     /* 광고: 콘텐츠보다 눈에 띄지 않도록 별도 섹션으로 분리, 상단 라벨로 명확히 구분 */
     .ad-section { padding: 1.75rem 3rem; border-top: 1px solid var(--border); background: var(--surface); }
@@ -287,7 +305,7 @@
 </head>
 <body>
 
-<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.6</div>
+<div id="appVersion" style="position:fixed; left:8px; bottom:6px; font-size:0.65rem; color:#9a9488; z-index:10000; pointer-events:none; font-family:monospace;">v1.5.7</div>
 <!-- ── 초기 로그인 확인 중 로딩 화면 (세션 체크 끝날 때까지 표시) ── -->
 <div id="initLoading">
   <div class="init-spinner" id="initSpinner"></div>
@@ -329,6 +347,47 @@
   }
 
 </script>
+
+<!-- ── 첫 방문자용 슬라이드 소개 ── -->
+<div id="introSlides">
+  <button class="intro-prev" id="introPrevBtn" onclick="introPrev()">← 이전</button>
+
+  <div class="intro-slide" style="display:flex;">
+    <div class="intro-icon">☁️</div>
+    <h2 class="intro-title">쓰는 순간,<br>모든 기기에 저장</h2>
+    <p class="intro-desc">PC에서 쓴 메모를 스마트폰에서 바로 확인하세요.<br>저장 버튼을 누를 필요 없이 자동으로 동기화됩니다.</p>
+  </div>
+
+  <div class="intro-slide">
+    <div class="intro-icon">✏️</div>
+    <h2 class="intro-title">PDF에 바로<br>펜으로 필기</h2>
+    <p class="intro-desc">첨부한 PDF를 열어 펜과 형광펜으로 직접 표시할 수 있어요.<br>필기본은 새 파일로 저장되고 원본은 그대로 보존됩니다.</p>
+  </div>
+
+  <div class="intro-slide">
+    <div class="intro-icon">🔒</div>
+    <h2 class="intro-title">나만의<br>완전한 개인 공간</h2>
+    <p class="intro-desc">본인 계정으로만 접근 가능한 공간이에요.<br>비밀번호는 암호화되어 저장되며, 관리자도 노트 내용을 볼 수 없습니다.</p>
+  </div>
+
+  <div class="intro-slide">
+    <div class="intro-icon">🚀</div>
+    <h2 class="intro-title">지금 바로<br>시작해볼까요?</h2>
+    <p class="intro-desc">무료로 가입하고 첫 노트를 만들어보세요.<br>로그인 없이 먼저 둘러보고 싶다면 체험해볼 수도 있어요.</p>
+  </div>
+
+  <div class="intro-dots" id="introDots">
+    <span class="intro-dot active"></span>
+    <span class="intro-dot"></span>
+    <span class="intro-dot"></span>
+    <span class="intro-dot"></span>
+  </div>
+
+  <div class="intro-actions">
+    <button class="intro-skip" onclick="skipIntro()">건너뛰기</button>
+    <button class="btn btn-primary btn-lg" id="introNextBtn" onclick="introNext()">다음</button>
+  </div>
+</div>
 
 <!-- ── Landing ── -->
 <div id="landing" style="display:none;">
@@ -617,7 +676,7 @@
 
 <!-- ── App ── -->
 <div id="app">
-  <div id="demoBanner" style="display:none; position:sticky; top:0; z-index:500; background:var(--accent); color:#fff; padding:0.55rem 1rem; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:0.9rem; flex-wrap:wrap; text-align:center;">
+  <div id="demoBanner" style="display:none; position:sticky; top:0; z-index:500; background:var(--accent); color:#fff; padding:0.55rem 1rem; font-size:0.82rem; align-items:center; justify-content:center; gap:0.9rem; flex-wrap:wrap; text-align:center;">
     <span>🔍 지금 <b>체험판</b>을 보고 계세요 — 여기서 쓰는 내용은 실제로 저장되지 않아요</span>
     <button onclick="exitDemoMode(); openModal('signup')" style="background:#fff; color:var(--accent); border:none; border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; font-weight:600; cursor:pointer;">무료로 시작하기</button>
     <button onclick="exitDemoMode()" style="background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.6); border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; cursor:pointer;">체험 종료</button>
@@ -903,7 +962,7 @@
       settled = true
       clearTimeout(fallback)
       if (session) { currentUser = session.user; showApp(); reconcileLinkedEmail() }
-      else { showLanding() }
+      else { showLandingOrIntro() }
     } catch (e) {
       if (!settled) {
         settled = true
@@ -995,6 +1054,7 @@
 
   // ── Views ──
   async function showApp() {
+    document.getElementById('introSlides').style.display = 'none'
     document.getElementById('landing').style.display = 'none'
     document.getElementById('app').style.display = 'flex'
     document.getElementById('userEmail').textContent = currentUser.email.replace('@notepad.app', '')
@@ -1036,12 +1096,54 @@
     } catch (e) {}
   }
   function showLanding() {
+    document.getElementById('introSlides').style.display = 'none'
     document.getElementById('landing').style.display = 'flex'
     document.getElementById('app').style.display = 'none'
     clearTimeout(saveTimer)
     notes = []; activeNote = null; appInitialized = false; sortMode = 'date'
     document.getElementById('sortSelect').value = 'date'
     loadAds()
+  }
+
+  // ── 첫 방문자용 슬라이드 소개 ──
+  // 로그인/로그아웃 여부와 무관하게, 이 브라우저에서 아직 한 번도 소개를
+  // 보지 않은 "완전 첫 방문"일 때만 랜딩 화면보다 먼저 보여준다.
+  // 다 보거나 건너뛰면 그 이후로는 곧바로 기존 랜딩(로그인/회원가입) 화면으로 간다.
+  let introIndex = 0
+  function showLandingOrIntro() {
+    let introSeen = false
+    try { introSeen = !!localStorage.getItem('notepad_intro_seen') } catch (e) {}
+    if (introSeen) showLanding()
+    else showIntroSlides()
+  }
+  function showIntroSlides() {
+    document.getElementById('landing').style.display = 'none'
+    document.getElementById('app').style.display = 'none'
+    document.getElementById('introSlides').style.display = 'flex'
+    introIndex = 0
+    renderIntroSlide()
+  }
+  function renderIntroSlide() {
+    const slides = document.querySelectorAll('#introSlides .intro-slide')
+    slides.forEach((el, i) => { el.style.display = i === introIndex ? 'flex' : 'none' })
+    document.querySelectorAll('#introDots .intro-dot').forEach((el, i) => el.classList.toggle('active', i === introIndex))
+    const nextBtn = document.getElementById('introNextBtn')
+    if (nextBtn) nextBtn.textContent = introIndex === slides.length - 1 ? '시작하기' : '다음'
+    const prevBtn = document.getElementById('introPrevBtn')
+    if (prevBtn) prevBtn.classList.toggle('visible', introIndex > 0)
+  }
+  function introNext() {
+    const slides = document.querySelectorAll('#introSlides .intro-slide')
+    if (introIndex < slides.length - 1) { introIndex++; renderIntroSlide() }
+    else finishIntro()
+  }
+  function introPrev() {
+    if (introIndex > 0) { introIndex--; renderIntroSlide() }
+  }
+  function skipIntro() { finishIntro() }
+  function finishIntro() {
+    try { localStorage.setItem('notepad_intro_seen', '1') } catch (e) {}
+    showLanding()
   }
 
   // ── 체험 모드(로그인 없이 둘러보기) ──
