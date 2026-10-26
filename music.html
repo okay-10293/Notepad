@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>오케이 음악</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="오케이 음악" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#3d5a3e" />
+  <style>
+    :root {
+      --bg: #f5f2eb; --surface: #fdfaf4; --ink: #1a1713; --ink-2: #6b6558;
+      --ink-3: #a09890; --accent: #3d5a3e; --accent-light: #d4e6d4; --border: #e0dbd0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: var(--bg); color: var(--ink); min-height: 100vh; min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    h1 { font-size: 1.15rem; font-weight: 600; }
+    .link { font-size: 0.82rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.6rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+    #nowTitle { font-size: 1.05rem; font-weight: 600; word-break: break-all; min-height: 1.5em; }
+    #nowSub { font-size: 0.78rem; color: var(--ink-3); margin-top: 0.15rem; }
+    .seek { display: flex; align-items: center; gap: 0.6rem; margin: 0.9rem 0 0.4rem; font-size: 0.72rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    input[type=range] { flex: 1; accent-color: var(--accent); height: 28px; }
+    .ctrl { display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
+    button { font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--ink); border-radius: 999px; }
+    .cbtn { width: 48px; height: 48px; font-size: 1.15rem; }
+    .cbtn.main { width: 64px; height: 64px; font-size: 1.5rem; background: var(--accent); color: #fff; border-color: var(--accent); }
+    .cbtn.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .add { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .add label { background: var(--accent); color: #fff; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.9rem; cursor: pointer; }
+    .stat { font-size: 0.75rem; color: var(--ink-2); }
+    ul { list-style: none; display: flex; flex-direction: column; }
+    li { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.4rem; border-bottom: 1px solid var(--border); }
+    li:last-child { border-bottom: none; }
+    li.cur { background: var(--accent-light); border-radius: 8px; }
+    li .idx { width: 1.6rem; text-align: center; font-size: 0.78rem; color: var(--ink-3); flex-shrink: 0; }
+    li .name { flex: 1; font-size: 0.9rem; word-break: break-all; cursor: pointer; }
+    li .size { font-size: 0.7rem; color: var(--ink-3); flex-shrink: 0; }
+    li .del { border-radius: 6px; width: 32px; height: 32px; font-size: 0.85rem; color: var(--ink-3); flex-shrink: 0; }
+    .empty { text-align: center; color: var(--ink-3); font-size: 0.85rem; line-height: 1.7; padding: 1.5rem 0; }
+    .badge { font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: var(--border); color: var(--ink-2); }
+    .badge.ok { background: var(--accent-light); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎵 오케이 음악</h1>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <span class="badge" id="offBadge">오프라인 준비 중…</span>
+      <a class="link" href="/">← 노트패드</a>
+    </div>
+  </header>
+
+  <div class="card">
+    <div id="nowTitle">재생 중인 곡 없음</div>
+    <div id="nowSub"></div>
+    <div class="seek">
+      <span id="tCur">0:00</span>
+      <input type="range" id="seek" min="0" max="1000" value="0" />
+      <span id="tDur">0:00</span>
+    </div>
+    <div class="ctrl">
+      <button class="cbtn" id="btnShuffle" title="셔플">🔀</button>
+      <button class="cbtn" id="btnPrev" title="이전">⏮</button>
+      <button class="cbtn main" id="btnPlay" title="재생/일시정지">▶</button>
+      <button class="cbtn" id="btnNext" title="다음">⏭</button>
+      <button class="cbtn" id="btnRepeat" title="반복">🔁</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="add">
+      <label>
+        + 곡 추가 (파일 앱에서 선택)
+        <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg" multiple style="display:none;" />
+      </label>
+      <span class="stat" id="stat"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <ul id="list"></ul>
+  </div>
+</div>
+
+<audio id="audio" preload="auto" playsinline></audio>
+
+<script>
+(function () {
+  'use strict'
+  var $ = function (id) { return document.getElementById(id) }
+  var audio = $('audio')
+  var tracks = []          // { id, name, size, blob }
+  var cur = -1             // 현재 재생 인덱스
+  var shuffle = false
+  var repeat = 'all'       // 'off' | 'all' | 'one'
+  var objUrl = null
+  var db = null
+
+  // ── IndexedDB ──
+  function openDB() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open('okay-music', 1)
+      r.onupgradeneeded = function () { r.result.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true }) }
+      r.onsuccess = function () { res(r.result) }
+      r.onerror = function () { rej(r.error) }
+    })
+  }
+  function tx(mode, fn) {
+    return new Promise(function (res, rej) {
+      var t = db.transaction('tracks', mode)
+      var out = fn(t.objectStore('tracks'))
+      t.oncomplete = function () { res(out && out.result) }
+      t.onerror = function () { rej(t.error) }
+      t.onabort = function () { rej(t.error || new Error('저장 실패 (용량 부족일 수 있어요)')) }
+    })
+  }
+  function loadAll() {
+    return tx('readonly', function (s) { return s.getAll() }).then(function (rows) { tracks = rows || [] })
+  }
+
+  // ── 유틸 ──
+  function fmt(s) {
+    if (!isFinite(s)) return '0:00'
+    s = Math.floor(s); var m = Math.floor(s / 60), x = s % 60
+    return m + ':' + (x < 10 ? '0' : '') + x
+  }
+  function mb(n) { return (n / 1048576).toFixed(1) + 'MB' }
+  function clean(name) { return name.replace(/\.[^.]+$/, '') }
+
+  // ── 목록 렌더 ──
+  function render() {
+    var ul = $('list')
+    ul.innerHTML = ''
+    if (!tracks.length) {
+      ul.innerHTML = '<div class="empty">아직 곡이 없어요.<br>위의 <b>곡 추가</b>로 파일 앱에 있는 mp3를 골라주세요.<br>한 번 추가하면 와이파이 없이도 재생돼요.</div>'
+    }
+    tracks.forEach(function (t, i) {
+      var li = document.createElement('li')
+      if (i === cur) li.className = 'cur'
+      li.innerHTML = '<span class="idx">' + (i === cur && !audio.paused ? '♪' : (i + 1)) + '</span>' +
+        '<span class="name"></span><span class="size">' + mb(t.size) + '</span>' +
+        '<button class="del" title="삭제">✕</button>'
+      li.querySelector('.name').textContent = clean(t.name)
+      li.querySelector('.name').onclick = function () { play(i) }
+      li.querySelector('.del').onclick = function () { removeTrack(i) }
+      ul.appendChild(li)
+    })
+    var total = tracks.reduce(function (a, t) { return a + t.size }, 0)
+    $('stat').textContent = tracks.length ? (tracks.length + '곡 · ' + mb(total)) : ''
+  }
+
+  function updateNow() {
+    var t = tracks[cur]
+    $('nowTitle').textContent = t ? clean(t.name) : '재생 중인 곡 없음'
+    $('nowSub').textContent = t ? ((cur + 1) + ' / ' + tracks.length) : ''
+    $('btnPlay').textContent = audio.paused ? '▶' : '⏸'
+    document.title = t ? (clean(t.name) + ' · 오케이 음악') : '오케이 음악'
+    if ('mediaSession' in navigator && t) {
+      try { navigator.mediaSession.metadata = new MediaMetadata({ title: clean(t.name), artist: '오케이 음악' }) } catch (e) {}
+    }
+  }
+
+  // ── 재생 제어 ──
+  function play(i) {
+    if (i < 0 || i >= tracks.length) return
+    cur = i
+    if (objUrl) URL.revokeObjectURL(objUrl)
+    objUrl = URL.createObjectURL(tracks[i].blob)
+    audio.src = objUrl
+    audio.loop = (repeat === 'one')
+    var p = audio.play()
+    if (p && p.catch) p.catch(function () { updateNow() })
+    updateNow(); render()
+  }
+  function nextIndex(auto) {
+    if (!tracks.length) return -1
+    if (shuffle && tracks.length > 1) {
+      var n; do { n = Math.floor(Math.random() * tracks.length) } while (n === cur)
+      return n
+    }
+    var n2 = cur + 1
+    if (n2 >= tracks.length) {
+      if (repeat === 'all' || !auto) return 0
+      return -1  // 반복 끔 + 마지막 곡 끝 → 정지
+    }
+    return n2
+  }
+  function next(auto) {
+    var n = nextIndex(auto)
+    if (n === -1) { audio.pause(); audio.currentTime = 0; updateNow(); render(); return }
+    play(n)
+  }
+  function prev() {
+    if (audio.currentTime > 3) { audio.currentTime = 0; return }
+    if (!tracks.length) return
+    play(cur <= 0 ? tracks.length - 1 : cur - 1)
+  }
+  function toggle() {
+    if (cur === -1) { if (tracks.length) play(0); return }
+    if (audio.paused) audio.play(); else audio.pause()
+  }
+
+  audio.addEventListener('ended', function () { next(true) })
+  audio.addEventListener('play', function () { updateNow(); render() })
+  audio.addEventListener('pause', function () { updateNow(); render() })
+  audio.addEventListener('timeupdate', function () {
+    if (audio.duration) $('seek').value = Math.round(audio.currentTime / audio.duration * 1000)
+    $('tCur').textContent = fmt(audio.currentTime)
+    $('tDur').textContent = fmt(audio.duration)
+  })
+  audio.addEventListener('error', function () { if (cur !== -1) next(true) })  // 깨진 파일은 건너뜀
+
+  $('seek').addEventListener('input', function () {
+    if (audio.duration) audio.currentTime = $('seek').value / 1000 * audio.duration
+  })
+  $('btnPlay').onclick = toggle
+  $('btnNext').onclick = function () { next(false) }
+  $('btnPrev').onclick = prev
+  $('btnShuffle').onclick = function () {
+    shuffle = !shuffle
+    this.classList.toggle('on', shuffle)
+  }
+  $('btnRepeat').onclick = function () {
+    repeat = repeat === 'all' ? 'one' : repeat === 'one' ? 'off' : 'all'
+    audio.loop = (repeat === 'one')
+    this.textContent = repeat === 'one' ? '🔂' : '🔁'
+    this.classList.toggle('on', repeat !== 'off')
+    this.title = repeat === 'all' ? '전체 반복' : repeat === 'one' ? '한 곡 반복' : '반복 끔'
+  }
+  $('btnRepeat').classList.add('on')
+
+  if ('mediaSession' in navigator) {
+    var ms = navigator.mediaSession
+    try {
+      ms.setActionHandler('play', function () { audio.play() })
+      ms.setActionHandler('pause', function () { audio.pause() })
+      ms.setActionHandler('previoustrack', prev)
+      ms.setActionHandler('nexttrack', function () { next(false) })
+    } catch (e) {}
+  }
+
+  // ── 곡 추가/삭제 ──
+  $('fileInput').addEventListener('change', function (e) {
+    var files = Array.prototype.slice.call(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    files.sort(function (a, b) { return a.name.localeCompare(b.name, 'ko', { numeric: true }) })
+    $('stat').textContent = '저장 중…'
+    var chain = Promise.resolve()
+    files.forEach(function (f) {
+      chain = chain.then(function () {
+        return tx('readwrite', function (s) { return s.add({ name: f.name, size: f.size, blob: f }) })
+      })
+    })
+    chain.then(loadAll).then(function () {
+      render(); updateNow()
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist()
+    }).catch(function (err) {
+      alert('저장 실패: ' + (err && err.message ? err.message : err))
+      loadAll().then(render)
+    })
+  })
+
+  function removeTrack(i) {
+    var t = tracks[i]
+    if (!t || !confirm('"' + clean(t.name) + '" 삭제할까요?')) return
+    tx('readwrite', function (s) { return s.delete(t.id) }).then(loadAll).then(function () {
+      if (i === cur) { audio.pause(); audio.removeAttribute('src'); cur = -1 }
+      else if (i < cur) cur--
+      render(); updateNow()
+    })
+  }
+
+  // ── 오프라인(PWA) ──
+  function setBadge(ok) {
+    var b = $('offBadge')
+    b.textContent = ok ? '✓ 오프라인 가능' : '오프라인 준비 안 됨'
+    b.className = 'badge' + (ok ? ' ok' : '')
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(function () { return navigator.serviceWorker.ready })
+      .then(function () {
+        return caches.match('/music.html').then(function (r) { setBadge(!!r) })
+      }).catch(function () { setBadge(false) })
+  } else {
+    setBadge(false)
+  }
+
+  // ── 시작 ──
+  openDB().then(function (d) { db = d; return loadAll() }).then(function () { render(); updateNow() })
+    .catch(function (e) {
+      $('list').innerHTML = '<div class="empty">이 브라우저에서는 곡을 저장할 수 없어요.<br>(' + (e && e.message ? e.message : e) + ')</div>'
+    })
+})()
+</script>
+</body>
+</html>
