@@ -141,7 +141,12 @@
   function mb(n) { return (n / 1048576).toFixed(1) + 'MB' }
   function clean(name) { return name.replace(/\.[^.]+$/, '') }
   // 표시 이름: 직접 바꾼 이름(title)이 있으면 그걸, 없으면 파일명(확장자 제외)
-  function label(t) { return t.title || clean(t.name) }
+  // 바꾼 이름은 곡 파일(blob)과 분리해서 localStorage에 저장 (blob을 다시 쓰면 iOS 사파리에서 파일이 깨질 수 있음)
+  var TITLES_KEY = 'okay-music-titles'
+  var titles = {}
+  try { titles = JSON.parse(localStorage.getItem(TITLES_KEY) || '{}') || {} } catch (e) { titles = {} }
+  function saveTitles() { try { localStorage.setItem(TITLES_KEY, JSON.stringify(titles)) } catch (e) {} }
+  function label(t) { return titles[t.id] || t.title || clean(t.name) }
 
   // ── 목록 렌더 ──
   function render() {
@@ -226,7 +231,15 @@
     $('tCur').textContent = fmt(audio.currentTime)
     $('tDur').textContent = fmt(audio.duration)
   })
-  audio.addEventListener('error', function () { if (cur !== -1) next(true) })  // 깨진 파일은 건너뜀
+  // 깨진 파일은 건너뛰되, 전부 깨졌을 때 무한 반복되지 않게 연속 오류 횟수 제한
+  var errStreak = 0
+  audio.addEventListener('error', function () {
+    if (cur === -1) return
+    errStreak++
+    if (errStreak >= tracks.length) { errStreak = 0; alert('재생할 수 없는 파일이에요. 삭제 후 다시 추가해주세요.'); return }
+    next(true)
+  })
+  audio.addEventListener('playing', function () { errStreak = 0 })
 
   $('seek').addEventListener('input', function () {
     if (audio.duration) audio.currentTime = $('seek').value / 1000 * audio.duration
@@ -285,19 +298,16 @@
     var v = prompt('곡 이름 수정 (비우면 원래 파일명으로 돌아가요)', label(t))
     if (v === null) return
     v = v.trim()
-    if (v) t.title = v; else delete t.title
-    tx('readwrite', function (s) { return s.put(t) }).then(function () {
-      render(); updateNow()
-    }).catch(function (err) {
-      alert('이름 저장 실패: ' + (err && err.message ? err.message : err))
-      loadAll().then(function () { render(); updateNow() })
-    })
+    if (v) titles[t.id] = v; else delete titles[t.id]
+    saveTitles()
+    render(); updateNow()
   }
 
   function removeTrack(i) {
     var t = tracks[i]
     if (!t || !confirm('"' + label(t) + '" 삭제할까요?')) return
     tx('readwrite', function (s) { return s.delete(t.id) }).then(loadAll).then(function () {
+      delete titles[t.id]; saveTitles()
       if (i === cur) { audio.pause(); audio.removeAttribute('src'); cur = -1 }
       else if (i < cur) cur--
       render(); updateNow()
