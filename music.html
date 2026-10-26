@@ -140,6 +140,8 @@
   }
   function mb(n) { return (n / 1048576).toFixed(1) + 'MB' }
   function clean(name) { return name.replace(/\.[^.]+$/, '') }
+  // 표시 이름: 직접 바꾼 이름(title)이 있으면 그걸, 없으면 파일명(확장자 제외)
+  function label(t) { return t.title || clean(t.name) }
 
   // ── 목록 렌더 ──
   function render() {
@@ -153,10 +155,12 @@
       if (i === cur) li.className = 'cur'
       li.innerHTML = '<span class="idx">' + (i === cur && !audio.paused ? '♪' : (i + 1)) + '</span>' +
         '<span class="name"></span><span class="size">' + mb(t.size) + '</span>' +
+        '<button class="del ren" title="이름 수정">✏️</button>' +
         '<button class="del" title="삭제">✕</button>'
-      li.querySelector('.name').textContent = clean(t.name)
+      li.querySelector('.name').textContent = label(t)
       li.querySelector('.name').onclick = function () { play(i) }
-      li.querySelector('.del').onclick = function () { removeTrack(i) }
+      li.querySelector('.ren').onclick = function () { renameTrack(i) }
+      li.querySelectorAll('.del')[1].onclick = function () { removeTrack(i) }
       ul.appendChild(li)
     })
     var total = tracks.reduce(function (a, t) { return a + t.size }, 0)
@@ -165,12 +169,12 @@
 
   function updateNow() {
     var t = tracks[cur]
-    $('nowTitle').textContent = t ? clean(t.name) : '재생 중인 곡 없음'
+    $('nowTitle').textContent = t ? label(t) : '재생 중인 곡 없음'
     $('nowSub').textContent = t ? ((cur + 1) + ' / ' + tracks.length) : ''
     $('btnPlay').textContent = audio.paused ? '▶' : '⏸'
-    document.title = t ? (clean(t.name) + ' · 오케이 음악') : '오케이 음악'
+    document.title = t ? (label(t) + ' · 오케이 음악') : '오케이 음악'
     if ('mediaSession' in navigator && t) {
-      try { navigator.mediaSession.metadata = new MediaMetadata({ title: clean(t.name), artist: '오케이 음악' }) } catch (e) {}
+      try { navigator.mediaSession.metadata = new MediaMetadata({ title: label(t), artist: '오케이 음악' }) } catch (e) {}
     }
   }
 
@@ -275,9 +279,24 @@
     })
   })
 
+  function renameTrack(i) {
+    var t = tracks[i]
+    if (!t) return
+    var v = prompt('곡 이름 수정 (비우면 원래 파일명으로 돌아가요)', label(t))
+    if (v === null) return
+    v = v.trim()
+    if (v) t.title = v; else delete t.title
+    tx('readwrite', function (s) { return s.put(t) }).then(function () {
+      render(); updateNow()
+    }).catch(function (err) {
+      alert('이름 저장 실패: ' + (err && err.message ? err.message : err))
+      loadAll().then(function () { render(); updateNow() })
+    })
+  }
+
   function removeTrack(i) {
     var t = tracks[i]
-    if (!t || !confirm('"' + clean(t.name) + '" 삭제할까요?')) return
+    if (!t || !confirm('"' + label(t) + '" 삭제할까요?')) return
     tx('readwrite', function (s) { return s.delete(t.id) }).then(loadAll).then(function () {
       if (i === cur) { audio.pause(); audio.removeAttribute('src'); cur = -1 }
       else if (i < cur) cur--
