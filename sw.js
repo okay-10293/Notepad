@@ -1,6 +1,6 @@
 // 오케이 음악 오프라인용 Service Worker
 // music.html + 아이콘만 캐시한다. 그 외 요청(노트패드 본체, Supabase, 광고 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-music-v1'
+const CACHE = 'okay-music-v2'
 const PAGE = '/music.html'
 const STATIC = ['/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon-180.png', '/assets/favicon-32.png']
 
