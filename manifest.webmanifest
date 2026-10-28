@@ -1,8 +1,8 @@
 {
-  "name": "오케이 음악",
-  "short_name": "오케이 음악",
-  "description": "오프라인에서도 연속 재생되는 간단한 음악 플레이어",
-  "start_url": "/music.html",
+  "name": "오케이 테이블",
+  "short_name": "오케이 테이블",
+  "description": "노트패드와 음악을 한곳에서. 내 계정으로 모든 기기에서.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f5f2eb",
