@@ -1,7 +1,8 @@
 // 오케이 음악 오프라인용 Service Worker
 // music.html + 아이콘만 캐시한다. 그 외 요청(노트패드 본체, Supabase, 광고 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-music-v2'
+const CACHE = 'okay-music-v3'
 const PAGE = '/music.html'
+const SB_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 const STATIC = ['/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon-180.png', '/assets/favicon-32.png']
 
 // Cloudflare Pages는 /music.html → /music 으로 리다이렉트하는데, 리다이렉트된 응답은
@@ -20,6 +21,7 @@ self.addEventListener('install', (event) => {
     const page = await cleanResponse(res)
     await cache.put(PAGE, page.clone())
     await cache.put('/music', page.clone())
+    try { const lib = await fetch(SB_LIB, { mode: 'no-cors' }); await cache.put(SB_LIB, lib) } catch (e) {}
     await Promise.all(STATIC.map(async (u) => {
       try { const r = await fetch(u, { cache: 'reload' }); if (r.ok) await cache.put(u, r) } catch (e) {}
     }))
@@ -38,6 +40,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
+  if (req.url === SB_LIB) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE)
+      const cached = await cache.match(SB_LIB)
+      const refresh = fetch(req).then(async (res) => { try { await cache.put(SB_LIB, res.clone()) } catch (e) {} return res }).catch(() => null)
+      if (cached) { event.waitUntil(refresh); return cached }
+      return (await refresh) || Response.error()
+    })())
+    return
+  }
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
 
