@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>PDF 오프너 · 오케이 테이블</title>
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
+  <style>
+    :root {
+      --bg: #ffffff; --surface: #ffffff; --ink: #0a0a0a; --ink-2: #5c5c5c; --ink-3: #9b9b9b; --accent: #0a0a0a; --accent-light: #f1f1f1; --border: #e6e6e6; --on-accent: #ffffff;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #000000; --surface: #121212; --ink: #f5f5f5; --ink-2: #a8a8a8; --ink-3: #6e6e6e; --accent: #f5f5f5; --accent-light: #232323; --border: #2a2a2a; --on-accent: #0a0a0a; }
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; min-height: 100dvh; }
+    svg.st { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 0.5rem 0.9rem; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+    .btn-ghost { background: transparent; }
+    .btn-icon-svg { width: 16px; height: 16px; }
+    #listView { max-width: 680px; margin: 0 auto; padding: calc(1.25rem + env(safe-area-inset-top, 0px)) 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px)); }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .top h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+    .link { font-size: 0.82rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .link svg { width: 14px; height: 14px; }
+    .pick { margin-top: 1.25rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .pick label { background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem; }
+    .pick label svg { width: 16px; height: 16px; }
+    #msg { font-size: 0.78rem; color: var(--ink-2); margin-top: 0.75rem; min-height: 1em; word-break: break-all; }
+    #loginNeed { display: none; margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; font-size: 0.9rem; line-height: 1.6; color: var(--ink-2); }
+    #loginNeed a { color: var(--ink); font-weight: 600; }
+    #list { margin-top: 1rem; display: grid; gap: 0.6rem; }
+    .row { display: flex; align-items: center; gap: 0.8rem; padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; cursor: pointer; }
+    .row:active { transform: scale(0.99); }
+    .rico { width: 38px; height: 38px; border-radius: 12px; background: var(--accent-light); display: grid; place-items: center; flex-shrink: 0; }
+    .rico svg { width: 20px; height: 20px; }
+    .rtxt { flex: 1; min-width: 0; }
+    .rname { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rmeta { font-size: 0.74rem; color: var(--ink-3); margin-top: 0.15rem; }
+    .rdel { border: none; background: transparent; color: var(--ink-3); width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; cursor: pointer; }
+    .rdel svg { width: 16px; height: 16px; }
+    .empty { text-align: center; color: var(--ink-3); font-size: 0.88rem; line-height: 1.7; padding: 2.5rem 1rem; }
+
+    .pdf-toolbar { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+    .pdf-filename { font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin-right: auto; }
+    .pdf-tools { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .pdf-tool-group { display: flex; align-items: center; gap: 0.35rem; padding-right: 0.6rem; margin-right: 0.6rem; border-right: 1px solid var(--border); }
+    .pdf-tool-group:last-of-type { border-right: none; padding-right: 0; margin-right: 0; }
+    .pdf-tool-btn { display: flex; align-items: center; gap: 0.35rem; background: none; border: 1px solid transparent; border-radius: 7px; cursor: pointer; padding: 0.4rem 0.6rem; font-size: 0.8rem; color: var(--ink-2); font-family: inherit; transition: all 0.15s; }
+    .pdf-tool-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .pdf-tool-btn:hover { background: var(--bg); color: var(--ink); }
+    .pdf-tool-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-light); }
+    .pen-swatches { display: flex; align-items: center; gap: 0.3rem; }
+    .pen-swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); transition: transform 0.1s, border-color 0.1s; }
+    .pen-swatch:hover { transform: scale(1.12); }
+    .pen-swatch.active { border-color: var(--ink); }
+    #pdfPenColor { width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; cursor: pointer; background: none; }
+    #pdfPenColor::-webkit-color-swatch-wrapper { padding: 0; }
+    #pdfPenColor::-webkit-color-swatch { border-radius: 50%; border: 2px solid var(--border); }
+    .pdf-slider-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--ink-3); white-space: nowrap; }
+    #pdfPenWidth { width: 64px; cursor: pointer; accent-color: var(--accent); }
+    #pdfPenOpacity { width: 64px; cursor: pointer; accent-color: var(--accent); }
+    .pdf-tools input:disabled, .pdf-tools .pen-swatch:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+    .pdf-pages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; background: var(--bg); }
+    .pdf-page-wrap { position: relative; box-shadow: 0 2px 12px rgba(0,0,0,0.12); background: #fff; max-width: 100%; }
+    .pdf-page-wrap canvas { display: block; max-width: 100%; height: auto; }
+    .pdf-draw-canvas { position: absolute; top: 0; left: 0; touch-action: none; cursor: crosshair; }
+    .pdf-loading { color: var(--ink-3); font-size: 0.9rem; padding: 3rem; text-align: center; width: 100%; }
+
+    #pdfAnnotateOverlay { padding-top: env(safe-area-inset-top, 0px); }
+    .pdf-tools input[type=color] { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 50%; padding: 0; background: none; }
+    @media (max-width: 720px) {
+      .pdf-toolbar { padding: 0.5rem 0.75rem; }
+      .pdf-tool-group { padding-right: 0.4rem; margin-right: 0.4rem; }
+      .pdf-tool-btn span { display: none; }
+      .pen-swatch { width: 26px; height: 26px; }
+      .pen-swatches { gap: 0.45rem; }
+      .pdf-filename { max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+<div id="listView">
+  <div class="top">
+    <a class="link" href="/"><svg viewBox="0 0 24 24" class="st"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>테이블</a>
+    <h1>PDF 오프너</h1>
+  </div>
+  <div class="pick" id="toolbarRow">
+    <label><svg viewBox="0 0 24 24" class="st"><path d="M12 5v14M5 12h14"/></svg>PDF 열기<input id="pickFile" type="file" accept="application/pdf,.pdf" hidden /></label>
+  </div>
+  <div id="msg"></div>
+  <div id="loginNeed">로그인이 필요해요. <a href="/notepad.html">노트패드에서 로그인</a>한 뒤 다시 열어 주세요. (홈 화면 앱은 사파리와 로그인이 따로예요)</div>
+  <div id="list"></div>
+</div>
+
+<div id="pdfAnnotateOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:200; flex-direction:column;">
+  <div class="pdf-toolbar">
+    <button class="pdf-tool-btn" onclick="goClosePdfAnnotate()" title="닫기" aria-label="닫기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+    </button>
+    <span class="pdf-filename" id="pdfFileName"></span>
+    <span id="pdfSaveStatus" style="font-size:0.75rem; color:var(--ink-3); margin-left:-0.5rem; white-space:nowrap;"></span>
+    <div class="pdf-tools">
+      <div class="pdf-tool-group">
+        <button class="pdf-tool-btn active" id="pdfPenBtn" onclick="setPdfTool('pen')" title="펜">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          <span>펜</span>
+        </button>
+        <button class="pdf-tool-btn" id="pdfHighlighterBtn" onclick="setPdfTool('highlighter')" title="형광펜">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 15.5L3 22"/><path d="M15 3l6 6-9.5 9.5-6-6L15 3z"/><path d="M3 22l2.5-6.5"/></svg>
+          <span>형광펜</span>
+        </button>
+        <button class="pdf-tool-btn" id="pdfEraserBtn" onclick="setPdfTool('eraser')" title="지우개">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H9L4.5 15.5a2 2 0 010-2.8L13.7 3.5a2 2 0 012.8 0l5.8 5.8a2 2 0 010 2.8L14 20"/></svg>
+          <span>지우개</span>
+        </button>
+      </div>
+      <div class="pdf-tool-group">
+        <div class="pen-swatches" id="pdfPenSwatches">
+          <button type="button" class="pen-swatch" style="background:#1a1713" onclick="setPdfPenColor('#1a1713')" title="검정"></button>
+          <button type="button" class="pen-swatch" style="background:#e74c3c" onclick="setPdfPenColor('#e74c3c')" title="빨강"></button>
+          <button type="button" class="pen-swatch" style="background:#f39c12" onclick="setPdfPenColor('#f39c12')" title="주황"></button>
+          <button type="button" class="pen-swatch" style="background:#27ae60" onclick="setPdfPenColor('#27ae60')" title="초록"></button>
+          <button type="button" class="pen-swatch" style="background:#2980b9" onclick="setPdfPenColor('#2980b9')" title="파랑"></button>
+          <button type="button" class="pen-swatch" style="background:#8e44ad" onclick="setPdfPenColor('#8e44ad')" title="보라"></button>
+        </div>
+        <input type="color" id="pdfPenColor" value="#e74c3c" title="직접 색상 선택" />
+      </div>
+      <div class="pdf-tool-group">
+        <label class="pdf-slider-label" title="굵기">
+          <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8" stroke-width="1.5"/><line x1="4" y1="14" x2="20" y2="14" stroke-width="3"/><line x1="4" y1="20" x2="20" y2="20" stroke-width="5"/></svg>
+          <input type="range" id="pdfPenWidth" min="1" max="40" value="3" />
+        </label>
+        <label class="pdf-slider-label" title="투명도">
+          <svg class="btn-icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity="0.4"/></svg>
+          <input type="range" id="pdfPenOpacity" min="10" max="100" value="100" />
+        </label>
+      </div>
+      <div class="pdf-tool-group">
+        <button class="pdf-tool-btn" onclick="clearPdfAnnotations()" title="전체 지우기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          <span>전체 지우기</span>
+        </button>
+      </div>
+      <button class="btn btn-ghost" onclick="downloadPdfAnnotation()" id="pdfDownloadBtn" style="display:flex; align-items:center; gap:0.4rem;">
+        <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span id="pdfDownloadBtnLabel">이 기기에 저장</span>
+      </button>
+    </div>
+  </div>
+  <div class="pdf-pages" id="pdfPages">
+    <div class="pdf-loading" id="pdfLoading">PDF 불러오는 중...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- PDF 뷰어 라이브러리: 구버전(3.11.174) 사용 - 최신 버전(4.x)은 최근 추가된 JS 기능에
+     의존하고 옛날 방식(.js) 파일을 더 이상 제공하지 않아 오래된 Safari/iOS 등에서 아예 동작하지
+     않는 경우가 있어, 모든 브라우저에서 안정적으로 동작하는 이 버전으로 고정함.
+     cdnjs 실패 시 jsdelivr로 자동 전환 (양쪽 다 동일한 옛날 방식 .js 파일 제공) -->
+<script>
+  (function () {
+    var PDFJS_VERSION = '3.11.174'
+    function loadScript(src, onload, onerror) {
+      const s = document.createElement('script')
+      s.src = src
+      s.onload = onload
+      s.onerror = onerror
+      document.head.appendChild(s)
+    }
+    function setWorker(workerSrc) {
+      if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+    }
+    loadScript(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.min.js',
+      function () { setWorker('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.worker.min.js') },
+      function () {
+        window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 - 1차 경로(cdnjs.cloudflare.com) 실패, 대체 경로 시도 중')
+        loadScript(
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.js',
+          function () { setWorker('https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.js') },
+          function () { window.__scriptLoadErrors = (window.__scriptLoadErrors || []).concat('PDF 보기 기능 (cdnjs.cloudflare.com, cdn.jsdelivr.net 모두 실패)') }
+        )
+      }
+    )
+  })()
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" onerror="window.__scriptLoadErrors=(window.__scriptLoadErrors||[]).concat('PDF 저장 기능 (cdn.jsdelivr.net)')"></script>
+<script>
+  // ── PDF 필기(펜/형광펜/지우개) 뷰어 ──
+  let pdfPagesData = [], pdfTool = 'pen', pdfHasUnsaved = false
+  // 지금 열려 있는 PDF의 저장 경로(Storage key) — 필기 레이어를 불러오고
+  // "덮어쓰기 저장"할 때 어떤 파일에 대한 필기인지 식별하는 데 쓰인다.
+  let pdfCurrentPath = null
+  // 도구별 설정(색상/굵기/투명도)을 따로 기억해서 전환해도 유지되도록 함
+  let pdfToolSettings = {
+    pen: { color: '#e74c3c', width: 3, opacity: 100 },
+    highlighter: { color: '#fff176', width: 18, opacity: 35 }
+  }
+
+  // 필기 레이어(투명 PNG)를 원본 PDF와 별도로 저장해두는 사이드카 파일의 경로.
+  // 원본 PDF 파일 자체는 절대 건드리지 않고, 필기만 이 파일에 따로 저장했다가
+  // 다시 열 때 얹어서 보여준다. 이렇게 하면 필기가 배경 이미지에 "합쳐지지" 않고
+  // 계속 독립된 레이어로 남아있어서, 나중에 다시 열어도 여전히 지우거나 고칠 수 있다.
+  function pdfInkKey(path) { return `${path}.ink.json` }
+
+  // 저장된 필기 레이어를 불러온다. 저장된 적이 없으면 null을 돌려준다(정상 상황).
+
+  // ── 기기 저장소(IndexedDB): PDF 사본과 필기 사본. 비행기 모드에서도 열 수 있게 한다. ──
+  // PDF 파일(blob)은 한 번 저장하면 다시 쓰지 않는다(필기는 별도 저장소에만 갱신).
+  let _cdb = null
+  function cdb() {
+    if (_cdb) return Promise.resolve(_cdb)
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('okay-pdf', 1)
+      r.onupgradeneeded = () => {
+        r.result.createObjectStore('files', { keyPath: 'path' })
+        r.result.createObjectStore('ink', { keyPath: 'path' })
+      }
+      r.onsuccess = () => { _cdb = r.result; res(_cdb) }
+      r.onerror = () => rej(r.error)
+    })
+  }
+  async function cdo(store, mode, fn) {
+    const d = await cdb()
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, mode); const s = t.objectStore(store)
+      const q = fn(s); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error)
+    })
+  }
+  const cacheGet = (path) => cdo('files', 'readonly', s => s.get(path))
+  const cacheAll = () => cdo('files', 'readonly', s => s.getAll())
+  const cachePut = (rec) => cdo('files', 'readwrite', s => s.put(rec))
+  const cacheDel = (path) => cdo('files', 'readwrite', s => s.delete(path))
+  const inkGet = (path) => cdo('ink', 'readonly', s => s.get(path))
+  const inkPut = (rec) => cdo('ink', 'readwrite', s => s.put(rec))
+  const inkDel = (path) => cdo('ink', 'readwrite', s => s.delete(path))
+
+  // 열 때: 온라인이면 새로 받아서 기기에 저장, 오프라인이면 기기 사본을 쓴다.
+  async function resolvePdfSource(url, name, path) {
+    try {
+      if (!url) throw new Error('no url')
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      const blob = await res.blob()
+      if (path) { try { await cachePut({ path, name, blob, at: Date.now() }) } catch (e) {} }
+      return { data: new Uint8Array(await blob.arrayBuffer()) }
+    } catch (e) {
+      const rec = path ? await cacheGet(path).catch(() => null) : null
+      if (rec && rec.blob) return { data: new Uint8Array(await rec.blob.arrayBuffer()) }
+      throw e
+    }
+  }
+
+  // 필기 레이어: 서버와 기기 사본 중 더 최근에 저장된 쪽을 쓴다.
+  async function loadPdfInkLayers(path) {
+    let remote = null, local = null
+    try {
+      if (sb && navigator.onLine) {
+        const { data: blob, error } = await sb.storage.from('images').download(pdfInkKey(path))
+        if (!error && blob) {
+          const j = JSON.parse(await blob.text())
+          if (j && Array.isArray(j.pages)) remote = { pages: j.pages, savedAt: j.savedAt || 0 }
+        }
+      }
+    } catch (e) {}
+    try { const r = await inkGet(path); if (r && Array.isArray(r.pages)) local = r } catch (e) {}
+    const best = (remote && local) ? (local.savedAt > remote.savedAt ? local : remote) : (remote || local)
+    return best ? best.pages : null
+  }
+
+  // 먼저 기기에 저장(오프라인이어도 필기가 안 날아가게)하고, 그다음 서버에 올린다.
+  // 서버는 보통 덮어쓰기(UPDATE)가 막혀 있어서, 지우고 같은 이름으로 다시 올린다.
+  async function savePdfInkLayers(path, pagesDataUrls) {
+    const savedAt = Date.now()
+    try { await inkPut({ path, pages: pagesDataUrls, savedAt }) } catch (e) {}
+    const key = pdfInkKey(path)
+    const json = JSON.stringify({ pages: pagesDataUrls, savedAt })
+    if (json.length > MAX_FILE_SIZE) {
+      throw new Error('필기 내용이 너무 많아서 저장할 수 없어요. 일부 페이지의 필기를 지우고 다시 시도해주세요.')
+    }
+    if (!navigator.onLine || !sb) throw new Error('오프라인')
+    try { await sb.storage.from('images').remove([key]) } catch (e) {}
+    const blob = new Blob([json], { type: 'application/json' })
+    const { error } = await sb.storage.from('images').upload(key, blob, { upsert: false, contentType: 'application/json' })
+    if (error) throw error
+  }
+
+  // 저장해둔 필기 PNG를 캔버스 위에 그대로 얹는다 — 새로 그린 획과 똑같이 취급되어
+  // pointer 이벤트로 계속 지우거나 덧그릴 수 있다(배경에 "고정"되지 않음).
+  function drawSavedInkOnto(ctx, dataUrl, w, h) {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => { ctx.drawImage(img, 0, 0, w, h); resolve() }
+      img.onerror = () => resolve() // 손상된 데이터는 조용히 무시하고 빈 상태로 계속 진행
+      img.src = dataUrl
+    })
+  }
+
+  // ── 필기 자동 저장 ──
+  // 버튼을 눌러야만 저장되던 방식은, 저장을 깜빡하고 앱이 꺼지거나(브라우저 튕김,
+  // 실수로 닫기 등) 하면 방금 한 필기가 통째로 날아가는 문제가 있었다. 그래서
+  // 획을 하나 그리거나 지울 때마다 자동으로 저장되도록 바꿨다. 매 획마다 바로
+  // 서버로 보내면 요청이 너무 잦아지므로, 잠깐(1.2초) 손을 멈추면 그때 한 번
+  // 저장하는 디바운스 방식을 쓴다 — 그래도 최근 필기가 몇 초 안에 안전하게
+  // 저장되므로 갑자기 튕겨도 잃어버리는 내용이 거의 없다.
+  let pdfAutoSaveTimer = null
+  let pdfAutoSaveInFlight = false
+  let pdfAutoSaveQueued = false // 저장 중에 또 필기가 생기면, 끝나자마자 한 번 더 저장
+
+  function setPdfSaveStatus(text) {
+    const el = document.getElementById('pdfSaveStatus')
+    if (el) el.textContent = text
+  }
+
+  function schedulePdfAutoSave() {
+    pdfHasUnsaved = true
+    setPdfSaveStatus('저장 대기 중...')
+    if (pdfAutoSaveTimer) clearTimeout(pdfAutoSaveTimer)
+    pdfAutoSaveTimer = setTimeout(runPdfAutoSave, 1200)
+  }
+
+  async function runPdfAutoSave() {
+    pdfAutoSaveTimer = null
+    if (!pdfCurrentPath || !pdfPagesData.length) return
+    if (pdfAutoSaveInFlight) { pdfAutoSaveQueued = true; return }
+    pdfAutoSaveInFlight = true
+    setPdfSaveStatus('저장 중...')
+    try {
+      const pages = pdfPagesData.map(p => p.drawCanvas.toDataURL('image/png'))
+      await savePdfInkLayers(pdfCurrentPath, pages)
+      pdfHasUnsaved = false
+      setPdfSaveStatus('자동 저장됨')
+    } catch (e) {
+      console.error('자동 저장 실패:', e)
+      setPdfSaveStatus('저장 실패 · 잠시 후 재시도')
+      // 네트워크가 잠깐 끊겼을 수 있으니 잠시 후 다시 시도한다
+      pdfAutoSaveTimer = setTimeout(runPdfAutoSave, 4000)
+    } finally {
+      pdfAutoSaveInFlight = false
+      if (pdfAutoSaveQueued) {
+        pdfAutoSaveQueued = false
+        runPdfAutoSave()
+      }
+    }
+  }
+
+  // 필기 화면을 닫기 직전, 아직 저장 안 된(디바운스 대기 중인) 내용이 있으면
+  // 묻지 않고 바로 마저 저장한다 — 저장 여부를 사용자가 신경 쓸 필요가 없게 함.
+  async function flushPdfAutoSave() {
+    if (pdfAutoSaveTimer) { clearTimeout(pdfAutoSaveTimer); pdfAutoSaveTimer = null }
+    if (!pdfHasUnsaved || !pdfCurrentPath || !pdfPagesData.length) return
+    try {
+      const pages = pdfPagesData.map(p => p.drawCanvas.toDataURL('image/png'))
+      await savePdfInkLayers(pdfCurrentPath, pages)
+      pdfHasUnsaved = false
+    } catch (e) {
+      console.error('닫기 전 마지막 저장 실패:', e)
+    }
+  }
+
+  async function openPdfAnnotate(url, name, path) {
+    pdfHasUnsaved = false
+    pdfCurrentPath = path || null
+    if (pdfAutoSaveTimer) { clearTimeout(pdfAutoSaveTimer); pdfAutoSaveTimer = null }
+    pdfAutoSaveQueued = false
+    setPdfSaveStatus('')
+    document.getElementById('pdfFileName').textContent = name
+    document.getElementById('pdfAnnotateOverlay').style.display = 'flex'
+    const pagesEl = document.getElementById('pdfPages')
+    pagesEl.innerHTML = '<div class="pdf-loading">PDF 불러오는 중...</div>'
+    pdfPagesData = []
+    setPdfTool('pen')
+
+    if (!window.pdfjsLib) {
+      pagesEl.innerHTML = '<div class="pdf-loading">PDF 뷰어를 불러오지 못했어요. 다운로드해서 확인해주세요.</div>'
+      return
+    }
+    try {
+      const pdf = await pdfjsLib.getDocument(await resolvePdfSource(url, name, path)).promise
+      // 예전에 저장해둔 필기가 있으면 미리 불러와둔다(파일이 없으면 null).
+      const savedInk = pdfCurrentPath ? await loadPdfInkLayers(pdfCurrentPath) : null
+      pagesEl.innerHTML = ''
+      const containerWidth = Math.min(pagesEl.clientWidth - 48, 760)
+      // 화면 배율(레티나/고해상도 디스플레이)에 맞춰 원본 페이지를 더 높은 해상도로
+      // 렌더링해서, 처음 열었을 때부터 선명하게 보이도록 한다. 너무 큰 캔버스가
+      // 되지 않도록 최대 3배로 제한한다.
+      const dpr = Math.min(window.devicePixelRatio || 1, 3)
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const baseViewport = page.getViewport({ scale: 1 })
+        const scale = containerWidth / baseViewport.width
+        const viewport = page.getViewport({ scale })
+
+        const wrap = document.createElement('div')
+        wrap.className = 'pdf-page-wrap'
+        wrap.style.width = viewport.width + 'px'
+        wrap.style.height = viewport.height + 'px'
+
+        // baseCanvas는 화면 배율(dpr)만큼 더 높은 내부 해상도로 렌더링하고,
+        // CSS 표시 크기는 viewport 크기 그대로 유지해서 화면에서 선명하게 보이게 한다.
+        const baseCanvas = document.createElement('canvas')
+        baseCanvas.width = Math.round(viewport.width * dpr)
+        baseCanvas.height = Math.round(viewport.height * dpr)
+        baseCanvas.style.width = viewport.width + 'px'
+        baseCanvas.style.height = viewport.height + 'px'
+        const hiViewport = page.getViewport({ scale: scale * dpr })
+        await page.render({ canvasContext: baseCanvas.getContext('2d'), viewport: hiViewport }).promise
+
+        const drawCanvas = document.createElement('canvas')
+        drawCanvas.className = 'pdf-draw-canvas'
+        drawCanvas.width = viewport.width; drawCanvas.height = viewport.height
+        drawCanvas.style.width = viewport.width + 'px'; drawCanvas.style.height = viewport.height + 'px'
+        const drawCtx = drawCanvas.getContext('2d')
+
+        // 획을 그리는 동안에는 이 "라이브" 캔버스에 불투명하게 그리다가, 손을 뗄 때
+        // 한 번에 drawCanvas로 합성한다. (형광펜 끊김 문제 해결 — 아래 initPdfPageDrawing 참고)
+        const liveCanvas = document.createElement('canvas')
+        liveCanvas.className = 'pdf-draw-canvas'
+        liveCanvas.width = viewport.width; liveCanvas.height = viewport.height
+        liveCanvas.style.width = viewport.width + 'px'; liveCanvas.style.height = viewport.height + 'px'
+        const liveCtx = liveCanvas.getContext('2d')
+
+        wrap.appendChild(baseCanvas)
+        wrap.appendChild(drawCanvas)
+        wrap.appendChild(liveCanvas)
+        pagesEl.appendChild(wrap)
+
+        pdfPagesData.push({ page, baseCanvas, drawCanvas, drawCtx, liveCanvas, liveCtx })
+        initPdfPageDrawing(drawCtx, liveCanvas, liveCtx)
+
+        // 이전에 저장해둔 필기가 있으면 drawCanvas 위에 그대로 얹는다.
+        if (savedInk && savedInk[i - 1]) {
+          await drawSavedInkOnto(drawCtx, savedInk[i - 1], drawCanvas.width, drawCanvas.height)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      pagesEl.innerHTML = '<div class="pdf-loading">PDF를 불러오지 못했어요. 파일이 손상되었거나 지원하지 않는 형식일 수 있어요.</div>'
+    }
+  }
+
+  // 형광펜(반투명 굵은 선)을 그릴 때, 예전에는 손가락/마우스가 움직일 때마다 짧은
+  // 선 조각을 매번 "반투명 상태 그대로" 겹쳐 그렸다. 그러면 선이 꺾이거나 조금씩
+  // 겹치는 지점마다 반투명 색이 두 번, 세 번 겹쳐 칠해지면서 그 부분만 더 진해지고
+  // 경계가 울퉁불퉁해져서, 획 전체가 "뚝뚝 끊기는" 것처럼 보였다.
+  // 그래서 지금은: 한 번의 획(누른 순간 ~ 뗄 때까지)은 별도의 라이브 캔버스에
+  // 완전 불투명(alpha=1) 색으로 이어그리고, 손을 뗀 순간에 그 획 전체를 원하는
+  // 투명도로 딱 한 번만 실제 캔버스에 합성한다. 이렇게 하면 획 내부에서 겹치는
+  // 부분이 생겨도 이중으로 진해지지 않아 매끄럽게 이어진다.
+  function initPdfPageDrawing(ctx, liveCanvas, liveCtx) {
+    let drawing = false, lastX = 0, lastY = 0
+    const pos = e => {
+      const rect = liveCanvas.getBoundingClientRect()
+      return {
+        x: (e.clientX - rect.left) * (liveCanvas.width / rect.width),
+        y: (e.clientY - rect.top) * (liveCanvas.height / rect.height)
+      }
+    }
+    const strokeLiveTo = (x1, y1, x2, y2) => {
+      liveCtx.lineJoin = 'round'
+      liveCtx.lineCap = 'round'
+      liveCtx.globalCompositeOperation = 'source-over'
+      liveCtx.globalAlpha = 1
+      liveCtx.strokeStyle = document.getElementById('pdfPenColor').value
+      liveCtx.lineWidth = Number(document.getElementById('pdfPenWidth').value)
+      liveCtx.beginPath(); liveCtx.moveTo(x1, y1); liveCtx.lineTo(x2, y2); liveCtx.stroke()
+    }
+    // 지우개는 실시간으로 지워지는 걸 바로 봐야 하므로 라이브 캔버스를 거치지 않고
+    // 실제 캔버스에 바로 지운다 (겹침으로 인한 이중 블렌딩 문제가 애초에 없음).
+    const eraseDirectTo = (x1, y1, x2, y2) => {
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.globalCompositeOperation = 'destination-out'
+      ctx.globalAlpha = 1
+      ctx.lineWidth = 26
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+    }
+    const commitLiveStroke = () => {
+      const opacity = Number(document.getElementById('pdfPenOpacity').value) / 100
+      ctx.globalAlpha = opacity
+      ctx.globalCompositeOperation = pdfTool === 'highlighter' ? 'multiply' : 'source-over'
+      ctx.drawImage(liveCanvas, 0, 0)
+      ctx.globalAlpha = 1
+      ctx.globalCompositeOperation = 'source-over'
+      liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height)
+      liveCanvas.style.opacity = '1'
+    }
+    liveCanvas.addEventListener('pointerdown', e => {
+      drawing = true
+      liveCanvas.setPointerCapture(e.pointerId)
+      const p = pos(e); lastX = p.x; lastY = p.y
+      if (pdfTool === 'eraser') {
+        liveCanvas.style.opacity = '1'
+        eraseDirectTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      } else {
+        // 획을 그리는 동안 라이브 캔버스 내부 픽셀은 여전히 alpha=1(완전 불투명)로
+        // 그린다 — 그래야 위 주석대로 획 안에서 겹치는 부분이 이중으로 진해지지
+        // 않는다. 대신 캔버스 "엘리먼트" 자체의 CSS 투명도를 처음부터 최종 목표
+        // 투명도로 맞춰둬서, 그리는 중간에도 실제 저장될 밝기가 그대로 보이게
+        // 한다. (이전에는 다 그릴 때까지 진하게 보이다가 손을 떼는 순간 갑자기
+        // 옅어지는 것처럼 보였다.)
+        liveCanvas.style.opacity = String(Number(document.getElementById('pdfPenOpacity').value) / 100)
+        strokeLiveTo(p.x, p.y, p.x + 0.1, p.y + 0.1)
+      }
+      pdfHasUnsaved = true
+    })
+    liveCanvas.addEventListener('pointermove', e => {
+      if (!drawing) return
+      const p = pos(e)
+      if (pdfTool === 'eraser') eraseDirectTo(lastX, lastY, p.x, p.y)
+      else strokeLiveTo(lastX, lastY, p.x, p.y)
+      lastX = p.x; lastY = p.y
+    })
+    const stop = () => {
+      if (!drawing) return
+      drawing = false
+      if (pdfTool !== 'eraser') commitLiveStroke()
+      // 획 하나가 끝날 때마다(펜/형광펜/지우개 공통) 자동 저장을 예약한다.
+      schedulePdfAutoSave()
+    }
+    liveCanvas.addEventListener('pointerup', stop)
+    liveCanvas.addEventListener('pointerleave', stop)
+    liveCanvas.addEventListener('pointercancel', stop)
+  }
+
+  function setPdfTool(tool) {
+    pdfTool = tool
+    document.getElementById('pdfPenBtn').classList.toggle('active', tool === 'pen')
+    document.getElementById('pdfHighlighterBtn').classList.toggle('active', tool === 'highlighter')
+    document.getElementById('pdfEraserBtn').classList.toggle('active', tool === 'eraser')
+
+    const colorInput = document.getElementById('pdfPenColor')
+    const widthInput = document.getElementById('pdfPenWidth')
+    const opacityInput = document.getElementById('pdfPenOpacity')
+    const isEraser = tool === 'eraser'
+    colorInput.disabled = isEraser
+    opacityInput.disabled = isEraser
+    document.querySelectorAll('.pen-swatch').forEach(sw => { sw.disabled = isEraser })
+
+    if (!isEraser) {
+      // 펜/형광펜은 각자 마지막으로 쓰던 색상·굵기·투명도를 불러옴
+      const s = pdfToolSettings[tool]
+      colorInput.value = s.color
+      widthInput.value = s.width
+      opacityInput.value = s.opacity
+    }
+    updateSwatchActive()
+  }
+
+  // 빠른 펜 색상 스와치 선택
+  function setPdfPenColor(color) {
+    if (pdfTool === 'eraser') return
+    document.getElementById('pdfPenColor').value = color
+    savePdfToolSetting()
+    updateSwatchActive()
+  }
+
+  // 현재 선택된 색상과 일치하는 스와치를 강조 표시
+  function updateSwatchActive() {
+    const current = (document.getElementById('pdfPenColor').value || '').toLowerCase()
+    document.querySelectorAll('.pen-swatch').forEach(sw => {
+      const swColor = (sw.style.background || '').toLowerCase()
+      sw.classList.toggle('active', swColor === current)
+    })
+  }
+
+  // 펜/형광펜 설정이 바뀌면 해당 도구 설정으로 저장해둠 (도구 전환 시 유지됨)
+  function savePdfToolSetting() {
+    if (pdfTool !== 'pen' && pdfTool !== 'highlighter') return
+    pdfToolSettings[pdfTool] = {
+      color: document.getElementById('pdfPenColor').value,
+      width: Number(document.getElementById('pdfPenWidth').value),
+      opacity: Number(document.getElementById('pdfPenOpacity').value)
+    }
+    updateSwatchActive()
+  }
+
+  function clearPdfAnnotations() {
+    if (!pdfPagesData.length) return
+    if (!confirm('모든 필기 내용을 지울까요?')) return
+    pdfPagesData.forEach(p => {
+      p.drawCtx.clearRect(0, 0, p.drawCanvas.width, p.drawCanvas.height)
+      if (p.liveCtx) p.liveCtx.clearRect(0, 0, p.liveCanvas.width, p.liveCanvas.height)
+    })
+    schedulePdfAutoSave()
+  }
+
+  // 이제 필기가 자동으로 저장되므로, 닫을 때 "저장할까요?"라고 물어볼 필요가 없다.
+  // 대신 디바운스 대기 중이던 최근 필기가 있으면 닫기 전에 마저 저장부터 마친다.
+  async function closePdfAnnotate() {
+    await flushPdfAutoSave()
+    document.getElementById('pdfAnnotateOverlay').style.display = 'none'
+    pdfPagesData = []; pdfHasUnsaved = false; pdfCurrentPath = null
+    setPdfSaveStatus('')
+    onPdfClosed()
+  }
+  // PDF 필기 화면의 "닫기" 버튼에서 호출한다. history에 pdf 단계가 쌓여있으면
+  // history.back()으로 물러나서 노트 화면으로 돌아가고, 없으면 바로 닫는다.
+  async function goClosePdfAnnotate() {
+    await closePdfAnnotate()
+  }
+
+  // 각 페이지의 원본 캔버스 + 필기 레이어를 합쳐 고해상도 JPEG 한 장으로 만든다.
+  // inkDrawable에는 draw 중인 캔버스(pdfPagesData의 drawCanvas)나, 저장소에서 불러온
+  // 필기 PNG를 얹은 Image 엘리먼트가 모두 들어올 수 있다 — 둘 다 drawImage로 그릴 수
+  // 있어서 "필기 화면이 열려 있을 때"와 "닫혀 있을 때(다운로드만 할 때)" 양쪽에서
+  // 완전히 같은 합성 로직을 공유한다.
+  async function renderAnnotatedPageToJpg(page, inkDrawable) {
+    // 화면에는 컨테이너 폭(최대 760px)에 맞춰 축소한 캔버스를 보여주는데, 저장할
+    // 때는 훨씬 높은 배율로 PDF 페이지를 다시 렌더링해서(최대 2200px 정도) 화질을
+    // 크게 개선하고, 필기 레이어만 그 크기에 맞춰 확대해서 합성한다.
+    const baseViewport1x = page.getViewport({ scale: 1 })
+    const MAX_DIM = 2200
+    let exportScale = 2.2
+    if (baseViewport1x.width * exportScale > MAX_DIM) exportScale = MAX_DIM / baseViewport1x.width
+    if (exportScale < 1) exportScale = 1
+    const hiViewport = page.getViewport({ scale: exportScale })
+    const hiCanvas = document.createElement('canvas')
+    hiCanvas.width = Math.round(hiViewport.width)
+    hiCanvas.height = Math.round(hiViewport.height)
+    await page.render({ canvasContext: hiCanvas.getContext('2d'), viewport: hiViewport }).promise
+
+    const merge = document.createElement('canvas')
+    merge.width = hiCanvas.width; merge.height = hiCanvas.height
+    const mctx = merge.getContext('2d')
+    // JPEG는 투명도가 없으므로 먼저 흰 배경을 깔아준다
+    mctx.fillStyle = '#fff'
+    mctx.fillRect(0, 0, merge.width, merge.height)
+    mctx.drawImage(hiCanvas, 0, 0)
+    if (inkDrawable) {
+      const iw = inkDrawable.width, ih = inkDrawable.height
+      if (iw && ih) mctx.drawImage(inkDrawable, 0, 0, iw, ih, 0, 0, merge.width, merge.height)
+    }
+    // PNG 대신 JPEG로 압축 — 페이지를 통째로 이미지화하면 PNG는 용량이 매우 커져서
+    // 저장(업로드)이 실패하거나 느려지는 원인이 되므로, 필기 용도로 충분한 화질(0.9)의
+    // JPEG로 훨씬 가볍게 만든다.
+    return await new Promise((resolve, reject) => {
+      merge.toBlob(async blob => {
+        if (!blob) return reject(new Error('페이지를 이미지로 변환하지 못했어요 (toBlob 실패)'))
+        resolve(new Uint8Array(await blob.arrayBuffer()))
+      }, 'image/jpeg', 0.9)
+    })
+  }
+
+  // 저장된 필기 PNG(data URL)를 Image 엘리먼트로 미리 로드해둔다.
+  function loadInkImage(dataUrl) {
+    if (!dataUrl) return Promise.resolve(null)
+    return new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null) // 손상된 데이터는 조용히 무시
+      img.src = dataUrl
+    })
+  }
+
+  // 각 페이지의 원본 캔버스 + 필기 캔버스를 합쳐 하나의 PDF로 만든다. 지금 필기
+  // 화면이 열려 있는 상태(pdfPagesData)를 기준으로 하므로, 아직 자동 저장 전인
+  // 최신 획까지도 그대로 반영된다. "이 기기에 저장" 버튼에서 사용한다.
+  async function buildAnnotatedPdfBytes() {
+    const { PDFDocument } = PDFLib
+    const newPdf = await PDFDocument.create()
+    for (const p of pdfPagesData) {
+      const jpgBytes = await renderAnnotatedPageToJpg(p.page, p.drawCanvas)
+      const jpgImage = await newPdf.embedJpg(jpgBytes)
+      const page = newPdf.addPage([jpgImage.width, jpgImage.height])
+      page.drawImage(jpgImage, { x: 0, y: 0, width: jpgImage.width, height: jpgImage.height })
+    }
+    return await newPdf.save()
+  }
+
+  // 필기 화면을 열지 않은 상태(첨부파일 목록의 작은 다운로드 버튼 등)에서도, 저장소에
+  // 저장해둔 필기 레이어가 있으면 원본 PDF와 합쳐서 새 PDF를 만들어준다. 위
+  // buildAnnotatedPdfBytes()와 같은 renderAnnotatedPageToJpg()를 그대로 재사용하므로
+  // "이 기기에 저장" 버튼과 완전히 동일한 방식으로 합성된다. 필기가 아예 없는
+  // 파일이면 null을 돌려주고, 이 경우 호출한 쪽에서 원본 파일을 그대로 받으면 된다.
+  async function buildAnnotatedDownloadBlob(path) {
+    if (!window.pdfjsLib || !window.PDFLib) return null
+    let inkPages = null
+    try { inkPages = await loadPdfInkLayers(path) } catch (e) { return null }
+    if (!inkPages || !inkPages.length || !inkPages.some(p => p)) return null
+    try {
+      const { data: urlData } = sb.storage.from('images').getPublicUrl(path)
+      const pdf = await pdfjsLib.getDocument(urlData.publicUrl).promise
+      const { PDFDocument } = PDFLib
+      const newPdf = await PDFDocument.create()
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const inkImg = await loadInkImage(inkPages[i - 1])
+        const jpgBytes = await renderAnnotatedPageToJpg(page, inkImg)
+        const jpgImage = await newPdf.embedJpg(jpgBytes)
+        const newPage = newPdf.addPage([jpgImage.width, jpgImage.height])
+        newPage.drawImage(jpgImage, { x: 0, y: 0, width: jpgImage.width, height: jpgImage.height })
+      }
+      const bytes = await newPdf.save()
+      return new Blob([bytes], { type: 'application/pdf' })
+    } catch (e) {
+      console.error('필기 포함 PDF 생성 실패, 원본 파일로 대신 받습니다:', e)
+      return null
+    }
+  }
+
+  // 필기는 이제 그릴 때마다 자동 저장되므로(schedulePdfAutoSave/runPdfAutoSave 참고),
+  // 별도의 수동 "저장" 버튼과 함수는 더 이상 필요하지 않아 제거했다.
+
+
+  // 필기한 내용을 책장에 저장하지 않고, 이름을 정해서 바로 내 기기로 다운로드한다.
+  async function downloadPdfAnnotation() {
+    if (!pdfPagesData.length || !window.PDFLib) { alert('다운로드 기능을 사용할 수 없어요.'); return }
+    const fileName = document.getElementById('pdfFileName').textContent || 'file.pdf'
+    const baseName = fileName.replace(/\.pdf$/i, '')
+    const suggested = `${baseName}_필기`
+    const input = prompt('저장할 파일 이름을 입력하세요', suggested)
+    if (input === null) return
+    const trimmed = (input.trim() || suggested).replace(/\.pdf$/i, '')
+    const btn = document.getElementById('pdfDownloadBtn')
+    const label = document.getElementById('pdfDownloadBtnLabel')
+    const originalText = label.textContent
+    btn.disabled = true; label.textContent = '만드는 중...'
+    try {
+      const pdfBytes = await buildAnnotatedPdfBytes()
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      await saveBlobToDevice(blob, `${trimmed}.pdf`)
+    } catch (e) {
+      console.error(e)
+      const detail = (e && e.message) ? e.message : String(e)
+      alert('다운로드에 실패했어요: ' + detail)
+    } finally {
+      btn.disabled = false; label.textContent = originalText
+    }
+  }
+
+
+  function encodeNameForKey(stem) {
+    try {
+      const bytes = new TextEncoder().encode(stem)
+      let bin = ''
+      bytes.forEach(b => { bin += String.fromCharCode(b) })
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    } catch (e) { return stem.replace(/[^a-zA-Z0-9\-_]/g, '_') }
+  }
+  function decodeNameFromKey(seg) {
+    try {
+      let b64 = seg.replace(/-/g, '+').replace(/_/g, '/')
+      while (b64.length % 4) b64 += '='
+      const bin = atob(b64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      // fatal: true — 예전 방식(밑줄 범벅)으로 저장된 옛 파일을 실수로 이상한
+      // 문자열로 잘못 디코딩하지 않고, 디코딩 실패로 확실히 처리하기 위함.
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    } catch (e) { return null }
+  }
+  // 원본 파일명 → Storage 키에 쓸 안전한 조각(확장자는 평문 유지)
+  function buildSafeStorageName(originalName) {
+    const extMatch = originalName.match(/\.[a-zA-Z0-9]+$/)
+    const ext = extMatch ? extMatch[0] : ''
+    const stem = ext ? originalName.slice(0, -ext.length) : originalName
+    return `${encodeNameForKey(stem)}${ext}`
+  }
+  // Storage에 저장된 파일명(타임스탬프 접두사 포함) → 원본 파일명 복원
+  function decodeOriginalName(storageFileName) {
+    const withoutPrefix = storageFileName.replace(/^\d+_\d+_/, '')
+    const extMatch = withoutPrefix.match(/\.[a-zA-Z0-9]+$/)
+    const ext = extMatch ? extMatch[0] : ''
+    const stemPart = ext ? withoutPrefix.slice(0, -ext.length) : withoutPrefix
+    const decoded = decodeNameFromKey(stemPart)
+    return (decoded !== null && decoded.length > 0 ? decoded : stemPart) + ext
+  }
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+
+  function isIOSDevice() {
+    // 아이패드는 iPadOS 13+부터 데스크톱 사파리로 위장해 userAgent에 "iPad"가
+    // 안 찍히므로, 맥으로 보이면서 터치를 지원하는 경우도 아이패드로 간주한다.
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  }
+  async function saveBlobToDevice(blob, fileName) {
+    if (isIOSDevice()) {
+      try {
+        const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] })
+          return
+        }
+      } catch (e) {
+        // 사용자가 공유 시트를 취소한 경우엔 그냥 종료 (다시 일반 다운로드로 뜨지 않게)
+        if (e && e.name === 'AbortError') return
+        console.error('공유 시트로 저장 실패, 일반 다운로드로 재시도:', e)
+      }
+    }
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(objectUrl)
+  }
+
+
+  // ── 목록 / 로그인 / 업로드 ──
+  const $ = (id) => document.getElementById(id)
+  let uid = null
+  let sb = null
+  const MAX_FILE_SIZE = 50 * 1024 * 1024
+  let deepLinked = false
+
+  function formatDate(iso) {
+    if (!iso) return ''
+    return new Date(iso).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+  function setMsg(t) { $('msg').textContent = t || '' }
+  function pdfInkKey(path) { return `${path}.ink.json` }
+
+  async function listAllPdfs() {
+    const bk = sb.storage.from('images')
+    const out = []
+    const own = await bk.list(`${uid}/pdf`, { limit: 1000 })
+    if (own.error) throw own.error
+    ;(own.data || []).forEach(o => {
+      if (/\.pdf$/i.test(o.name)) out.push({ path: `${uid}/pdf/${o.name}`, name: decodeOriginalName(o.name), at: o.updated_at || o.created_at, own: true })
+    })
+    const root = await bk.list(uid, { limit: 1000 })
+    if (!root.error) {
+      const folders = (root.data || []).filter(o => !o.id && o.name !== 'pdf' && o.name !== 'music')
+      for (const f of folders) {
+        const r = await bk.list(`${uid}/${f.name}`, { limit: 1000 })
+        ;(r.data || []).forEach(o => {
+          if (/\.pdf$/i.test(o.name)) out.push({ path: `${uid}/${f.name}/${o.name}`, name: decodeOriginalName(o.name), at: o.updated_at || o.created_at, own: false })
+        })
+      }
+    }
+    out.sort((a, b) => String(b.at).localeCompare(String(a.at)))
+    return out
+  }
+
+  function renderList(items, cachedSet, offline) {
+    const el = $('list')
+    if (!items.length) {
+      el.innerHTML = '<div class="empty">' + (offline ? '이 기기에 저장된 PDF가 없어요.' : 'PDF가 아직 없어요.<br>위의 "PDF 열기"로 파일을 올려 보세요. 노트패드에 첨부한 PDF도 여기 나와요.') + '</div>'
+      return
+    }
+    el.innerHTML = items.map((it, i) =>
+      '<div class="row" data-i="' + i + '">' +
+        '<div class="rico"><svg viewBox="0 0 24 24" class="st"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div>' +
+        '<div class="rtxt"><div class="rname">' + escHtml(it.name) + '</div>' +
+        '<div class="rmeta">' + escHtml(formatDate(it.at)) + (it.own ? '' : ' · 노트 첨부') + (cachedSet.has(it.path) ? ' · 기기에 저장됨' : '') + '</div></div>' +
+        (it.own ? '<button class="rdel" title="삭제" aria-label="삭제"><svg viewBox="0 0 24 24" class="st"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : '') +
+      '</div>').join('')
+    el.querySelectorAll('.row').forEach(row => {
+      const it = items[Number(row.dataset.i)]
+      row.addEventListener('click', () => openItem(it))
+      const del = row.querySelector('.rdel')
+      if (del) del.addEventListener('click', (e) => { e.stopPropagation(); deleteItem(it) })
+    })
+  }
+
+  async function refreshList() {
+    let cached = []
+    try { cached = await cacheAll() } catch (e) {}
+    const cachedSet = new Set(cached.map(c => c.path))
+    const fromCache = () => cached.map(c => ({ path: c.path, name: c.name, at: new Date(c.at).toISOString(), own: false }))
+    if (!navigator.onLine || !sb || !uid) {
+      setMsg('오프라인 · 이 기기에 저장된 PDF만 보여요')
+      renderList(fromCache(), cachedSet, true)
+      return
+    }
+    setMsg('')
+    try {
+      renderList(await listAllPdfs(), cachedSet, false)
+    } catch (e) {
+      setMsg('목록을 불러오지 못했어요: ' + (e && e.message ? e.message : e))
+      renderList(fromCache(), cachedSet, true)
+    }
+  }
+
+  function openItem(it) {
+    const url = (sb && navigator.onLine) ? sb.storage.from('images').getPublicUrl(it.path).data.publicUrl : ''
+    $('listView').style.display = 'none'
+    openPdfAnnotate(url, it.name, it.path)
+  }
+
+  async function deleteItem(it) {
+    if (!confirm('"' + it.name + '"을(를) 삭제할까요? 필기도 함께 지워져요.')) return
+    try {
+      const r = await sb.storage.from('images').remove([it.path, pdfInkKey(it.path)])
+      if (r.error) throw r.error
+      try { await cacheDel(it.path); await inkDel(it.path) } catch (e) {}
+      refreshList()
+    } catch (e) { alert('삭제하지 못했어요: ' + (e && e.message ? e.message : e)) }
+  }
+
+  async function onPickFile(ev) {
+    const f = ev.target.files && ev.target.files[0]
+    ev.target.value = ''
+    if (!f) return
+    if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { alert('PDF 파일만 열 수 있어요.'); return }
+    if (f.size > MAX_FILE_SIZE) { alert('50MB를 넘는 PDF는 올릴 수 없어요.'); return }
+    if (!sb || !uid) { alert('로그인이 필요해요.'); return }
+    if (!navigator.onLine) { alert('새 PDF를 올리려면 인터넷 연결이 필요해요.'); return }
+    setMsg('올리는 중…')
+    const path = `${uid}/pdf/${Date.now()}_${Math.floor(Math.random() * 1e6)}_${buildSafeStorageName(f.name)}`
+    const { error } = await sb.storage.from('images').upload(path, f, { upsert: false, contentType: 'application/pdf' })
+    if (error) { setMsg('올리지 못했어요: ' + error.message); return }
+    setMsg('')
+    try { await cachePut({ path, name: f.name, blob: f, at: Date.now() }) } catch (e) {}
+    openItem({ path, name: f.name })
+  }
+
+  // 필기 화면을 닫으면 목록으로 (노트패드에서 바로 열었다면 노트패드로 돌아간다)
+  function onPdfClosed() {
+    if (deepLinked && history.length > 1) { deepLinked = false; history.back(); return }
+    deepLinked = false
+    if (location.search) history.replaceState(null, '', location.pathname)
+    $('pdfAnnotateOverlay').style.display = 'none'
+    $('listView').style.display = 'block'
+    refreshList()
+  }
+
+  async function init() {
+    $('pickFile').addEventListener('change', onPickFile)
+    try {
+      ;['pdfPenColor', 'pdfPenWidth', 'pdfPenOpacity'].forEach(id => $(id).addEventListener('input', savePdfToolSetting))
+    } catch (e) {}
+    window.addEventListener('online', refreshList)
+    window.addEventListener('offline', refreshList)
+
+    const params = new URLSearchParams(location.search)
+    const dPath = params.get('path'), dName = params.get('name')
+
+    try {
+      await new Promise((res, rej) => { if (window.supabase) return res(); const t = setInterval(() => { if (window.supabase) { clearInterval(t); res() } }, 50); setTimeout(() => { clearInterval(t); rej(new Error('lib')) }, 8000) })
+      sb = window.supabase.createClient('https://iksctrteeygnvfcsyjea.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg')
+      if (navigator.onLine) {
+        const r = await sb.auth.getSession()
+        uid = r && r.data && r.data.session ? r.data.session.user.id : null
+      }
+    } catch (e) { sb = sb || null }
+    if (navigator.onLine && sb && !uid) {
+      $('loginNeed').style.display = 'block'
+      $('toolbarRow').style.display = 'none'
+    }
+    if (dPath && (uid || !navigator.onLine)) {
+      deepLinked = true
+      openItem({ path: dPath, name: dName || decodeOriginalName(dPath.split('/').pop()) })
+      return
+    }
+    refreshList()
+  }
+  init()
+
+</script>
+</body>
+</html>

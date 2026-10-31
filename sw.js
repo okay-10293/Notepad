@@ -1,10 +1,22 @@
 // 오케이 테이블 오프라인용 Service Worker
-// 허브(/)와 music.html, 아이콘만 캐시한다. 그 외 요청(노트패드 본체, Supabase, 광고 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-table-v4'
-const SB_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+// 허브(/), 음악, PDF 오프너 페이지와 그 페이지가 쓰는 라이브러리만 캐시한다.
+// 그 외 요청(노트패드 본체, Supabase 데이터 등)은 건드리지 않고 그대로 네트워크로 보낸다.
+const CACHE = 'okay-table-v5'
+const PDFJS = '3.11.174'
+const LIBS = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS + '/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS + '/pdf.worker.min.js',
+  'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'
+]
 const STATIC = ['/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon-180.png', '/assets/favicon-32.png']
 // 주소 → 캐시 키 (Cloudflare Pages가 .html을 떼는 리다이렉트도 같이 처리)
-const PAGES = { '/': '/', '/index.html': '/', '/music': '/music.html', '/music.html': '/music.html' }
+const PAGES = {
+  '/': '/', '/index.html': '/',
+  '/music': '/music.html', '/music.html': '/music.html',
+  '/pdf': '/pdf.html', '/pdf.html': '/pdf.html'
+}
+const ALIAS = { '/music.html': '/music', '/pdf.html': '/pdf' }
 
 // 리다이렉트된 응답은 페이지 이동(navigation)에 그대로 쓸 수 없어서 새 Response로 감싸 flag를 떼어낸다.
 async function cleanResponse(res) {
@@ -15,18 +27,20 @@ async function cleanResponse(res) {
 async function putPage(cache, key, res) {
   const page = await cleanResponse(res)
   await cache.put(key, page.clone())
-  if (key === '/music.html') await cache.put('/music', page.clone())
+  if (ALIAS[key]) await cache.put(ALIAS[key], page.clone())
 }
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE)
-    for (const key of ['/', '/music.html']) {
+    for (const key of ['/', '/music.html', '/pdf.html']) {
       const res = await fetch(key, { cache: 'reload' })
       if (!res.ok) throw new Error(key + ' 캐시 실패')
       await putPage(cache, key, res)
     }
-    try { const lib = await fetch(SB_LIB, { mode: 'no-cors' }); await cache.put(SB_LIB, lib) } catch (e) {}
+    await Promise.all(LIBS.map(async (u) => {
+      try { const r = await fetch(u, { mode: 'no-cors' }); await cache.put(u, r) } catch (e) {}
+    }))
     await Promise.all(STATIC.map(async (u) => {
       try { const r = await fetch(u, { cache: 'reload' }); if (r.ok) await cache.put(u, r) } catch (e) {}
     }))
@@ -45,16 +59,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
-  if (req.url === SB_LIB) {
+
+  // CDN 라이브러리: 캐시 우선, 뒤에서 조용히 갱신
+  if (LIBS.includes(req.url)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE)
-      const cached = await cache.match(SB_LIB)
-      const refresh = fetch(req).then(async (res) => { try { await cache.put(SB_LIB, res.clone()) } catch (e) {} return res }).catch(() => null)
+      const cached = await cache.match(req.url)
+      const refresh = fetch(req).then(async (res) => { try { await cache.put(req.url, res.clone()) } catch (e) {} return res }).catch(() => null)
       if (cached) { event.waitUntil(refresh); return cached }
       return (await refresh) || Response.error()
     })())
     return
   }
+
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
 
