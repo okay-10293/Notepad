@@ -3,11 +3,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>드로잉 · 오케이 테이블</title>
 <meta name="theme-color" content="#000000"><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <style>
 :root{--bg:#fff;--s:#f3f3f3;--ink:#0a0a0a;--ink2:#6a6a6a;--bd:#e0e0e0;--ac:#0a0a0a;--on:#fff;color-scheme:light dark}
 @media(prefers-color-scheme:dark){:root{--bg:#0b0b0b;--s:#171717;--ink:#f2f2f2;--ink2:#9a9a9a;--bd:#2a2a2a;--ac:#f2f2f2;--on:#0a0a0a}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:13px -apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:13px 'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
 body{display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 button,input,select{font:inherit;color:inherit}
 button,select{background:var(--s);border:1px solid var(--bd);border-radius:8px;padding:6px 9px;cursor:pointer}
@@ -131,7 +132,7 @@ view.addEventListener('pointerdown',e=>{view.setPointerCapture(e.pointerId);cons
 if(!drawIt){if(stroke)return;ptrs.set(e.pointerId,{x:p.sx,y:p.sy});gs=gmeas();if(ptrs.size===2)tp={t:performance.now(),m:0,x:gs.x,y:gs.y,d:gs.d};return}
 if(stroke||ptrs.size)return;
 if(tool==='lasso'){lid=e.pointerId;lp=[{x:p.x,y:p.y}];return}
-if(tool==='text'){const t=prompt('텍스트');if(!t)return;const B=bp(),f=B.size*3;stroke={id:-1,tool:'text',bb:[1e9,1e9,-1e9,-1e9]};bx.clearRect(0,0,W,H);px.clearRect(0,0,W,H);px.drawImage(L().c,0,0);bx.font='600 '+f+'px -apple-system,sans-serif';bx.fillStyle=col;bx.globalAlpha=1;bx.textBaseline='top';bx.fillText(t,p.x,p.y);stroke.bb=[p.x,p.y,p.x+bx.measureText(t).width,p.y+f*1.3];commit();return}
+if(tool==='text'){const t=prompt('텍스트');if(!t)return;const B=bp(),f=B.size*3;stroke={id:-1,tool:'text',bb:[1e9,1e9,-1e9,-1e9]};bx.clearRect(0,0,W,H);px.clearRect(0,0,W,H);px.drawImage(L().c,0,0);bx.font='600 '+f+"px Pretendard,'Apple SD Gothic Neo',-apple-system,sans-serif";bx.fillStyle=col;bx.globalAlpha=1;bx.textBaseline='top';bx.fillText(t,p.x,p.y);stroke.bb=[p.x,p.y,p.x+bx.measureText(t).width,p.y+f*1.3];commit();return}
 if(tool==='pick'){render();const dp=vc.getImageData(Math.round(p.sx*dpr),Math.round(p.sy*dpr),1,1).data;setCol(rgbHex(dp[0],dp[1],dp[2]));return}
 if(tool==='fill'){flood(p.x,p.y);return}
 stroke={id:e.pointerId,tool,sp:{x:p.x,y:p.y},bb:[1e9,1e9,-1e9,-1e9],start:p,end:p,lx:null};bx.clearRect(0,0,W,H);px.clearRect(0,0,W,H);px.drawImage(L().c,0,0);

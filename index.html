@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="오케이 테이블" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
     :root {
       --bg: #ffffff; --surface: #ffffff; --ink: #0a0a0a; --ink-2: #5c5c5c; --ink-3: #9b9b9b; --accent: #0a0a0a; --accent-light: #f1f1f1; --border: #e6e6e6; --on-accent: #ffffff;
@@ -27,9 +27,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
     html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-    body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
     main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 4rem 1.25rem 2rem; }
-    .brand { font-family: 'Gowun Batang', 'Batang', serif; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; }
+    .brand { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; }
     .tag { margin-top: 0.5rem; color: var(--ink-2); font-size: 0.95rem; line-height: 1.6; }
     .grid { margin-top: 2.5rem; display: grid; gap: 0.9rem; }
     .tile { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s, border-color 0.12s; }

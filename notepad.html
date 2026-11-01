@@ -38,7 +38,7 @@
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
   }
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -48,7 +48,7 @@
     @media (prefers-color-scheme: dark) {
       :root { --bg: #000000; --surface: #121212; --ink: #f5f5f5; --ink-2: #a8a8a8; --ink-3: #6e6e6e; --accent: #f5f5f5; --accent-light: #232323; --border: #2a2a2a; --on-accent: #0a0a0a; }
     }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+    body { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
 
     /* ── 초기 로딩 화면 ── */
     #initLoading { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
@@ -59,9 +59,9 @@
     /* ── Landing ── */
     #landing { min-height: 100vh; display: flex; flex-direction: column; }
     .land-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; border-bottom: 1px solid var(--border); }
-    .logo { font-family: 'Gowun Batang', serif; font-size: 1.4rem; color: var(--ink); letter-spacing: -0.02em; }
+    .logo { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.4rem; color: var(--ink); letter-spacing: -0.02em; }
     .land-nav-btns { display: flex; gap: 0.75rem; }
-    .btn { font-family: 'Noto Sans KR', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+    .btn { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
     .btn-ghost { background: transparent; border-color: var(--border); color: var(--ink-2); }
     .btn-ghost:hover { background: var(--border); color: var(--ink); }
     .btn-primary { background: var(--accent); color: var(--on-accent); }
@@ -71,7 +71,7 @@
     .land-hero-grid { flex: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; align-items: center; gap: 2.5rem; padding: 4rem 3rem; max-width: 1180px; margin: 0 auto; width: 100%; }
     .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 1.35rem; text-align: left; }
     .hero-tag { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); background: var(--accent-light); padding: 0.3rem 0.9rem; border-radius: 99px; }
-    .hero-title { font-family: 'Gowun Batang', serif; font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.28; color: var(--ink); }
+    .hero-title { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.28; color: var(--ink); }
     .hero-sub { font-size: 1rem; color: var(--ink-2); max-width: 420px; line-height: 1.75; font-weight: 300; }
     .hero-btns { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
@@ -90,7 +90,7 @@
     .note-mock-spiral span { width: 13px; height: 13px; border-radius: 50%; background: var(--bg); border: 2px solid var(--border); }
     .note-mock-bar { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 0.9rem; }
     .note-mock-save { font-size: 0.68rem; color: var(--accent); background: var(--accent-light); padding: 0.18rem 0.55rem; border-radius: 99px; font-weight: 500; }
-    .note-mock-title { font-family: 'Gowun Batang', serif; font-size: 1.1rem; margin-bottom: 0.85rem; color: var(--ink); }
+    .note-mock-title { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.1rem; margin-bottom: 0.85rem; color: var(--ink); }
     .note-mock-lines { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.1rem; }
     .note-mock-line { height: 8px; border-radius: 4px; background: var(--border); }
     .note-mock-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); padding: 0.35rem 0.65rem; border-radius: 7px; }
@@ -121,7 +121,7 @@
     @media (prefers-reduced-motion: reduce) { .intro-slide { animation: none; } }
     .intro-icon { width: 84px; height: 84px; border-radius: 22px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; color: var(--accent); margin-bottom: 0.4rem; }
     .intro-icon svg { width: 36px; height: 36px; }
-    .intro-title { font-family: 'Gowun Batang', serif; font-size: 1.55rem; color: var(--ink); line-height: 1.35; }
+    .intro-title { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.55rem; color: var(--ink); line-height: 1.35; }
     .intro-desc { font-size: 0.9rem; color: var(--ink-2); line-height: 1.75; font-weight: 300; }
     .intro-dots { display: flex; gap: 0.5rem; margin-top: 2.25rem; }
     .intro-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: all 0.2s; }
@@ -147,7 +147,7 @@
 
     /* 랜딩 추가 섹션 */
     .land-how { padding: 4rem 3rem; background: var(--surface); border-top: 1px solid var(--border); }
-    .section-title { font-family: 'Gowun Batang', serif; font-size: 1.8rem; text-align: center; margin-bottom: 2.5rem; }
+    .section-title { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.8rem; text-align: center; margin-bottom: 2.5rem; }
     .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; }
     .step { text-align: center; }
     .step-num { width: 36px; height: 36px; background: var(--accent); color: var(--on-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; margin: 0 auto 0.75rem; }
@@ -170,13 +170,13 @@
     .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
     .modal-bg.open { display: flex; }
     .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); position: relative; max-height: 90vh; overflow-y: auto; }
-    .modal-title { font-family: 'Gowun Batang', serif; font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .modal-title { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.4rem; margin-bottom: 0.4rem; }
     .modal-sub { font-size: 0.82rem; color: var(--ink-2); margin-bottom: 1.5rem; font-weight: 300; }
     .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
     .form-label { font-size: 0.8rem; font-weight: 500; color: var(--ink-2); }
-    .form-input { font-family: 'Noto Sans KR', sans-serif; font-size: 0.9rem; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; transition: border-color 0.15s; }
+    .form-input { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 0.9rem; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; transition: border-color 0.15s; }
     .form-input:focus { border-color: var(--accent); }
-    .form-textarea { font-family: 'Noto Sans KR', sans-serif; font-size: 0.9rem; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; resize: vertical; min-height: 100px; transition: border-color 0.15s; }
+    .form-textarea { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 0.9rem; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; resize: vertical; min-height: 100px; transition: border-color 0.15s; }
     .form-textarea:focus { border-color: var(--accent); }
     .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; }
     .modal-switch { font-size: 0.8rem; color: var(--ink-2); font-weight: 300; }
@@ -193,13 +193,13 @@
     .shelf-view { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
     .shelf-header { padding: 1.25rem 1.5rem 0.85rem; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.75rem; }
     .shelf-header-top { display: flex; justify-content: space-between; align-items: center; }
-    .sidebar-logo { font-family: 'Gowun Batang', serif; font-size: 1.1rem; }
+    .sidebar-logo { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.1rem; }
     .user-info { font-size: 0.75rem; color: var(--ink-2); font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
     .shelf-header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .icon-btn { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 0.35rem 0.6rem; font-size: 0.85rem; color: var(--ink-2); transition: all 0.15s; font-family: inherit; }
     .icon-btn:hover { background: var(--bg); color: var(--accent); }
     .icon-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-    .search-input { font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem; width: 100%; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; }
+    .search-input { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 0.82rem; width: 100%; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; }
     .search-input:focus { border-color: var(--accent); }
     .shelf-grid { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; align-content: start; }
     .note-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; cursor: pointer; transition: all 0.15s; position: relative; display: flex; flex-direction: column; gap: 0.4rem; min-height: 108px; }
@@ -214,13 +214,13 @@
     /* ── 노트 단독 보기 ── */
     .editor-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
     .editor-toolbar { padding: 0.85rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .note-title-input { font-family: 'Gowun Batang', serif; font-size: 1.3rem; border: none; background: transparent; color: var(--ink); outline: none; flex: 1; min-width: 0; }
+    .note-title-input { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 1.3rem; border: none; background: transparent; color: var(--ink); outline: none; flex: 1; min-width: 0; }
     .note-title-input::placeholder { color: var(--ink-3); }
     .toolbar-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .save-status { font-size: 0.75rem; color: var(--ink-3); font-weight: 300; white-space: nowrap; }
     .btn-danger { background: transparent; border: 1px solid #e0c0c0; color: #c0392b; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
     .btn-danger:hover { background: #fdf0f0; }
-    .note-textarea { flex: 1; padding: 2rem 2.5rem; font-family: 'Noto Sans KR', sans-serif; font-size: 0.95rem; font-weight: 300; line-height: 1.9; color: var(--ink); background: transparent; border: none; outline: none; resize: none; }
+    .note-textarea { flex: 1; padding: 2rem 2.5rem; font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 0.95rem; font-weight: 300; line-height: 1.9; color: var(--ink); background: transparent; border: none; outline: none; resize: none; }
     .note-textarea::placeholder { color: var(--ink-3); }
     .logout-btn { background: none; border: none; cursor: pointer; font-size: 0.75rem; color: var(--ink-3); font-family: inherit; padding: 0; }
     .logout-btn:hover { color: var(--ink); }
