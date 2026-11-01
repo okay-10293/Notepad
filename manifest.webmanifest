@@ -1,7 +1,7 @@
 {
   "name": "오케이 테이블",
   "short_name": "오케이 테이블",
-  "description": "노트패드와 음악을 한곳에서. 내 계정으로 모든 기기에서.",
+  "description": "노트패드, PDF, 드로잉, 음악",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

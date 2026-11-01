@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>오케이 테이블</title>
-  <meta name="description" content="오케이 테이블 — 노트패드, PDF, 드로잉, 음악을 한곳에서. 내 계정으로 모든 기기에서 이어서 쓰세요." />
+  <meta name="description" content="오케이 테이블 — 노트패드, PDF, 드로잉, 음악." />
   <meta property="og:title" content="오케이 테이블" />
-  <meta property="og:description" content="노트패드, PDF, 드로잉, 음악을 한곳에서. 내 계정으로 모든 기기에서." />
+  <meta property="og:description" content="노트패드, PDF, 드로잉, 음악." />
   <meta property="og:image" content="/assets/og-image.png" />
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
@@ -32,10 +32,10 @@
     .brand { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; }
     .tag { margin-top: 0.5rem; color: var(--ink-2); font-size: 0.95rem; line-height: 1.6; }
     .grid { margin-top: 2.5rem; display: grid; gap: 0.9rem; }
-    .tile { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: transform 0.12s, border-color 0.12s; }
+    .tile { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: inherit; text-decoration: none; transition: transform 0.12s, border-color 0.12s; }
     .tile:active { transform: scale(0.985); }
     .tile:hover { border-color: var(--accent); }
-    .ico { width: 54px; height: 54px; border-radius: 16px; background: var(--accent-light); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
+    .ico { width: 54px; height: 54px; border-radius: 8px; background: var(--accent-light); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
     .ico svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .txt { flex: 1; min-width: 0; }
     .name { font-size: 1.08rem; font-weight: 700; }
@@ -45,7 +45,7 @@
     .tile.soon { opacity: 0.55; cursor: default; }
     .tile.soon:hover { border-color: var(--border); }
     .off .tile.needs-net { opacity: 0.55; }
-    .off .tile.needs-net .note { display: block; }
+    .off .tile.needs-net .desc::after { content: " · 인터넷 필요"; }
     .off-msg { display: none; margin-top: 1.25rem; font-size: 0.82rem; color: var(--ink-2); }
     .off .off-msg { display: block; }
     footer { padding: 1.5rem 1.25rem 2rem; text-align: center; font-size: 0.75rem; color: var(--ink-3); }
@@ -55,46 +55,22 @@
 <body>
   <main id="root">
     <h1 class="brand">오케이 테이블</h1>
-    <p class="tag">필요한 것들을 한 테이블 위에. 같은 계정이면 어느 기기에서든 이어서 쓸 수 있어요.</p>
+    <p class="tag">노트패드, PDF, 드로잉, 음악. 같은 계정으로 모든 기기에서 사용합니다.</p>
 
-    <div class="off-msg">지금은 오프라인이에요. 음악은 이 기기에 저장된 곡으로 들을 수 있어요.</div>
+    <div class="off-msg">오프라인 상태입니다. 음악은 이 기기에 저장된 곡만 재생됩니다.</div>
 
     <div class="grid">
       <a class="tile needs-net" href="/notepad.html">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18"/><path d="M10 8h6M10 12h6"/></svg></span>
-        <span class="txt">
-          <div class="name">노트패드</div>
-          <div class="desc">글과 파일을 저장하는 클라우드 노트. 사진, 문서 첨부도 돼요.</div>
-          <div class="note">인터넷 연결이 필요해요</div>
-        </span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="txt"><div class="name">노트패드</div><div class="desc">글, 파일 저장</div></span>
       </a>
-
       <a class="tile" href="/pdf.html">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14l2 2 4-4"/></svg></span>
-        <span class="txt">
-          <div class="name">PDF 오프너</div>
-          <div class="desc">PDF를 열고 펜, 형광펜으로 필기. 필기는 계정에 저장돼요.</div>
-        </span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="txt"><div class="name">PDF 오프너</div><div class="desc">PDF 열기, 필기</div></span>
       </a>
-
       <a class="tile" href="/draw.html">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="M2 2l7.5 7.5"/><circle cx="11" cy="11" r="2"/></svg></span>
-        <span class="txt">
-          <div class="name">드로잉</div>
-          <div class="desc">레이어, 브러시, 펜슬 필압까지. 그림은 계정에 저장돼요.</div>
-        </span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="txt"><div class="name">드로잉</div><div class="desc">그림 그리기</div></span>
       </a>
-
       <a class="tile" href="/music.html">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>
-        <span class="txt">
-          <div class="name">음악</div>
-          <div class="desc">내 곡을 모아 연속 재생. 비행기에서도, 계정으로 기기 간 동기화도.</div>
-        </span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="txt"><div class="name">음악</div><div class="desc">저장한 곡 재생</div></span>
       </a>
     </div>
   </main>
