@@ -1,7 +1,7 @@
 // 오케이 테이블 오프라인용 Service Worker
 // 허브(/), 음악, PDF 오프너 페이지와 그 페이지가 쓰는 라이브러리만 캐시한다.
 // 그 외 요청(노트패드 본체, Supabase 데이터 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-table-v5'
+const CACHE = 'okay-table-v6'
 const PDFJS = '3.11.174'
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
@@ -14,9 +14,10 @@ const STATIC = ['/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon
 const PAGES = {
   '/': '/', '/index.html': '/',
   '/music': '/music.html', '/music.html': '/music.html',
-  '/pdf': '/pdf.html', '/pdf.html': '/pdf.html'
+  '/pdf': '/pdf.html', '/pdf.html': '/pdf.html',
+  '/draw': '/draw.html', '/draw.html': '/draw.html'
 }
-const ALIAS = { '/music.html': '/music', '/pdf.html': '/pdf' }
+const ALIAS = { '/music.html': '/music', '/pdf.html': '/pdf', '/draw.html': '/draw' }
 
 // 리다이렉트된 응답은 페이지 이동(navigation)에 그대로 쓸 수 없어서 새 Response로 감싸 flag를 떼어낸다.
 async function cleanResponse(res) {
@@ -33,7 +34,7 @@ async function putPage(cache, key, res) {
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE)
-    for (const key of ['/', '/music.html', '/pdf.html']) {
+    for (const key of ['/', '/music.html', '/pdf.html', '/draw.html']) {
       const res = await fetch(key, { cache: 'reload' })
       if (!res.ok) throw new Error(key + ' 캐시 실패')
       await putPage(cache, key, res)

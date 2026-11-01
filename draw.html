@@ -41,7 +41,7 @@ label.r{display:flex;align-items:center;gap:6px;font-size:12px}label.r span{widt
 </style></head><body>
 <div id="top"><a href="/">← 테이블</a><input id="nm" value="제목 없음" aria-label="제목">
 <button id="bU">실행취소</button><button id="bR">다시</button><button id="bF">맞춤</button><span id="zm">100%</span>
-<button id="bG">내 그림</button><button id="bS">저장</button><button id="bE">PNG</button><span id="st"></span></div>
+<button id="bG">내 그림</button><button id="bI">이미지</button><input id="fi" type="file" accept="image/*" hidden><button id="bS">저장</button><button id="bE">PNG</button><span id="st"></span></div>
 <main><div id="tools"></div><div id="stage"><canvas id="view"></canvas></div>
 <div id="panel">
 <div class="sec"><h4>색상</h4><canvas id="sv" width="200" height="110"></canvas><input id="hue" type="range" min="0" max="359" value="0"><div style="display:flex;gap:6px;align-items:center"><input id="hx" value="#111111"><div class="sw" id="rc"></div></div></div>
@@ -56,7 +56,7 @@ label.r{display:flex;align-items:center;gap:6px;font-size:12px}label.r span{widt
 <select id="lb"><option value="source-over">일반</option><option value="multiply">곱하기</option><option value="screen">스크린</option><option value="overlay">오버레이</option><option value="darken">어둡게</option><option value="lighten">밝게</option><option value="soft-light">소프트라이트</option><option value="color-dodge">색상 닷지</option></select>
 <div class="chk"><label><input id="lk" type="checkbox">알파 잠금</label><label><input id="lc" type="checkbox">아래로 클리핑</label></div>
 <div class="bt"><button id="l1">추가</button><button id="l2">복제</button><button id="l3">병합↓</button><button id="l4">삭제</button></div>
-<div class="bt"><button id="l5">위로</button><button id="l6">아래로</button><button id="l7">비우기</button><button id="l8">반전</button></div></div>
+<div class="bt"><button id="l5">위로</button><button id="l6">아래로</button><button id="l7">비우기</button><button id="l8">반전</button><button id="l9">변형</button></div></div>
 </div></main>
 <div id="gal"><div style="display:flex;gap:8px;align-items:center;padding:10px 0;flex-wrap:wrap"><button id="gx">닫기</button><b>내 그림</b>
 <span style="margin-left:auto;display:flex;gap:6px;align-items:center">새 그림 <input id="nw" type="number" value="2048" style="width:70px;background:var(--s);border:1px solid var(--bd);border-radius:8px;padding:5px"> × <input id="nh" type="number" value="1536" style="width:70px;background:var(--s);border:1px solid var(--bd);border-radius:8px;padding:5px"><button id="gn">만들기</button></span></div><div id="gl"></div></div>
@@ -155,9 +155,17 @@ function setTool(t){tool=t;[...$('tools').children].forEach(b=>b.classList.toggl
 TL.forEach(([t,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.t=t;b.onclick=()=>setTool(t);$('tools').appendChild(b)})
 $('bU').onclick=()=>step(-1);$('bR').onclick=()=>step(1);$('bF').onclick=fit
 $('lo').oninput=e=>{L().op=e.target.value/100;rd()};$('lb').onchange=e=>{L().bl=e.target.value;rd()};$('lk').onchange=e=>{L().lock=e.target.checked?1:0};$('lc').onchange=e=>{L().clip=e.target.checked?1:0;rd()}
-$('l1').onclick=addL;$('l2').onclick=dupL;$('l3').onclick=mrg;$('l4').onclick=delL;$('l5').onclick=()=>mvL(1);$('l6').onclick=()=>mvL(-1);$('l7').onclick=clrL;$('l8').onclick=flipL;$('s1').onclick=()=>{sel=null;rd()};$('s2').onclick=selDel;$('s3').onclick=selCut
+$('l1').onclick=addL;$('l2').onclick=dupL;$('l3').onclick=mrg;$('l4').onclick=delL;$('l5').onclick=()=>mvL(1);$('l6').onclick=()=>mvL(-1);$('l7').onclick=clrL;$('l8').onclick=flipL;$('l9').onclick=xfL;$('s1').onclick=()=>{sel=null;rd()};$('s2').onclick=selDel;$('s3').onclick=selCut
+/* 가져오기 / 변형 / 기기 백업 */
+$('bI').onclick=()=>$('fi').click()
+$('fi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const im=new Image();im.onload=()=>{const l=newL(f.name.replace(/\.[^.]+$/,'')),k=Math.min(1,W/im.width,H/im.height),w=im.width*k,h=im.height*k;l.ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);const i=cur+1;layers.splice(i,0,l);cur=i;hpush(()=>{layers.splice(layers.indexOf(l),1)},()=>{layers.splice(i,0,l);cur=i});URL.revokeObjectURL(im.src);ui();rd()};im.src=URL.createObjectURL(f)}
+function xfL(){const v=prompt('크기 %, 회전 도 (예: 80, 15)','100, 0');if(!v)return;const[sc,ro]=v.split(',').map(x=>parseFloat(x));if(!(sc>0))return;const l=L(),bb=[0,0,W,H],bf=crop(l.c,bb);l.ctx.save();l.ctx.clearRect(0,0,W,H);l.ctx.translate(W/2,H/2);l.ctx.rotate((ro||0)*Math.PI/180);l.ctx.scale(sc/100,sc/100);l.ctx.drawImage(bf,-W/2,-H/2);l.ctx.restore();const af=crop(l.c,bb);hpush(()=>rest(l,bb,bf),()=>rest(l,bb,af));rd()}
+const ser=()=>JSON.stringify({v:1,w:W,h:H,name:$('nm').value.trim()||'제목 없음',layers:layers.map(l=>({n:l.n,v:l.vis,o:l.op,b:l.bl,l:l.lock,c:l.clip,d:l.c.toDataURL('image/png')}))})
+const idb=(m,f)=>new Promise((res,rej)=>{const r=indexedDB.open('okay-draw',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>{const t=r.result.transaction('k',m),q=f(t.objectStore('k'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)};r.onerror=()=>rej(r.error)})
+let btm=0;function backup(){clearTimeout(btm);btm=setTimeout(async()=>{try{await idb('readwrite',st=>st.put(ser(),'last'))}catch(e){}},3000)}
+async function fromJ(j){size(j.w,j.h);layers=[];for(const d of j.layers){const l=newL(d.n);l.vis=d.v;l.op=d.o;l.bl=d.b;l.lock=d.l;l.clip=d.c;await new Promise(r=>{const im=new Image();im.onload=()=>{l.ctx.drawImage(im,0,0);r()};im.onerror=r;im.src=d.d});layers.push(l)}cur=layers.length-1;hist=[];hp=0;$('nm').value=j.name;ui();fit()}
 /* 저장 / 불러오기 (계정) */
-function touch(){clearTimeout(atimer);if(docId&&uid)atimer=setTimeout(()=>save(true),10000)}
+function touch(){clearTimeout(atimer);backup();if(docId&&uid)atimer=setTimeout(()=>save(true),10000)}
 function flat(bg){const c=mk(W,H),x=c.getContext('2d');if(bg){x.fillStyle='#fff';x.fillRect(0,0,W,H)}layers.forEach((l,i)=>{if(!l.vis)return;x.globalAlpha=l.op;x.globalCompositeOperation=l.bl;if(l.clip&&i>0){const t=mk(W,H),y=t.getContext('2d');y.drawImage(l.c,0,0);y.globalCompositeOperation='destination-in';y.drawImage(layers[i-1].c,0,0);x.drawImage(t,0,0)}else x.drawImage(l.c,0,0)});return c}
 const blob=(c,t,q)=>new Promise(r=>c.toBlob(r,t,q))
 async function save(auto){if(!sb||!uid){if(!auto)msg('로그인하면 계정에 저장돼요 (노트패드에서 로그인)');return}
@@ -181,5 +189,6 @@ addEventListener('beforeunload',e=>{if(hist.length&&(!docId||!uid)){e.preventDef
 addEventListener('resize',rsz)
 /* 시작 */
 blank(W,H);setCol(col);setTool('pen');pushRec();rsz();fit()
+;(async()=>{try{const j=await idb('readonly',st=>st.get('last'));if(j&&confirm('이전에 작업하던 그림이 이 기기에 남아 있어요. 복구할까요?'))await fromJ(JSON.parse(j))}catch(e){}})()
 ;(async()=>{try{if(!window.supabase||!navigator.onLine)return;sb=supabase.createClient('https://iksctrteeygnvfcsyjea.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg');const r=await sb.auth.getSession();uid=r.data.session?r.data.session.user.id:null;if(!uid)msg('로그인하면 계정에 저장돼요')}catch(e){}})()
 </script></body></html>
