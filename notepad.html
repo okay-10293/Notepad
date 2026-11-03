@@ -13,6 +13,8 @@
   <!-- AdSense 스크립트는 head 영역에서 무조건 로드하지 않고, 로그인하지 않은 방문자가 랜딩 화면을 볼 때만 JS에서 동적으로 로드합니다 (loadAds() 참고). 로그인 후 앱(노트 편집) 화면에는 광고가 절대 노출되지 않도록 하기 위함입니다. -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, follow" />
+  <link rel="canonical" href="https://okaynotepad.pages.dev/" />
   <meta name="description" content="OkayNotepad는 PC, 스마트폰, 태블릿 어디서든 실시간으로 동기화되는 무료 클라우드 메모장입니다. 텍스트 노트 작성은 물론 이미지, PDF, 문서 파일 첨부(최대 50MB), PDF에 펜·형광펜으로 직접 필기, 자동 저장, 노트 검색 기능을 무료로 제공합니다. 별도 앱 설치 없이 웹 브라우저만으로 즉시 사용 가능합니다." />
   <meta property="og:site_name" content="OkayNotepad" />
   <meta property="og:title" content="OkayNotepad — 무료 클라우드 메모장, 모든 기기에서 동기화" />
@@ -667,7 +669,7 @@
 <div id="app">
   <div id="demoBanner" style="display:none; position:sticky; top:0; z-index:500; background:var(--accent); color:var(--on-accent); padding:0.55rem 1rem; font-size:0.82rem; align-items:center; justify-content:center; gap:0.9rem; flex-wrap:wrap; text-align:center;">
     <span>🔍 지금 <b>체험판</b>을 보고 계세요 — 여기서 쓰는 내용은 실제로 저장되지 않아요</span>
-    <button onclick="exitDemoMode(); openModal('signup')" style="background:var(--on-accent); color:var(--accent); border:none; border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; font-weight:600; cursor:pointer;">무료로 시작하기</button>
+    <button onclick="location.replace('/?signup=1')" style="background:var(--on-accent); color:var(--accent); border:none; border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; font-weight:600; cursor:pointer;">무료로 시작하기</button>
     <button onclick="exitDemoMode()" style="background:transparent; color:var(--on-accent); border:1px solid currentColor; border-radius:6px; padding:0.3rem 0.7rem; font-size:0.8rem; cursor:pointer;">체험 종료</button>
   </div>
   <!-- 책장: 노트 목록 -->
@@ -861,7 +863,7 @@
       settled = true
       clearTimeout(fallback)
       if (session) { currentUser = session.user; showApp(); reconcileLinkedEmail() }
-      else { showLandingOrIntro() }
+      else if (location.search.includes('demo=1')) { startDemoMode() } else { location.replace('/') }
     } catch (e) {
       if (!settled) {
         settled = true
@@ -995,6 +997,7 @@
     } catch (e) {}
   }
   function showLanding() {
+    location.replace('/'); return
     document.getElementById('introSlides').style.display = 'none'
     document.getElementById('landing').style.display = 'flex'
     document.getElementById('app').style.display = 'none'
@@ -1071,8 +1074,7 @@
   function demoBlocked(msg) {
     if (!demoMode) return false
     if (confirm((msg || '체험판에서는 사용할 수 없는 기능이에요.') + '\n\n무료로 가입하면 전부 이용하실 수 있어요. 지금 가입하시겠어요?')) {
-      exitDemoMode()
-      openModal('signup')
+      location.replace('/?signup=1')
     }
     return true
   }

@@ -1,7 +1,7 @@
 // 오케이 테이블 오프라인용 Service Worker
 // 허브(/), 음악, PDF 오프너 페이지와 그 페이지가 쓰는 라이브러리만 캐시한다.
 // 그 외 요청(노트패드 본체, Supabase 데이터 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-table-v6'
+const CACHE = 'okay-table-v7'
 const PDFJS = '3.11.174'
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',

@@ -1,13 +1,37 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <meta name="naver-site-verification" content="9e03a9e3b1493547d8a028e17fea9032965c8e34" />
+  <meta name="google-site-verification" content="TJQkf_GJ_qnSZjyXC1GaZMYe65FUmW0EDua6TGiO6Ps" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>오케이 테이블</title>
-  <meta name="description" content="오케이 테이블 — 노트패드, PDF, 드로잉, 음악." />
-  <meta property="og:title" content="오케이 테이블" />
-  <meta property="og:description" content="노트패드, PDF, 드로잉, 음악." />
-  <meta property="og:image" content="/assets/og-image.png" />
+  <title>오케이 테이블 — 노트패드, PDF, 드로잉, 음악을 한곳에서</title>
+  <meta name="description" content="오케이 테이블은 노트패드(오케이 노트패드), PDF 오프너, 드로잉, 음악을 하나의 계정으로 쓰는 무료 웹 서비스입니다. PC, 스마트폰, 태블릿 어디서든 이어서 사용하고, 앱 설치 없이 브라우저에서 바로 시작하세요." />
+  <link rel="canonical" href="https://okaynotepad.pages.dev/" />
+  <meta property="og:site_name" content="오케이 테이블" />
+  <meta property="og:title" content="오케이 테이블 — 노트패드, PDF, 드로잉, 음악을 한곳에서" />
+  <meta property="og:description" content="하나의 계정으로 노트, PDF 필기, 그림, 음악을 모든 기기에서. 무료, 설치 없음." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://okaynotepad.pages.dev/" />
+  <meta property="og:image" content="https://okaynotepad.pages.dev/assets/og-image.png" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="오케이 테이블" />
+  <meta name="twitter:description" content="노트패드, PDF, 드로잉, 음악. 하나의 계정으로 모든 기기에서." />
+  <meta name="twitter:image" content="https://okaynotepad.pages.dev/assets/og-image.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "오케이 테이블",
+    "alternateName": ["OkayTable", "오케이 노트패드", "OkayNotepad", "오케이노트패드"],
+    "url": "https://okaynotepad.pages.dev/",
+    "description": "노트패드, PDF 오프너, 드로잉, 음악을 하나의 계정으로 쓰는 무료 웹 서비스.",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "All",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+  }
+  </script>
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -15,79 +39,304 @@
   <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="오케이 테이블" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
     :root {
-      --bg: #ffffff; --surface: #ffffff; --ink: #0a0a0a; --ink-2: #5c5c5c; --ink-3: #9b9b9b; --accent: #0a0a0a; --accent-light: #f1f1f1; --border: #e6e6e6; --on-accent: #ffffff;
+      --bg: #ffffff; --surface: #f6f6f6; --ink: #0a0a0a; --ink-2: #5c5c5c; --ink-3: #9b9b9b; --accent: #0a0a0a; --border: #e6e6e6; --on-accent: #ffffff; --err: #c0392b; --ok: #2e7d32;
+      color-scheme: light dark;
     }
     @media (prefers-color-scheme: dark) {
-      :root { --bg: #000000; --surface: #121212; --ink: #f5f5f5; --ink-2: #a8a8a8; --ink-3: #6e6e6e; --accent: #f5f5f5; --accent-light: #232323; --border: #2a2a2a; --on-accent: #0a0a0a; }
+      :root { --bg: #000000; --surface: #121212; --ink: #f5f5f5; --ink-2: #a8a8a8; --ink-3: #6e6e6e; --accent: #f5f5f5; --border: #2a2a2a; --on-accent: #0a0a0a; --err: #ff8a80; --ok: #81c784; }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
-    html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-    body { background: var(--bg); color: var(--ink); font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
-    main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 4rem 1.25rem 2rem; }
-    .brand { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; }
-    .tag { margin-top: 0.5rem; color: var(--ink-2); font-size: 0.95rem; line-height: 1.6; }
-    .grid { margin-top: 2.5rem; display: grid; gap: 0.9rem; }
-    .tile { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: inherit; text-decoration: none; transition: transform 0.12s, border-color 0.12s; }
-    .tile:active { transform: scale(0.985); }
-    .tile:hover { border-color: var(--accent); }
-    .ico { width: 54px; height: 54px; border-radius: 8px; background: var(--accent-light); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
-    .ico svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .txt { flex: 1; min-width: 0; }
-    .name { font-size: 1.08rem; font-weight: 700; }
-    .desc { margin-top: 0.2rem; font-size: 0.85rem; color: var(--ink-2); line-height: 1.5; }
-    .chev { width: 20px; height: 20px; color: var(--ink-3); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-    .note { display: none; margin-top: 0.4rem; font-size: 0.75rem; color: var(--ink-3); }
-    .tile.soon { opacity: 0.55; cursor: default; }
-    .tile.soon:hover { border-color: var(--border); }
-    .off .tile.needs-net { opacity: 0.55; }
-    .off .tile.needs-net .desc::after { content: " · 인터넷 필요"; }
-    .off-msg { display: none; margin-top: 1.25rem; font-size: 0.82rem; color: var(--ink-2); }
-    .off .off-msg { display: block; }
-    footer { padding: 1.5rem 1.25rem 2rem; text-align: center; font-size: 0.75rem; color: var(--ink-3); }
-    footer a { color: var(--ink-3); text-decoration: none; margin: 0 0.5rem; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; min-height: 100dvh; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); line-height: 1.6; }
+    a { color: inherit; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 1.25rem; }
+    nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; }
+    .brand { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; text-decoration: none; }
+    .nav-r { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .btn { border: 1px solid var(--border); background: transparent; color: var(--ink); border-radius: 6px; padding: 0.5rem 0.9rem; font: inherit; font-size: 0.88rem; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { border-color: var(--ink-3); }
+    .btn-p { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+    .btn-lg { padding: 0.8rem 1.4rem; font-size: 0.98rem; }
+    .btn:disabled { opacity: 0.6; cursor: default; }
+    .hero { padding: 4.5rem 0 3.5rem; }
+    .tag { font-size: 0.8rem; color: var(--ink-2); font-weight: 600; letter-spacing: 0.02em; }
+    .hero h1 { margin-top: 0.8rem; font-size: clamp(2rem, 6vw, 3.1rem); font-weight: 800; line-height: 1.2; letter-spacing: -0.03em; }
+    .hero p { margin-top: 1.1rem; color: var(--ink-2); max-width: 560px; }
+    .hero .row { margin-top: 1.8rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    section { padding: 3rem 0; border-top: 1px solid var(--border); }
+    h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.9rem; }
+    .card { border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem; }
+    .card b { display: block; font-weight: 700; margin-bottom: 0.35rem; }
+    .card span { font-size: 0.88rem; color: var(--ink-2); line-height: 1.7; }
+    .steps { counter-reset: s; display: grid; gap: 0.9rem; }
+    .steps div { display: flex; gap: 0.9rem; font-size: 0.93rem; color: var(--ink-2); }
+    .steps div::before { counter-increment: s; content: counter(s); flex-shrink: 0; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--ink); font-size: 0.85rem; }
+    .steps b { color: var(--ink); display: block; }
+    .about p { color: var(--ink-2); font-size: 0.93rem; line-height: 1.9; margin-bottom: 1rem; }
+    details { border: 1px solid var(--border); border-radius: 6px; padding: 0.9rem 1rem; margin-bottom: 0.6rem; }
+    summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+    details p { margin-top: 0.7rem; color: var(--ink-2); font-size: 0.9rem; line-height: 1.8; }
+    .ad { min-height: 0; }
+    .ad small { display: block; color: var(--ink-3); font-size: 0.7rem; margin-bottom: 0.4rem; }
+    footer { border-top: 1px solid var(--border); padding: 1.6rem 0 2.4rem; font-size: 0.78rem; color: var(--ink-3); }
+    footer .links { margin-top: 0.7rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    footer a { color: var(--ink-3); text-decoration: none; }
+    footer a:hover { color: var(--ink); }
+    /* 로그인 후 */
+    #appview { display: none; }
+    .me { font-size: 0.85rem; color: var(--ink-2); }
+    .tiles { margin-top: 2rem; display: grid; gap: 0.7rem; }
+    .tile { display: block; padding: 1.15rem 1.2rem; border: 1px solid var(--border); border-radius: 6px; text-decoration: none; }
+    .tile:hover { border-color: var(--ink); }
+    .tile:active { background: var(--surface); }
+    .tile .n { font-weight: 700; font-size: 1.05rem; }
+    .tile .d { font-size: 0.85rem; color: var(--ink-2); margin-top: 0.15rem; }
+    .off .tile.net { opacity: 0.55; }
+    .off .tile.net .d::after { content: " · 인터넷 필요"; }
+    .offmsg { display: none; margin-top: 1rem; font-size: 0.82rem; color: var(--ink-2); }
+    .off .offmsg { display: block; }
+    #loading { padding: 5rem 0; text-align: center; color: var(--ink-3); font-size: 0.9rem; }
+    /* 모달 */
+    .mbg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+    .mbg.open { display: flex; }
+    .modal { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; width: 100%; max-width: 380px; position: relative; }
+    .mx { position: absolute; top: 0.6rem; right: 0.7rem; border: none; background: none; color: var(--ink-3); font-size: 1.1rem; cursor: pointer; padding: 0.3rem; }
+    .mt { font-size: 1.15rem; font-weight: 800; }
+    .ms { font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0 1.1rem; }
+    .fg { margin-bottom: 0.9rem; }
+    .fg label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0.3rem; }
+    .fg input { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; font-size: 1rem; }
+    .fg input:focus { outline: none; border-color: var(--ink); }
+    .msg { display: none; font-size: 0.82rem; margin-bottom: 0.8rem; }
+    .mf { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+    .sw { font-size: 0.82rem; color: var(--ink-2); }
+    .sw a { color: var(--ink); font-weight: 600; cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
-  <main id="root">
-    <h1 class="brand">오케이 테이블</h1>
-    <p class="tag">노트패드, PDF, 드로잉, 음악. 같은 계정으로 모든 기기에서 사용합니다.</p>
+<div id="loading" class="wrap">불러오는 중…</div>
 
-    <div class="off-msg">오프라인 상태입니다. 음악은 이 기기에 저장된 곡만 재생됩니다.</div>
+<!-- 로그인 전: 소개 화면 -->
+<div id="landing" style="display:none;">
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/">오케이 테이블</a>
+      <div class="nav-r">
+        <a class="btn" href="/notepad.html?demo=1">체험해보기</a>
+        <button class="btn" onclick="openModal('login')">로그인</button>
+        <button class="btn btn-p" onclick="openModal('signup')">무료 시작</button>
+      </div>
+    </nav>
 
-    <div class="grid">
-      <a class="tile needs-net" href="/notepad.html">
-        <span class="txt"><div class="name">노트패드</div><div class="desc">글, 파일 저장</div></span>
-      </a>
-      <a class="tile" href="/pdf.html">
-        <span class="txt"><div class="name">PDF 오프너</div><div class="desc">PDF 열기, 필기</div></span>
-      </a>
-      <a class="tile" href="/draw.html">
-        <span class="txt"><div class="name">드로잉</div><div class="desc">그림 그리기</div></span>
-      </a>
-      <a class="tile" href="/music.html">
-        <span class="txt"><div class="name">음악</div><div class="desc">저장한 곡 재생</div></span>
-      </a>
+    <header class="hero">
+      <div class="tag">하나의 계정, 네 가지 도구</div>
+      <h1>노트, PDF, 그림, 음악.<br>한곳에서 모든 기기로.</h1>
+      <p>로그인 한 번으로 노트패드, PDF 오프너, 드로잉, 음악을 어느 기기에서든 이어서 사용합니다. 설치 없이 브라우저에서 바로 시작하세요.</p>
+      <div class="row">
+        <button class="btn btn-p btn-lg" onclick="openModal('login')">로그인</button>
+        <button class="btn btn-lg" onclick="openModal('signup')">회원가입</button>
+      </div>
+    </header>
+
+    <section>
+      <h2>구성</h2>
+      <div class="grid">
+        <div class="card"><b>노트패드</b><span>글을 쓰면 자동 저장되고 모든 기기에 동기화됩니다. 이미지, PDF, 문서 파일을 첨부할 수 있고 노트 검색도 됩니다.</span></div>
+        <div class="card"><b>PDF 오프너</b><span>PDF를 열어 펜, 형광펜, 지우개로 필기합니다. 필기는 계정에 저장되고 노트패드에 첨부한 PDF도 그대로 열립니다.</span></div>
+        <div class="card"><b>드로잉</b><span>필압을 지원하는 브러시, 레이어, 선택 영역, 클리핑 마스크, 대칭 그리기를 갖춘 그림판입니다. 그림은 계정에 저장됩니다.</span></div>
+        <div class="card"><b>음악</b><span>내 곡을 모아 연속 재생합니다. 곡이 기기에도 저장되어 비행기 모드에서도 들을 수 있고, 같은 계정이면 기기끼리 동기화됩니다.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>이렇게 사용하세요</h2>
+      <div class="steps">
+        <div><span><b>무료 가입</b>아이디와 비밀번호만으로 가입합니다. 이메일은 필요 없습니다.</span></div>
+        <div><span><b>도구 선택</b>로그인하면 노트패드, PDF 오프너, 드로잉, 음악이 한 화면에 나옵니다.</span></div>
+        <div><span><b>어디서든 이어서</b>같은 계정으로 로그인하면 컴퓨터, 스마트폰, 태블릿에서 같은 내용을 볼 수 있습니다.</span></div>
+      </div>
+    </section>
+
+    <section class="about">
+      <h2>오케이 테이블이란?</h2>
+      <p>오케이 테이블은 기기를 오가며 작업하는 분들을 위한 무료 웹 서비스입니다. 이전에는 오케이 노트패드라는 이름의 클라우드 메모장으로 시작했고, 지금은 PDF 필기, 드로잉, 음악까지 한 계정으로 쓸 수 있도록 확장했습니다. 별도 앱 설치 없이 웹 브라우저만으로 접속할 수 있습니다.</p>
+      <p>메모는 컴퓨터에서 쓰고 스마트폰에서 확인하고, 태블릿에서 PDF에 필기하고, 그림은 어디서든 이어서 그리는 식으로 사용할 수 있습니다. 데이터는 Supabase의 보안 인프라에 저장되며, 비밀번호는 단방향 암호화되어 보관됩니다.</p>
+    </section>
+
+    <section>
+      <h2>자주 묻는 질문</h2>
+      <details><summary>무료인가요?</summary><p>네, 현재 모든 기능을 무료로 제공합니다. 가입 후 별도 결제나 구독 없이 바로 사용할 수 있습니다.</p></details>
+      <details><summary>어떤 기기에서 사용할 수 있나요?</summary><p>웹 브라우저가 있는 모든 기기에서 사용할 수 있습니다. Windows, Mac, iOS, Android 모두 가능합니다. 드로잉은 애플 펜슬 같은 필압 펜을 지원합니다.</p></details>
+      <details><summary>파일은 어떤 형식을 올릴 수 있나요?</summary><p>노트패드에는 이미지, PDF, Word, Excel, PowerPoint, 압축 파일 등 대부분의 형식을 올릴 수 있고 파일 하나당 최대 50MB입니다. 음악은 mp3, m4a, wav, flac 등을 지원합니다.</p></details>
+      <details><summary>PDF 필기는 어떻게 저장되나요?</summary><p>필기는 원본 PDF와 별도로 계정에 자동 저장되며, 원본 PDF는 그대로 유지됩니다. 필기한 PDF는 PDF 파일로 내려받을 수도 있습니다.</p></details>
+      <details><summary>인터넷 없이도 쓸 수 있나요?</summary><p>음악, 드로잉은 이 기기에 저장된 내용으로 오프라인에서도 열립니다. 노트패드는 인터넷 연결이 필요합니다.</p></details>
+      <details><summary>비밀번호를 잊어버리면 어떻게 하나요?</summary><p>로그인 후 노트패드 설정에서 이메일을 연동해 두면 재설정 링크를 받을 수 있습니다. 연동 전에 분실했다면 이메일로 문의해 주세요.</p></details>
+      <details><summary>내 데이터는 안전한가요?</summary><p>Supabase 보안 인프라를 사용하며, 비밀번호는 해시로 저장됩니다. 자세한 내용은 개인정보처리방침을 확인해 주세요.</p></details>
+    </section>
+
+    <section class="ad">
+      <small>광고</small>
+      <ins class="adsbygoogle" style="display:block; width:100%; min-height:90px" data-ad-client="ca-pub-2538594772108776" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    </section>
+  </div>
+</div>
+
+<!-- 로그인 후: 도구 선택 -->
+<div id="appview">
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/">오케이 테이블</a>
+      <div class="nav-r"><span class="me" id="me"></span><button class="btn" onclick="doLogout()">로그아웃</button></div>
+    </nav>
+    <div class="offmsg">오프라인 상태입니다. 음악과 드로잉은 이 기기에 저장된 내용으로 사용할 수 있습니다.</div>
+    <div class="tiles">
+      <a class="tile net" href="/notepad.html"><div class="n">노트패드</div><div class="d">글, 파일 저장</div></a>
+      <a class="tile" href="/pdf.html"><div class="n">PDF 오프너</div><div class="d">PDF 열기, 필기</div></a>
+      <a class="tile" href="/draw.html"><div class="n">드로잉</div><div class="d">그림 그리기</div></a>
+      <a class="tile" href="/music.html"><div class="n">음악</div><div class="d">저장한 곡 재생</div></a>
     </div>
-  </main>
+  </div>
+</div>
 
-  <footer>
+<div class="wrap"><footer>
+  <span>© 2026 오케이 테이블</span>
+  <div class="links">
+    <a href="mailto:okayt10293@gmail.com">문의하기</a>
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSe0olHrjuRVQTrZh2ZSc645AnU5xduT7YzmK3yffdeAiqZQAg/viewform?usp=publish-editor" target="_blank" rel="noopener">건의사항</a>
     <a href="/privacy.html">개인정보처리방침</a>
     <a href="/terms.html">이용약관</a>
-  </footer>
+    <a href="mailto:okayt10293@gmail.com">okayt10293@gmail.com</a>
+  </div>
+</footer></div>
 
-  <script>
-    (function () {
-      function upd() { document.getElementById('root').classList.toggle('off', !navigator.onLine) }
-      upd(); window.addEventListener('online', upd); window.addEventListener('offline', upd)
-      if ('serviceWorker' in navigator) {
-        try { navigator.serviceWorker.register('/sw.js').catch(function () {}) } catch (e) {}
-      }
-    })()
-  </script>
+<div class="mbg" id="authModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="mx" onclick="closeModal()" aria-label="닫기">×</button>
+    <div id="loginForm">
+      <div class="mt">로그인</div>
+      <div class="ms">아이디와 비밀번호를 입력하세요.</div>
+      <div class="fg"><label for="loginId">아이디</label><input id="loginId" type="text" autocomplete="username" autocapitalize="none" onkeydown="if(event.key==='Enter')handleLogin()" /></div>
+      <div class="fg"><label for="loginPw">비밀번호</label><input id="loginPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleLogin()" /></div>
+      <div class="msg" id="loginError"></div>
+      <div class="mf"><span class="sw">계정이 없으신가요? <a onclick="switchModal('signup')">회원가입</a></span><button class="btn btn-p" id="loginBtn" onclick="handleLogin()">로그인</button></div>
+      <div style="text-align:center;margin-top:1rem;"><a class="sw" style="cursor:pointer;text-decoration:underline;" onclick="switchModal('findpw')">비밀번호 찾기</a></div>
+    </div>
+    <div id="signupForm" style="display:none">
+      <div class="mt">회원가입</div>
+      <div class="ms">아이디를 만들어 무료로 시작하세요.</div>
+      <div class="fg"><label for="signupId">아이디 (5자 이상, 영문/숫자)</label><input id="signupId" type="text" autocomplete="username" autocapitalize="none" /></div>
+      <div class="fg"><label for="signupPw">비밀번호 (6자 이상)</label><input id="signupPw" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')handleSignup()" /></div>
+      <div class="msg" id="signupError"></div>
+      <div class="mf"><span class="sw">이미 계정이 있으신가요? <a onclick="switchModal('login')">로그인</a></span><button class="btn btn-p" onclick="handleSignup()">회원가입</button></div>
+    </div>
+    <div id="findpwForm" style="display:none">
+      <div class="mt">비밀번호 찾기</div>
+      <div class="ms">연동한 이메일로 재설정 링크를 보냅니다.</div>
+      <div class="fg"><label for="findpwEmail">연동한 이메일</label><input id="findpwEmail" type="email" /></div>
+      <div class="msg" id="findpwError"></div>
+      <div class="mf"><span class="sw"><a onclick="switchModal('login')">← 로그인으로</a></span><button class="btn btn-p" onclick="handleFindPw()">링크 전송</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  const REF = 'iksctrteeygnvfcsyjea'
+  const $ = (id) => document.getElementById(id)
+  let sb = null, adsLoaded = false
+
+  function offUpdate() { $('appview').classList.toggle('off', !navigator.onLine) }
+  function showApp(user) {
+    $('loading').style.display = 'none'
+    $('landing').style.display = 'none'
+    $('appview').style.display = 'block'
+    $('me').textContent = (user && user.email ? user.email : '').replace('@notepad.app', '')
+    offUpdate()
+  }
+  function showLanding() {
+    $('loading').style.display = 'none'
+    $('appview').style.display = 'none'
+    $('landing').style.display = 'block'
+    if (navigator.onLine && !adsLoaded) {
+      adsLoaded = true
+      const s = document.createElement('script')
+      s.async = true; s.crossOrigin = 'anonymous'
+      s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2538594772108776'
+      s.onload = () => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) {} }
+      document.head.appendChild(s)
+    }
+  }
+
+  window.openModal = (t) => { $('authModal').classList.add('open'); switchModal(t) }
+  window.closeModal = () => $('authModal').classList.remove('open')
+  window.switchModal = (t) => {
+    ;['loginForm', 'signupForm', 'findpwForm'].forEach(id => $(id).style.display = 'none')
+    $({ login: 'loginForm', signup: 'signupForm', findpw: 'findpwForm' }[t]).style.display = 'block'
+  }
+  const msg = (id, t, ok) => { const e = $(id); e.textContent = t; e.style.display = 'block'; e.style.color = ok ? 'var(--ok)' : 'var(--err)' }
+
+  window.handleLogin = async () => {
+    const u = $('loginId').value.trim(), p = $('loginPw').value
+    if (!u || !p) return msg('loginError', '아이디와 비밀번호를 입력하세요.')
+    if (!sb) return msg('loginError', '로그인 기능을 불러오지 못했습니다. 새로고침해 주세요.')
+    const b = $('loginBtn'), t = b.textContent
+    b.disabled = true; b.textContent = '로그인 중…'
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email: u + '@notepad.app', password: p })
+      if (error) return msg('loginError', '아이디 또는 비밀번호가 틀렸습니다.')
+      closeModal()
+    } catch (e) { msg('loginError', '로그인에 실패했습니다. 네트워크를 확인하고 다시 시도해 주세요.') }
+    finally { b.disabled = false; b.textContent = t }
+  }
+  window.handleSignup = async () => {
+    const u = $('signupId').value.trim(), p = $('signupPw').value
+    if (!u || !p) return msg('signupError', '모든 항목을 입력하세요.')
+    if (u.length < 5) return msg('signupError', '아이디는 5자 이상이어야 합니다.')
+    if (!/^[a-zA-Z0-9_]+$/.test(u)) return msg('signupError', '아이디는 영문, 숫자, 언더바만 가능합니다.')
+    if (p.length < 6) return msg('signupError', '비밀번호는 6자 이상이어야 합니다.')
+    if (!sb) return msg('signupError', '가입 기능을 불러오지 못했습니다. 새로고침해 주세요.')
+    const { error } = await sb.auth.signUp({ email: u + '@notepad.app', password: p })
+    if (error) return msg('signupError', error.message.includes('already') ? '이미 사용 중인 아이디입니다.' : '가입에 실패했습니다.')
+    msg('signupError', '가입 완료. 아이디와 비밀번호로 로그인하세요.', true)
+    setTimeout(() => switchModal('login'), 1200)
+  }
+  window.handleFindPw = async () => {
+    const e = $('findpwEmail').value.trim()
+    if (!e) return msg('findpwError', '이메일을 입력하세요.')
+    if (!sb) return msg('findpwError', '기능을 불러오지 못했습니다. 새로고침해 주세요.')
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: location.origin + '/notepad.html' })
+    if (error) return msg('findpwError', '전송에 실패했습니다. 연동한 이메일인지 확인하세요.')
+    msg('findpwError', '이메일을 확인하세요. 재설정 링크를 보냈습니다.', true)
+  }
+  window.doLogout = async () => { try { if (sb) await sb.auth.signOut() } catch (e) {} showLanding() }
+
+  async function init() {
+    let user = null
+    try { if (window.supabase) sb = window.supabase.createClient('https://iksctrteeygnvfcsyjea.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg') } catch (e) {}
+    if (navigator.onLine && sb) {
+      try { const r = await sb.auth.getSession(); user = r.data.session ? r.data.session.user : null } catch (e) {}
+    } else {
+      // 오프라인: 저장된 로그인 정보가 있으면 로그인된 것으로 보고 도구 화면을 보여준다
+      try { const raw = JSON.parse(localStorage.getItem('sb-' + REF + '-auth-token')); user = raw && raw.user } catch (e) {}
+    }
+    user ? showApp(user) : showLanding()
+    if (sb) sb.auth.onAuthStateChange((ev, sess) => {
+      if (ev === 'SIGNED_IN' && sess) showApp(sess.user)
+      else if (ev === 'SIGNED_OUT') showLanding()
+    })
+    const q = new URLSearchParams(location.search)
+    if (!user && q.has('signup')) openModal('signup')
+    else if (!user && q.has('login')) openModal('login')
+    window.addEventListener('online', offUpdate); window.addEventListener('offline', offUpdate)
+    if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('/sw.js').catch(() => {}) } catch (e) {} }
+  }
+  init()
+})()
+</script>
 </body>
 </html>
