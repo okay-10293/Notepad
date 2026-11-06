@@ -1739,7 +1739,16 @@
   }
   async function saveBlobToDevice(blob, fileName) {
     const app = inAppName()
-    if (app) alert(app + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "다른 브라우저로 열기"(Chrome/Safari)를 선택한 뒤 다시 시도해 주세요.')
+    if (app) {
+      if (/Android/i.test(navigator.userAgent)) {
+        // 앱 안의 브라우저는 Blob 저장이 안 되므로 Chrome으로 같은 페이지를 열어 준다
+        if (confirm(app + ' 앱 안의 브라우저에서는 이 파일을 저장할 수 없어요.\nChrome으로 열어서 다시 시도할까요?')) {
+          location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end'
+        }
+        return
+      }
+      alert(app + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "Safari로 열기"를 선택한 뒤 다시 시도해 주세요.')
+    }
     if (isIOSDevice()) {
       let file = null
       try {
@@ -1770,13 +1779,26 @@
   //   선택한 뒤 다시 시도하면 정상적으로 다운로드된다.
   async function downloadFile(path, name) {
     const fileName = name || 'file'
-    // 네이버/카카오톡 같은 인앱 브라우저는 Blob 저장을 막는 경우가 많다.
-    // 서버가 Content-Disposition: attachment로 내려주는 주소로 바로 이동해서 앱의 자체 다운로드 기능을 쓰게 한다.
-    if (inAppName()) {
-      if (isIOSDevice()) alert(inAppName() + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "Safari로 열기"를 선택한 뒤 다시 시도해 주세요.')
-      const { data: dl } = sb.storage.from('images').getPublicUrl(path, { download: fileName })
-      window.location.href = dl.publicUrl
-      return
+    const { data: dl } = sb.storage.from('images').getPublicUrl(path, { download: fileName })
+    // 안드로이드/PC/인앱 브라우저: Blob 주소(blob:)는 브라우저 앱의 다운로드 관리자(네이버 앱 등)가 처리하지 못해서
+    // "다운로드를 시작합니다"만 뜨고 파일이 안 생긴다. 서버가 attachment로 내려주는 https 주소로 직접 받게 한다.
+    // 아이폰/아이패드는 공유 시트(파일에 저장)가 가장 확실해서 아래 Blob 경로를 쓴다.
+    if (!isIOSDevice()) {
+      try {
+        const r = await fetch(dl.publicUrl, { method: 'HEAD' })   // 파일이 실제로 있는지 먼저 확인
+        if (r.ok) {
+          const a = document.createElement('a')
+          a.href = dl.publicUrl
+          a.download = fileName
+          a.rel = 'noopener'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          return
+        }
+      } catch (e) { console.error('서버 다운로드 주소 확인 실패, Blob 방식으로 재시도:', e) }
+    } else if (inAppName()) {
+      alert(inAppName() + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "Safari로 열기"를 선택한 뒤 다시 시도해 주세요.')
     }
     try {
       const { data: blob, error } = await sb.storage.from('images').download(path)
@@ -1784,9 +1806,8 @@
       await saveBlobToDevice(blob, fileName)
     } catch (e) {
       console.error('직접 다운로드 실패, 강제 다운로드 URL로 재시도:', e)
-      const { data: dlUrlData } = sb.storage.from('images').getPublicUrl(path, { download: fileName })
       const a = document.createElement('a')
-      a.href = dlUrlData.publicUrl
+      a.href = dl.publicUrl
       a.rel = 'noopener'
       document.body.appendChild(a)
       a.click()

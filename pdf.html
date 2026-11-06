@@ -820,7 +820,16 @@
   }
   async function saveBlobToDevice(blob, fileName) {
     const app = inAppName()
-    if (app) alert(app + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "다른 브라우저로 열기"(Chrome/Safari)를 선택한 뒤 다시 시도해 주세요.')
+    if (app) {
+      if (/Android/i.test(navigator.userAgent)) {
+        // 앱 안의 브라우저는 Blob 저장이 안 되므로 Chrome으로 같은 페이지를 열어 준다
+        if (confirm(app + ' 앱 안의 브라우저에서는 이 파일을 저장할 수 없어요.\nChrome으로 열어서 다시 시도할까요?')) {
+          location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end'
+        }
+        return
+      }
+      alert(app + ' 앱 안의 브라우저에서는 파일 저장이 막혀 있을 수 있어요.\n저장이 안 되면 메뉴에서 "Safari로 열기"를 선택한 뒤 다시 시도해 주세요.')
+    }
     if (isIOSDevice()) {
       let file = null
       try {
