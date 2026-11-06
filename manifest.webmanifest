@@ -1,6 +1,6 @@
 {
-  "name": "오케이 테이블",
-  "short_name": "오케이 테이블",
+  "name": "오케이 스튜디오",
+  "short_name": "오케이 스튜디오",
   "description": "노트패드, PDF, 드로잉, 음악",
   "start_url": "/",
   "scope": "/",

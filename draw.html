@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>드로잉 · 오케이 테이블</title>
+<title>드로잉 · 오케이 스튜디오</title>
 <meta name="theme-color" content="#000000"><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
@@ -40,7 +40,7 @@ label.r{display:flex;align-items:center;gap:6px;font-size:12px}label.r span{widt
 .gi{border:1px solid var(--bd);border-radius:8px;overflow:hidden;cursor:pointer;background:var(--s)}.gi img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#fff}.gi div{padding:6px 8px;display:flex;justify-content:space-between;gap:4px;font-size:12px}
 @media(max-width:700px){#panel{width:190px}}
 </style></head><body>
-<div id="top"><a href="/">← 테이블</a><input id="nm" value="제목 없음" aria-label="제목">
+<div id="top"><a href="/">← 스튜디오</a><input id="nm" value="제목 없음" aria-label="제목">
 <button id="bU">실행취소</button><button id="bR">다시</button><button id="bF">맞춤</button><button id="b1">1:1</button><span id="zm">100%</span>
 <button id="bZ">캔버스</button><button id="bG">내 그림</button><button id="bI">이미지</button><input id="fi" type="file" accept="image/*" hidden><button id="bS">저장</button><button id="bE">PNG</button><button id="bJ">JPG</button><span id="st"></span></div>
 <main><div id="tools"></div><div id="stage"><canvas id="view"></canvas></div>
@@ -170,7 +170,7 @@ async function fromJ(j){size(j.w,j.h);layers=[];for(const d of j.layers){const l
 function touch(){clearTimeout(atimer);backup();if(docId&&uid)atimer=setTimeout(()=>save(true),10000)}
 function flat(bg){const c=mk(W,H),x=c.getContext('2d');if(bg){x.fillStyle='#fff';x.fillRect(0,0,W,H)}layers.forEach((l,i)=>{if(!l.vis)return;x.globalAlpha=l.op;x.globalCompositeOperation=l.bl;if(l.clip&&i>0){const t=mk(W,H),y=t.getContext('2d');y.drawImage(l.c,0,0);y.globalCompositeOperation='destination-in';y.drawImage(layers[i-1].c,0,0);x.drawImage(t,0,0)}else x.drawImage(l.c,0,0)});return c}
 const blob=(c,t,q)=>new Promise(r=>c.toBlob(r,t,q))
-async function save(auto){if(!sb||!uid){if(!auto)msg('로그인하면 계정에 저장돼요 (오케이 테이블에서 로그인)');return}
+async function save(auto){if(!sb||!uid){if(!auto)msg('로그인하면 계정에 저장돼요 (오케이 스튜디오에서 로그인)');return}
 const name=$('nm').value.trim()||'제목 없음',id=ts+'_'+b64(name),bk=sb.storage.from('images'),dir=uid+'/draw/';msg('저장 중…')
 try{const j=JSON.stringify({v:1,w:W,h:H,name,layers:layers.map(l=>({n:l.n,v:l.vis,o:l.op,b:l.bl,l:l.lock,c:l.clip,d:l.c.toDataURL('image/png')}))});if(j.length>49e6)throw new Error('파일이 50MB를 넘어요. 레이어를 줄여 주세요');
 const th=mk(256,192),tc=th.getContext('2d');tc.fillStyle='#fff';tc.fillRect(0,0,256,192);const sc=Math.min(256/W,192/H);tc.drawImage(flat(0),(256-W*sc)/2,(192-H*sc)/2,W*sc,H*sc);
@@ -184,7 +184,7 @@ function rcv(){const v=prompt('새 캔버스 크기 (가로, 세로) — 되돌�
 async function exp(ty,ex){const b=await blob(flat(1),ty,.92),n=($('nm').value||'그림')+'.'+ex,f=new File([b],n,{type:ty});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e.name==='AbortError')return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function blank(w,h,name){size(w,h);layers=[newL('레이어 1')];cur=0;hist=[];hp=0;docId=null;ts=Date.now();$('nm').value=name||'제목 없음';ui();fit()}
 async function open(id){msg('불러오는 중…');try{const {data,error}=await sb.storage.from('images').download(uid+'/draw/'+id+'.json');if(error)throw error;const j=JSON.parse(await data.text());size(j.w,j.h);layers=[];for(const d of j.layers){const l=newL(d.n);l.vis=d.v;l.op=d.o;l.bl=d.b;l.lock=d.l;l.clip=d.c;await new Promise(r=>{const im=new Image();im.onload=()=>{l.ctx.drawImage(im,0,0);r()};im.onerror=r;im.src=d.d});layers.push(l)}cur=layers.length-1;hist=[];hp=0;docId=id;ts=+id.split('_')[0]||Date.now();$('nm').value=j.name;ui();fit();$('gal').classList.remove('show');msg('')}catch(e){msg('불러오지 못했어요: '+(e.message||e))}}
-async function gallery(){$('gal').classList.add('show');const gl=$('gl');if(!sb||!uid){gl.innerHTML='<p style="color:var(--ink2);padding:20px">로그인이 필요해요. <a href="/?login=1" style="color:var(--ink)">오케이 테이블에서 로그인</a> 후 다시 열어 주세요.</p>';return}
+async function gallery(){$('gal').classList.add('show');const gl=$('gl');if(!sb||!uid){gl.innerHTML='<p style="color:var(--ink2);padding:20px">로그인이 필요해요. <a href="/?login=1" style="color:var(--ink)">오케이 스튜디오에서 로그인</a> 후 다시 열어 주세요.</p>';return}
 gl.textContent='불러오는 중…';const bk=sb.storage.from('images'),r=await bk.list(uid+'/draw',{limit:500});if(r.error){gl.textContent='목록 오류: '+r.error.message;return}
 const ids=(r.data||[]).filter(o=>/\.json$/.test(o.name)).map(o=>o.name.slice(0,-5)).sort().reverse();gl.innerHTML=ids.length?'':'<p style="color:var(--ink2);padding:20px">저장된 그림이 없어요.</p>';
 ids.forEach(id=>{const d=document.createElement('div');d.className='gi';d.innerHTML='<img alt=""><div><span></span><u style="cursor:pointer;opacity:.6">삭제</u></div>';d.querySelector('img').src=bk.getPublicUrl(uid+'/draw/'+id+'.jpg').data.publicUrl;d.querySelector('span').textContent=unb64(id.split('_').slice(1).join('_'));d.onclick=()=>open(id);d.querySelector('u').onclick=async e=>{e.stopPropagation();if(!confirm('삭제할까요?'))return;await bk.remove([uid+'/draw/'+id+'.json',uid+'/draw/'+id+'.jpg']);if(docId===id)docId=null;gallery()};gl.appendChild(d)})}
