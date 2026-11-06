@@ -803,7 +803,8 @@
     document.body.appendChild(a)
     a.click()
     a.remove()
-    URL.revokeObjectURL(objectUrl)
+    // 바로 해제하면 사파리/일부 브라우저에서 큰 파일 다운로드가 끊길 수 있어서 잠시 뒤에 해제
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 15000)
   }
 
 
