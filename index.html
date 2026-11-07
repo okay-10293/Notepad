@@ -68,8 +68,8 @@
     .hero .row { margin-top: 1.8rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
     section { padding: 3rem 0; border-top: 1px solid var(--border); }
     h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.9rem; }
-    .card { border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+    .card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 1.3rem; }
     .card b { display: block; font-weight: 700; margin-bottom: 0.35rem; }
     .card span { font-size: 0.88rem; color: var(--ink-2); line-height: 1.7; }
     .steps { counter-reset: s; display: grid; gap: 0.9rem; }
@@ -89,12 +89,21 @@
     /* 로그인 후 */
     #appview { display: none; }
     .me { font-size: 0.85rem; color: var(--ink-2); }
-    .tiles { margin-top: 2rem; display: grid; gap: 0.7rem; }
-    .tile { display: block; padding: 1.15rem 1.2rem; border: 1px solid var(--border); border-radius: 6px; text-decoration: none; }
-    .tile:hover { border-color: var(--ink); }
-    .tile:active { background: var(--surface); }
-    .tile .n { font-weight: 700; font-size: 1.05rem; }
-    .tile .d { font-size: 0.85rem; color: var(--ink-2); margin-top: 0.15rem; }
+    .brand::before { content: ""; display: inline-block; width: 0.62em; height: 0.62em; background: var(--ink); margin-right: 0.5rem; vertical-align: 0.02em; }
+    .greet { padding: 3.4rem 0 2.4rem; }
+    .date { font-size: 0.85rem; color: var(--ink-3); font-weight: 600; letter-spacing: 0.03em; }
+    .greet h1 { margin-top: 0.6rem; font-size: clamp(2.1rem, 6.5vw, 3.6rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.15; }
+    .tiles { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+    .tile { display: flex; flex-direction: column; justify-content: space-between; min-height: 240px; padding: 1.4rem; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); text-decoration: none; transition: background 0.15s, color 0.15s; }
+    .tile:hover, .tile:active { background: var(--ink); color: var(--bg); }
+    .tile .top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .tile .no { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; }
+    .tile .go { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; transition: transform 0.15s; }
+    .tile:hover .go { transform: translate(3px, -3px); }
+    .tile .n { font-size: clamp(1.6rem, 3.6vw, 2.3rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; }
+    .tile .d { margin-top: 0.45rem; font-size: 0.92rem; color: var(--ink-2); }
+    .tile:hover .d, .tile:active .d { color: var(--bg); opacity: 0.7; }
+    @media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } .tile { min-height: 150px; } }
     .off .tile.net { opacity: 0.55; }
     .off .tile.net .d::after { content: " · 인터넷 필요"; }
     .offmsg { display: none; margin-top: 1rem; font-size: 0.82rem; color: var(--ink-2); }
@@ -192,12 +201,13 @@
       <a class="brand" href="/">오케이 스튜디오</a>
       <div class="nav-r"><span class="me" id="me"></span><button class="btn" onclick="doLogout()">로그아웃</button></div>
     </nav>
+    <header class="greet"><div class="date" id="today"></div><h1 id="hello">안녕하세요</h1></header>
     <div class="offmsg">오프라인 상태입니다. 음악과 드로잉은 이 기기에 저장된 내용으로 사용할 수 있습니다.</div>
     <div class="tiles">
-      <a class="tile net" href="/notepad.html"><div class="n">노트패드</div><div class="d">글, 파일 저장</div></a>
-      <a class="tile" href="/pdf.html"><div class="n">PDF 오프너</div><div class="d">PDF 열기, 필기</div></a>
-      <a class="tile" href="/draw.html"><div class="n">드로잉</div><div class="d">그림 그리기</div></a>
-      <a class="tile" href="/music.html"><div class="n">음악</div><div class="d">저장한 곡 재생</div></a>
+      <a class="tile net" href="/notepad.html"><span class="top"><span class="no">01</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">노트패드</div><div class="d">글, 파일 저장</div></span></a>
+      <a class="tile" href="/pdf.html"><span class="top"><span class="no">02</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">PDF 오프너</div><div class="d">PDF 열기, 필기</div></span></a>
+      <a class="tile" href="/draw.html"><span class="top"><span class="no">03</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">드로잉</div><div class="d">그림 그리기</div></span></a>
+      <a class="tile" href="/music.html"><span class="top"><span class="no">04</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">음악</div><div class="d">저장한 곡 재생</div></span></a>
     </div>
   </div>
 </div>
@@ -255,7 +265,10 @@
     $('loading').style.display = 'none'
     $('landing').style.display = 'none'
     $('appview').style.display = 'block'
-    $('me').textContent = (user && user.email ? user.email : '').replace('@notepad.app', '')
+    const nm = (user && user.email ? user.email : '').replace('@notepad.app', '')
+    $('me').textContent = ''
+    const h = $('hello'); h.textContent = ''; h.append('안녕하세요,', document.createElement('br'), nm ? nm + '님' : '')
+    $('today').textContent = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
     offUpdate()
   }
   function showLanding() {
