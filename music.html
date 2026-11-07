@@ -68,6 +68,7 @@
     .sync { font-size: 0.75rem; color: var(--ink-2); margin-top: 0.75rem; display: flex; align-items: center; gap: 0.35rem; word-break: break-all; }
     .sync:empty { display: none; }
     .sync svg { width: 14px; height: 14px; color: var(--accent); }
+    .auto { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--ink-2); margin-top: 0.6rem; }
     .hint { display: none; margin-top: 0.75rem; font-size: 0.8rem; color: var(--accent); text-decoration: underline; line-height: 1.5; }
     .empty { text-align: center; color: var(--ink-3); font-size: 0.85rem; line-height: 1.7; padding: 1.5rem 0; }
     .badge { font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: var(--border); color: var(--ink-2); display: inline-flex; align-items: center; gap: 0.25rem; }
@@ -111,6 +112,7 @@
       <span class="stat" id="stat"></span>
     </div>
     <div class="sync" id="sync"></div>
+    <label class="auto"><input type="checkbox" id="ac" checked> 오프라인용으로 기기에 자동 저장</label>
     <a class="hint" id="loginHint" href="/?login=1">로그인하면 모든 기기에서 같은 곡을 들을 수 있어요 (오케이 스튜디오에서 로그인)</a>
   </div>
 
@@ -178,7 +180,7 @@
     })
   }
   function loadAll() {
-    return tx('readonly', function (s) { return s.getAll() }).then(function (rows) { tracks = rows || [] })
+    return tx('readonly', function (s) { return s.getAll() }).then(function (rows) { tracks = (rows || []).concat(ghost) })
   }
 
   // ── 유틸 ──
@@ -208,11 +210,11 @@
       var li = document.createElement('li')
       if (i === cur) li.className = 'cur'
       li.innerHTML = '<span class="idx">' + (i === cur && !audio.paused ? ic('eq') : (i + 1)) + '</span>' +
-        '<span class="name"></span><span class="size">' + mb(t.size) + '</span>' +
+        '<span class="name"></span><span class="size">' + (t.size ? mb(t.size) : '') + (t.remote ? ' · 클라우드' : '') + '</span>' +
         '<button class="del ren" title="이름 수정" aria-label="이름 수정">' + ic('edit') + '</button>' +
         '<button class="del" title="삭제" aria-label="삭제">' + ic('close') + '</button>'
       li.querySelector('.name').textContent = label(t)
-      li.querySelector('.name').onclick = function () { play(i) }
+      li.querySelector('.name').onclick = function () { skipN = 0; play(i) }
       li.querySelector('.ren').onclick = function () { renameTrack(i) }
       li.querySelectorAll('.del')[1].onclick = function () { removeTrack(i) }
       ul.appendChild(li)
@@ -235,10 +237,16 @@
   // ── 재생 제어 ──
   function play(i) {
     if (i < 0 || i >= tracks.length) return
+    var t = tracks[i], src = t.blob ? '' : remoteUrl(t)
+    if (!t.blob && !src) {
+      cur = i; updateNow(); render()
+      setSync(navigator.onLine ? '연결 중이에요. 잠시 후 다시 눌러 주세요' : '오프라인이라 아직 기기에 저장되지 않은 곡은 재생할 수 없어요')
+      if (++skipN <= tracks.length) next(true)
+      return
+    }
     cur = i
-    if (objUrl) URL.revokeObjectURL(objUrl)
-    objUrl = URL.createObjectURL(tracks[i].blob)
-    audio.src = objUrl
+    if (objUrl) { URL.revokeObjectURL(objUrl); objUrl = null }
+    if (t.blob) { objUrl = URL.createObjectURL(t.blob); audio.src = objUrl } else { audio.src = src }
     audio.loop = (repeat === 'one')
     var p = audio.play()
     if (p && p.catch) p.catch(function () { updateNow() })
@@ -281,14 +289,14 @@
     $('tDur').textContent = fmt(audio.duration)
   })
   // 깨진 파일은 건너뛰되, 전부 깨졌을 때 무한 반복되지 않게 연속 오류 횟수 제한
-  var errStreak = 0
+  var errStreak = 0, skipN = 0
   audio.addEventListener('error', function () {
     if (cur === -1) return
     errStreak++
     if (errStreak >= tracks.length) { errStreak = 0; alert('재생할 수 없는 파일이에요. 삭제 후 다시 추가해주세요.'); return }
     next(true)
   })
-  audio.addEventListener('playing', function () { errStreak = 0 })
+  audio.addEventListener('playing', function () { errStreak = 0; skipN = 0 })
 
   $('seek').addEventListener('input', function () {
     if (audio.duration) audio.currentTime = $('seek').value / 1000 * audio.duration
@@ -357,7 +365,8 @@
   function removeTrack(i) {
     var t = tracks[i]
     if (!t || !confirm('"' + label(t) + '" 삭제할까요?')) return
-    var rid = remoteMap[t.id]
+    var rid = t.remote ? t.rid : remoteMap[t.id]
+    if (t.remote) { ghost = ghost.filter(function (g) { return g.rid !== t.rid }); saveGhost() }
     if (rid) { pending.push(rid); savePending(); delete remoteMap[t.id]; saveMap() }
     tx('readwrite', function (s) { return s.delete(t.id) }).then(loadAll).then(function () {
       delete titles[t.id]; saveTitles()
@@ -394,6 +403,9 @@
   var MAP_KEY = 'okay-music-remote', UID_KEY = 'okay-music-uid', PEND_KEY = 'okay-music-pending-del', DIRTY_KEY = 'okay-music-titles-dirty'
   function lsGet(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d } catch (e) { return d } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} }
+  var ghost = lsGet('okay-music-ghost', [])   // 서버에만 있는 곡(기기에 아직 없음): 목록에 바로 보이고 스트리밍으로 재생
+  function saveGhost() { lsSet('okay-music-ghost', ghost) }
+  function remoteUrl(t) { if (!sb || !uid || !navigator.onLine) return ''; return sb.storage.from(BUCKET).getPublicUrl(uid + '/music/' + t.rid).data.publicUrl }
   var remoteMap = lsGet(MAP_KEY, {})   // 로컬 곡 id → 서버 파일명(rid)
   var pending = lsGet(PEND_KEY, [])    // 아직 서버에서 못 지운 곡
   function saveMap() { lsSet(MAP_KEY, remoteMap) }
@@ -471,7 +483,7 @@
 
   function wipeSynced() {
     var ids = Object.keys(remoteMap).map(Number)
-    remoteMap = {}; saveMap(); pending = []; savePending(); setDirty(false)
+    remoteMap = {}; saveMap(); ghost = []; saveGhost(); pending = []; savePending(); setDirty(false)
     return ids.reduce(function (p, id) { return p.then(function () { delete titles[id]; return tx('readwrite', function (s) { return s.delete(id) }) }) }, Promise.resolve())
       .then(function () { saveTitles(); return loadAll() })
   }
@@ -479,7 +491,7 @@
   function pushTitles() {
     if (!sb || !uid || !navigator.onLine) return Promise.resolve()
     var obj = {}
-    tracks.forEach(function (t) { var r = remoteMap[t.id]; if (r && titles[t.id]) obj[r] = titles[t.id] })
+    tracks.forEach(function (t) { var r = t.remote ? t.rid : remoteMap[t.id]; if (r && titles[t.id]) obj[r] = titles[t.id] })
     var blob = new Blob([JSON.stringify(obj)], { type: 'application/json' })
     return sb.storage.from(BUCKET).upload(uid + '/music/titles.json', blob, { upsert: true, contentType: 'application/json' })
       .then(function (r) { if (!r.error) setDirty(false) }).catch(function () {})
@@ -511,10 +523,19 @@
       }
       if (toRemove.length) { saveMap(); saveTitles(); await loadAll(); fixCur(idBefore); render(); updateNow() }
 
-      // 2) 이 기기에만 있는 곡 → 서버에 올리기
+      // 2) 서버에만 있는 곡 → 내려받지 않고 목록에 바로 올림 (재생은 서버에서 스트리밍)
+      var mapped = {}
+      tracks.forEach(function (t) { if (!t.remote && remoteMap[t.id]) mapped[remoteMap[t.id]] = true })
+      ghost = Object.keys(remote).sort().filter(function (r) { return !mapped[r] }).map(function (r) {
+        return { id: 'r:' + r, rid: r, name: ridName(r).name, size: (remote[r].metadata && remote[r].metadata.size) || 0, remote: true }
+      })
+      down = ghost.length
+      saveGhost(); await loadAll(); fixCur(idBefore); render(); updateNow()
+
+      // 2-2) 이 기기에만 있는 곡 → 서버에 올리기
       var have = {}
       tracks.forEach(function (t) { if (remoteMap[t.id]) have[remoteMap[t.id]] = true })
-      var local = tracks.slice()
+      var local = tracks.filter(function (t) { return !t.remote })
       for (var b = 0; b < local.length; b++) {
         var t = local[b]
         if (remoteMap[t.id]) continue
@@ -527,19 +548,8 @@
         remoteMap[t.id] = rid; saveMap(); have[rid] = true; up++
       }
 
-      // 3) 서버에만 있는 곡 → 이 기기로 내려받기 (이름순 = 올린 순서)
-      var need = Object.keys(remote).sort().filter(function (r) { return !have[r] })
-      for (var c = 0; c < need.length; c++) {
-        setSync('내려받는 중 (' + (c + 1) + '/' + need.length + ')', true)
-        var dl = await bk.download(prefix + '/' + need[c])
-        if (dl.error || !dl.data) { failed++; lastErr = (dl.error && dl.error.message) || '다운로드 실패'; continue }
-        var info = ridName(need[c])
-        var blob = new Blob([dl.data], { type: MIME[info.ext] || 'audio/mpeg' })
-        var newId = await tx('readwrite', function (s) { return s.add({ name: info.name, size: blob.size, blob: blob }) })
-        remoteMap[newId] = need[c]; saveMap(); down++
-      }
-
-      // 4) 곡 이름(수정한 제목) 맞추기
+      // 3) 곡 이름(수정한 제목) 맞추기
+      // 곡 이름(수정한 제목) 맞추기
       var rt = {}
       try {
         var tr = await bk.download(prefix + '/titles.json')
@@ -549,7 +559,7 @@
       var dirty = lsGet(DIRTY_KEY, false)
       if (!dirty) {
         tracks.forEach(function (t) {
-          var r = remoteMap[t.id]; if (!r) return
+          var r = t.remote ? t.rid : remoteMap[t.id]; if (!r) return
           if (rt[r]) titles[t.id] = rt[r]; else delete titles[t.id]
         })
         saveTitles()
@@ -558,11 +568,38 @@
       fixCur(idBefore)
       render(); updateNow()
       if (failed) setSync('일부 곡을 못 올렸어요 (' + failed + '곡): ' + lastErr)
-      else setSync('동기화됨 · ' + tracks.length + '곡' + ((up || down || gone) ? ' (올림 ' + up + ' / 받음 ' + down + ' / 삭제 ' + gone + ')' : ''), true)
+      else setSync('동기화됨 · ' + tracks.length + '곡' + ((up || down || gone) ? ' (올림 ' + up + ' / 클라우드 ' + down + ' / 삭제 ' + gone + ')' : ''), true)
+      cacheQueue()
     } catch (e) {
       setSync('동기화 실패: ' + (e && e.message ? e.message : e))
     } finally { syncing = false }
   }
+  // 오프라인(비행기)용으로 서버에만 있는 곡을 뒤에서 하나씩 기기에 저장한다. 재생을 막지 않고, 끄면 멈춘다.
+  var caching = false
+  async function cacheQueue() {
+    if (caching || !sb || !uid || !navigator.onLine || !$('ac').checked || !ghost.length) return
+    caching = true
+    var skipped = {}, bk = sb.storage.from(BUCKET), prefix = uid + '/music'
+    try {
+      while ($('ac').checked && navigator.onLine) {
+        var g = ghost.filter(function (x) { return !skipped[x.rid] && curId() !== x.id })[0]
+        if (!g) break
+        setSync('기기에 저장 중 · 남은 ' + ghost.length + '곡', true)
+        var dl = await bk.download(prefix + '/' + g.rid)
+        if (dl.error || !dl.data) { skipped[g.rid] = 1; continue }
+        var info = ridName(g.rid), blob = new Blob([dl.data], { type: MIME[info.ext] || 'audio/mpeg' }), idb = curId()
+        var newId = await tx('readwrite', function (st) { return st.add({ name: info.name, size: blob.size, blob: blob }) })
+        remoteMap[newId] = g.rid; saveMap()
+        if (titles['r:' + g.rid]) { titles[newId] = titles['r:' + g.rid]; delete titles['r:' + g.rid]; saveTitles() }
+        ghost = ghost.filter(function (x) { return x.rid !== g.rid }); saveGhost()
+        await loadAll(); fixCur(idb); render(); updateNow()
+      }
+      setSync(ghost.length ? '동기화됨 · ' + tracks.length + '곡 (일부는 클라우드에서 바로 재생)' : '동기화됨 · ' + tracks.length + '곡 · 모두 기기에 저장됨', true)
+    } catch (e) { setSync('기기 저장 중 오류: ' + (e && e.message ? e.message : e)) }
+    finally { caching = false }
+  }
+  $('ac').checked = localStorage.getItem('okay-music-autocache') !== '0'
+  $('ac').onchange = function () { try { localStorage.setItem('okay-music-autocache', this.checked ? '1' : '0') } catch (e) {} if (this.checked) cacheQueue() }
   window.addEventListener('online', function () { if (sb && uid) runSync(); else initSync() })
 
   // ── 시작 ──
