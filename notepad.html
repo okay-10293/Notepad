@@ -792,6 +792,7 @@
   }
 
   let currentUser = null, notes = [], activeNote = null, saveTimer = null, appInitialized = false
+  function addRecent(it, u) { try { var k = 'okay-recent', a = JSON.parse(localStorage.getItem(k) || '[]'); a = a.filter(function (x) { return x.key !== it.key }); it.at = Date.now(); it.u = u; a.unshift(it); localStorage.setItem(k, JSON.stringify(a.slice(0, 30))) } catch (e) {} }
   let sortMode = 'date', selectMode = false, selectedIds = new Set()
   // 브라우저 뒤로가기 히스토리(책장 → 노트 → PDF 필기)를 재생하는 동안에는
   // selectNote/openPdfAnnotate 등이 또 새 history entry를 쌓지 않도록 막는 플래그
@@ -967,6 +968,8 @@
     history.replaceState({ view: 'shelf' }, '')
     await cleanupOrphanedTutorialDemoNote()
     await loadNotes()
+    // 메인 화면의 '최근 항목'에서 노트를 눌러 들어온 경우 해당 노트를 바로 연다
+    try { const nid = new URLSearchParams(location.search).get('note'); if (nid) { history.replaceState({ view: 'shelf' }, '', location.pathname); selectNote(nid) } } catch (e) {}
     if (!appInitialized) {
       initDragDrop()
       initPaste()
@@ -1212,6 +1215,7 @@
     await flushNoteSave()
     activeNote = notes.find(n => n.id === id)
     if (!activeNote) return
+    addRecent({ t: 'note', key: 'note:' + activeNote.id, title: activeNote.title || '제목 없음', snip: (activeNote.body || '').slice(0, 120), url: '/notepad.html?note=' + activeNote.id }, currentUser && currentUser.id)
     document.getElementById('shelfView').style.display = 'none'
     document.getElementById('noteView').style.display = 'flex'
     document.getElementById('noteTitle').value = activeNote.title || ''
@@ -1396,6 +1400,7 @@
   }
 
   function openLightbox(url, name) {
+    if (activeNote) addRecent({ t: 'image', key: 'img:' + url, title: name, thumb: url, url: '/notepad.html?note=' + activeNote.id }, currentUser && currentUser.id)
     document.getElementById('lightboxImg').src = url
     document.getElementById('lightboxImg').alt = name
     document.getElementById('lightboxModal').classList.add('open')

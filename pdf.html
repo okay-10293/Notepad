@@ -385,6 +385,7 @@
     }
     try {
       const pdf = await pdfjsLib.getDocument(await resolvePdfSource(url, name, path)).promise
+    makePdfThumb(pdf, path)
       // 예전에 저장해둔 필기가 있으면 미리 불러와둔다(파일이 없으면 null).
       const savedInk = pdfCurrentPath ? await loadPdfInkLayers(pdfCurrentPath) : null
       pagesEl.innerHTML = ''
@@ -850,6 +851,16 @@
 
 
   // ── 목록 / 로그인 / 업로드 ──
+  function addRecent(it, u) { try { var k = 'okay-recent', a = JSON.parse(localStorage.getItem(k) || '[]'); a = a.filter(function (x) { return x.key !== it.key }); it.at = Date.now(); it.u = u; a.unshift(it); localStorage.setItem(k, JSON.stringify(a.slice(0, 30))) } catch (e) {} }
+  async function makePdfThumb(pdf, path) {
+    try {
+      const pg = await pdf.getPage(1), v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 360 / v0.width })
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height
+      await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise
+      const k = 'okay-recent', a = JSON.parse(localStorage.getItem(k) || '[]'), it = a.find(x => x.key === 'pdf:' + path)
+      if (it) { it.thumb = c.toDataURL('image/jpeg', 0.6); localStorage.setItem(k, JSON.stringify(a)) }
+    } catch (e) {}
+  }
   const $ = (id) => document.getElementById(id)
   let uid = null
   let sb = null
@@ -927,6 +938,7 @@
 
   function openItem(it) {
     const url = (sb && navigator.onLine) ? sb.storage.from('images').getPublicUrl(it.path).data.publicUrl : ''
+    addRecent({ t: 'pdf', key: 'pdf:' + it.path, title: it.name, url: '/pdf.html?path=' + encodeURIComponent(it.path) + '&name=' + encodeURIComponent(it.name) }, uid)
     $('listView').style.display = 'none'
     openPdfAnnotate(url, it.name, it.path)
   }

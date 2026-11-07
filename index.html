@@ -68,8 +68,8 @@
     .hero .row { margin-top: 1.8rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
     section { padding: 3rem 0; border-top: 1px solid var(--border); }
     h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
-    .card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 1.3rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.9rem; }
+    .card { border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem; }
     .card b { display: block; font-weight: 700; margin-bottom: 0.35rem; }
     .card span { font-size: 0.88rem; color: var(--ink-2); line-height: 1.7; }
     .steps { counter-reset: s; display: grid; gap: 0.9rem; }
@@ -89,23 +89,34 @@
     /* 로그인 후 */
     #appview { display: none; }
     .me { font-size: 0.85rem; color: var(--ink-2); }
-    .brand::before { content: ""; display: inline-block; width: 0.62em; height: 0.62em; background: var(--ink); margin-right: 0.5rem; vertical-align: 0.02em; }
-    .greet { padding: 3.4rem 0 2.4rem; }
-    .date { font-size: 0.85rem; color: var(--ink-3); font-weight: 600; letter-spacing: 0.03em; }
-    .greet h1 { margin-top: 0.6rem; font-size: clamp(2.1rem, 6.5vw, 3.6rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.15; }
-    .tiles { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
-    .tile { display: flex; flex-direction: column; justify-content: space-between; min-height: 240px; padding: 1.4rem; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); text-decoration: none; transition: background 0.15s, color 0.15s; }
-    .tile:hover, .tile:active { background: var(--ink); color: var(--bg); }
-    .tile .top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .tile .no { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; }
-    .tile .go { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; transition: transform 0.15s; }
-    .tile:hover .go { transform: translate(3px, -3px); }
-    .tile .n { font-size: clamp(1.6rem, 3.6vw, 2.3rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; }
-    .tile .d { margin-top: 0.45rem; font-size: 0.92rem; color: var(--ink-2); }
-    .tile:hover .d, .tile:active .d { color: var(--bg); opacity: 0.7; }
-    @media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } .tile { min-height: 150px; } }
-    .off .tile.net { opacity: 0.55; }
-    .off .tile.net .d::after { content: " · 인터넷 필요"; }
+    .menu-btn { border: none; background: none; padding: 0.4rem; margin-right: -0.4rem; cursor: pointer; color: var(--ink); display: grid; }
+    .menu-btn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .sec-t { margin: 2.4rem 0 0.9rem; font-size: 0.82rem; color: var(--ink-3); font-weight: 600; letter-spacing: 0.03em; }
+    .recent { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .rc { position: relative; display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 1 / 1; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; text-decoration: none; background: var(--surface); color: var(--ink); transition: border-color 0.15s, transform 0.12s; }
+    .rc:hover { border-color: var(--ink); }
+    .rc:active { transform: scale(0.985); }
+    .rc .th { position: absolute; inset: 0 0 3.3rem 0; background-size: cover; background-position: top center; background-color: var(--surface); }
+    .rc .snip { position: absolute; inset: 0 0 3.3rem 0; padding: 1rem; font-size: 0.85rem; color: var(--ink-2); line-height: 1.65; overflow: hidden; word-break: break-all; }
+    .rc .gl { position: absolute; inset: 0 0 3.3rem 0; display: grid; place-items: center; color: var(--ink-3); }
+    .rc .gl svg { width: 46px; height: 46px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+    .rc .cap { position: relative; height: 3.3rem; padding: 0.55rem 0.9rem; background: var(--bg); border-top: 1px solid var(--border); }
+    .rc .ty { font-size: 0.7rem; color: var(--ink-3); font-weight: 600; }
+    .rc .ti { font-size: 0.92rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rc.ph { border-style: dashed; background: transparent; }
+    @media (max-width: 640px) { .recent { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
+    .dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 40; }
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 86vw); background: var(--bg); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.22s; z-index: 41; padding: calc(1.2rem + env(safe-area-inset-top, 0px)) 1.2rem 1.2rem; display: flex; flex-direction: column; }
+    .open-d .dim { opacity: 1; pointer-events: auto; }
+    .open-d .drawer { transform: none; }
+    .drawer .dh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-weight: 800; font-size: 1.1rem; }
+    .drawer .dx { border: none; background: none; color: var(--ink-2); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0.2rem 0.4rem; }
+    .drawer a, .drawer .mi { display: block; text-align: left; width: 100%; padding: 0.85rem 0.7rem; border: none; background: none; color: var(--ink); font: inherit; font-size: 1.05rem; font-weight: 600; text-decoration: none; border-radius: 10px; cursor: pointer; }
+    .drawer a:hover, .drawer .mi:hover { background: var(--surface); }
+    .drawer small { display: block; font-size: 0.78rem; color: var(--ink-3); font-weight: 400; margin-top: 0.1rem; }
+    .drawer hr { border: none; border-top: 1px solid var(--border); margin: 0.8rem 0; }
+    .drawer .who { font-size: 0.85rem; color: var(--ink-2); padding: 0.3rem 0.7rem; }
+    .off .drawer a.net { opacity: 0.55; }
     .offmsg { display: none; margin-top: 1rem; font-size: 0.82rem; color: var(--ink-2); }
     .off .offmsg { display: block; }
     #loading { padding: 5rem 0; text-align: center; color: var(--ink-3); font-size: 0.9rem; }
@@ -199,17 +210,23 @@
   <div class="wrap">
     <nav>
       <a class="brand" href="/">오케이 스튜디오</a>
-      <div class="nav-r"><span class="me" id="me"></span><button class="btn" onclick="doLogout()">로그아웃</button></div>
+      <button class="menu-btn" onclick="toggleMenu(true)" aria-label="메뉴"><svg viewBox="0 0 30 30"><path d="M4 8h22M4 15h22M4 22h22"/></svg></button>
     </nav>
-    <header class="greet"><div class="date" id="today"></div><h1 id="hello">안녕하세요</h1></header>
-    <div class="offmsg">오프라인 상태입니다. 음악과 드로잉은 이 기기에 저장된 내용으로 사용할 수 있습니다.</div>
-    <div class="tiles">
-      <a class="tile net" href="/notepad.html"><span class="top"><span class="no">01</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">노트패드</div><div class="d">글, 파일 저장</div></span></a>
-      <a class="tile" href="/pdf.html"><span class="top"><span class="no">02</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">PDF 오프너</div><div class="d">PDF 열기, 필기</div></span></a>
-      <a class="tile" href="/draw.html"><span class="top"><span class="no">03</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">드로잉</div><div class="d">그림 그리기</div></span></a>
-      <a class="tile" href="/music.html"><span class="top"><span class="no">04</span><svg class="go" viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23L23 7M10 7h13v13"/></svg></span><span><div class="n">음악</div><div class="d">저장한 곡 재생</div></span></a>
-    </div>
+    <div class="offmsg">오프라인 상태입니다. 이 기기에서 열었던 항목과 음악, 드로잉은 계속 사용할 수 있습니다.</div>
+    <div class="sec-t">최근 항목</div>
+    <div class="recent" id="recent"></div>
   </div>
+  <div class="dim" onclick="toggleMenu(false)"></div>
+  <aside class="drawer" aria-label="메뉴">
+    <div class="dh"><span>오케이 스튜디오</span><button class="dx" onclick="toggleMenu(false)" aria-label="닫기">×</button></div>
+    <a class="net" href="/notepad.html">노트패드<small>글, 파일 저장</small></a>
+    <a href="/pdf.html">PDF 오프너<small>PDF 열기, 필기</small></a>
+    <a href="/draw.html">드로잉<small>그림 그리기</small></a>
+    <a href="/music.html">음악<small>저장한 곡 재생</small></a>
+    <hr>
+    <div class="who" id="who"></div>
+    <button class="mi" onclick="doLogout()">로그아웃</button>
+  </aside>
 </div>
 
 <div class="wrap"><footer>
@@ -266,9 +283,9 @@
     $('landing').style.display = 'none'
     $('appview').style.display = 'block'
     const nm = (user && user.email ? user.email : '').replace('@notepad.app', '')
-    $('me').textContent = ''
-    const h = $('hello'); h.textContent = ''; h.append('안녕하세요,', document.createElement('br'), nm ? nm + '님' : '')
-    $('today').textContent = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
+    $('who').textContent = nm
+    toggleMenu(false)
+    buildRecent(user)
     offUpdate()
   }
   function showLanding() {
@@ -282,6 +299,65 @@
       s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2538594772108776'
       s.onload = () => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}) } catch (e) {} }
       document.head.appendChild(s)
+    }
+  }
+
+  window.toggleMenu = (o) => document.body.classList.toggle('open-d', o)
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false) })
+
+  // ── 최근 항목 ──
+  const TY = { note: '노트', image: '이미지', pdf: 'PDF', draw: '그림', music: '음악' }
+  const GL = {
+    note: '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h6M10 12h6"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
+    pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+    draw: '<path d="M12 19l7-7 3 3-7 7z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/>',
+    music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>'
+  }
+  const unb64 = (seg) => { try { let x = seg.replace(/-/g, '+').replace(/_/g, '/'); while (x.length % 4) x += '='; return new TextDecoder().decode(Uint8Array.from(atob(x), c => c.charCodeAt(0))) } catch (e) { return '그림' } }
+  function renderRecent(items) {
+    const box = $('recent'); box.textContent = ''
+    items.forEach((it) => {
+      const a = document.createElement('a'); a.className = 'rc' + (it.ph ? ' ph' : ''); a.href = it.url
+      let top = ''
+      if (it.thumb) top = '<div class="th"></div>'
+      else if (it.snip) top = '<div class="snip"></div>'
+      else top = '<div class="gl"><svg viewBox="0 0 24 24">' + (GL[it.t] || GL.note) + '</svg></div>'
+      a.innerHTML = top + '<div class="cap"><div class="ty"></div><div class="ti"></div></div>'
+      if (it.thumb) a.querySelector('.th').style.backgroundImage = 'url("' + String(it.thumb).replace(/"/g, '%22') + '")'
+      else if (it.snip) a.querySelector('.snip').textContent = it.snip
+      a.querySelector('.ty').textContent = it.ph ? '시작하기' : (TY[it.t] || '')
+      a.querySelector('.ti').textContent = it.title || ''
+      box.appendChild(a)
+    })
+  }
+  async function buildRecent(user) {
+    let items = []
+    try { items = JSON.parse(localStorage.getItem('okay-recent') || '[]').filter(x => x.u === user.id) } catch (e) {}
+    items = items.slice(0, 6)
+    renderRecent(items)   // 이 기기에서 연 항목을 먼저 바로 보여준다
+    if (items.length < 6 && navigator.onLine && sb) {
+      const seen = new Set(items.map(x => x.key))
+      try {
+        // 새 기기라 기록이 없을 땐 계정에 있는 최근 노트와 그림으로 채운다
+        const r = await sb.from('notes').select('id,title,body,updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(6)
+        ;(r.data || []).forEach(n => { const key = 'note:' + n.id; if (!seen.has(key)) { seen.add(key); items.push({ t: 'note', key, title: n.title || '제목 없음', snip: (n.body || '').slice(0, 120), url: '/notepad.html?note=' + n.id }) } })
+      } catch (e) {}
+      try {
+        const l = await sb.storage.from('images').list(user.id + '/draw', { limit: 100 })
+        ;((l.data || []).filter(o => /\.json$/.test(o.name)).map(o => o.name.slice(0, -5)).sort().reverse().slice(0, 3)).forEach(id => {
+          const key = 'draw:' + id.split('_')[0]
+          if (!seen.has(key)) { seen.add(key); items.push({ t: 'draw', key, title: unb64(id.split('_').slice(1).join('_')), thumb: sb.storage.from('images').getPublicUrl(user.id + '/draw/' + id + '.jpg').data.publicUrl, url: '/draw.html?open=' + id }) }
+        })
+      } catch (e) {}
+      items = items.slice(0, 6)
+      const SC = [{ t: 'note', title: '새 노트', url: '/notepad.html' }, { t: 'pdf', title: 'PDF 열기', url: '/pdf.html' }, { t: 'draw', title: '새 그림', url: '/draw.html' }, { t: 'music', title: '음악 재생', url: '/music.html' }]
+      for (let i = 0; items.length < 6 && i < SC.length; i++) items.push(Object.assign({ ph: 1 }, SC[i]))
+      renderRecent(items)
+    } else if (items.length < 6) {
+      const SC = [{ t: 'music', title: '음악 재생', url: '/music.html' }, { t: 'draw', title: '새 그림', url: '/draw.html' }, { t: 'pdf', title: 'PDF 열기', url: '/pdf.html' }]
+      for (let i = 0; items.length < 6 && i < SC.length; i++) items.push(Object.assign({ ph: 1 }, SC[i]))
+      renderRecent(items)
     }
   }
 

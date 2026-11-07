@@ -154,6 +154,7 @@
   $('btnNext').innerHTML = ic('next')
   $('btnRepeat').innerHTML = ic('repeat')
   var audio = $('audio')
+  function addRecent(it, u) { try { var k = 'okay-recent', a = JSON.parse(localStorage.getItem(k) || '[]'); a = a.filter(function (x) { return x.key !== it.key }); it.at = Date.now(); it.u = u; a.unshift(it); localStorage.setItem(k, JSON.stringify(a.slice(0, 30))) } catch (e) {} }
   var tracks = []          // { id, name, size, blob }
   var cur = -1             // 현재 재생 인덱스
   var shuffle = false
@@ -245,6 +246,7 @@
       return
     }
     cur = i
+    addRecent({ t: 'music', key: 'music', title: label(t), url: '/music.html' }, uid)
     if (objUrl) { URL.revokeObjectURL(objUrl); objUrl = null }
     if (t.blob) { objUrl = URL.createObjectURL(t.blob); audio.src = objUrl } else { audio.src = src }
     audio.loop = (repeat === 'one')
