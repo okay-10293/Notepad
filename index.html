@@ -97,7 +97,8 @@
     .rc:hover { border-color: var(--ink); }
     .rc:active { transform: scale(0.985); }
     .rc .th { position: absolute; inset: 0 0 3.3rem 0; background-size: cover; background-position: top center; background-color: var(--surface); }
-    .rc .snip { position: absolute; inset: 0 0 3.3rem 0; padding: 1rem; font-size: 0.85rem; color: var(--ink-2); line-height: 1.65; overflow: hidden; word-break: break-all; }
+    .rc .snip { position: absolute; inset: 0 0 3.3rem 0; padding: 0.9rem 0.9rem 0; background: var(--surface); }
+    .rc .paper { height: 100%; background: var(--bg); border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; padding: 0.75rem 0.8rem; font-size: 0.72rem; line-height: 1.65; color: var(--ink-2); overflow: hidden; word-break: break-all; }
     .rc .gl { position: absolute; inset: 0 0 3.3rem 0; display: grid; place-items: center; color: var(--ink-3); }
     .rc .gl svg { width: 46px; height: 46px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
     .rc .cap { position: relative; height: 3.3rem; padding: 0.55rem 0.9rem; background: var(--bg); border-top: 1px solid var(--border); }
@@ -321,15 +322,34 @@
       const a = document.createElement('a'); a.className = 'rc' + (it.ph ? ' ph' : ''); a.href = it.url
       let top = ''
       if (it.thumb) top = '<div class="th"></div>'
-      else if (it.snip) top = '<div class="snip"></div>'
+      else if (it.snip) top = '<div class="snip"><div class="paper"></div></div>'
       else top = '<div class="gl"><svg viewBox="0 0 24 24">' + (GL[it.t] || GL.note) + '</svg></div>'
       a.innerHTML = top + '<div class="cap"><div class="ty"></div><div class="ti"></div></div>'
       if (it.thumb) a.querySelector('.th').style.backgroundImage = 'url("' + String(it.thumb).replace(/"/g, '%22') + '")'
-      else if (it.snip) a.querySelector('.snip').textContent = it.snip
+      else if (it.snip) a.querySelector('.paper').textContent = it.snip
       a.querySelector('.ty').textContent = it.ph ? '시작하기' : (TY[it.t] || '')
       a.querySelector('.ti').textContent = it.title || ''
       box.appendChild(a)
     })
+  }
+  // 노트에 이미지가 첨부돼 있으면 첫 이미지를 썸네일로 쓴다 (조회 결과는 기기에 잠시 저장)
+  async function noteThumbs(items, user) {
+    if (!sb || !navigator.onLine) return
+    let cache = {}; try { cache = JSON.parse(localStorage.getItem('okay-note-thumb') || '{}') } catch (e) {}
+    const now = Date.now(); let changed = false
+    await Promise.all(items.filter(it => it.t === 'note' && !it.thumb && !it.ph && /^note:/.test(it.key || '')).map(async (it) => {
+      const id = it.key.slice(5), c = cache[id]
+      if (c && (c.u || now - c.at < 864e5)) { if (c.u) it.thumb = c.u; return }
+      try {
+        const l = await sb.storage.from('images').list(user.id + '/' + id, { limit: 20 })
+        const f = (l.data || []).find(o => /\.(jpe?g|png|gif|webp)$/i.test(o.name))
+        const u = f ? sb.storage.from('images').getPublicUrl(user.id + '/' + id + '/' + f.name).data.publicUrl : ''
+        cache[id] = { u, at: now }; changed = true
+        if (u) it.thumb = u
+      } catch (e) {}
+    }))
+    if (changed) { try { localStorage.setItem('okay-note-thumb', JSON.stringify(cache)) } catch (e) {} }
+    if (items.some(it => it.thumb)) renderRecent(items)
   }
   async function buildRecent(user) {
     let items = []
