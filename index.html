@@ -379,6 +379,7 @@
       for (let i = 0; items.length < 6 && i < SC.length; i++) items.push(Object.assign({ ph: 1 }, SC[i]))
       renderRecent(items)
     }
+    noteThumbs(items, user)
   }
 
   window.openModal = (t) => { $('authModal').classList.add('open'); switchModal(t) }
