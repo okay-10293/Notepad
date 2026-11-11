@@ -159,6 +159,8 @@
   var cur = -1             // 현재 재생 인덱스
   var shuffle = false
   var repeat = 'all'       // 'off' | 'all' | 'one'
+  var played = {}          // 셔플 + 전체 반복: 이번 바퀴에 이미 들은 곡 (모든 곡을 한 번씩 듣게 한다)
+  function resetBag() { played = {}; if (tracks[cur]) played[tracks[cur].id] = 1 }
   var objUrl = null
   var db = null
 
@@ -246,6 +248,7 @@
       return
     }
     cur = i
+    played[t.id] = 1
     addRecent({ t: 'music', key: 'music', title: label(t), url: '/music.html' }, uid)
     if (objUrl) { URL.revokeObjectURL(objUrl); objUrl = null }
     if (t.blob) { objUrl = URL.createObjectURL(t.blob); audio.src = objUrl } else { audio.src = src }
@@ -257,6 +260,14 @@
   function nextIndex(auto) {
     if (!tracks.length) return -1
     if (shuffle && tracks.length > 1) {
+      if (repeat === 'all') {
+        // 전체 반복 + 셔플: 아직 안 들은 곡 중에서만 뽑고, 모두 들으면 새로 섞어서 다음 바퀴 시작
+        var left = []
+        tracks.forEach(function (t, k) { if (!played[t.id] && k !== cur) left.push(k) })
+        if (!left.length) { resetBag(); tracks.forEach(function (t, k) { if (k !== cur) left.push(k) }) }
+        return left[Math.floor(Math.random() * left.length)]
+      }
+      // 반복 끔 + 셔플: 그냥 무작위 (같은 곡이 다시 나올 수 있음, 바로 직전 곡만 제외)
       var n; do { n = Math.floor(Math.random() * tracks.length) } while (n === cur)
       return n
     }
@@ -308,10 +319,12 @@
   $('btnPrev').onclick = prev
   $('btnShuffle').onclick = function () {
     shuffle = !shuffle
+    resetBag()
     this.classList.toggle('on', shuffle)
   }
   $('btnRepeat').onclick = function () {
     repeat = repeat === 'all' ? 'one' : repeat === 'one' ? 'off' : 'all'
+    resetBag()
     audio.loop = (repeat === 'one')
     this.innerHTML = ic(repeat === 'one' ? 'repeat1' : 'repeat')
     this.classList.toggle('on', repeat !== 'off')
