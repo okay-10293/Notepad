@@ -82,7 +82,7 @@
     <h1><span data-ic="music"></span>오케이 음악</h1>
     <div style="display:flex; gap:0.5rem; align-items:center;">
       <span class="badge" id="offBadge">오프라인 준비 중…</span>
-      <a class="link" href="/"><span data-ic="back"></span>스튜디오</a>
+      <span id="mslot"></span>
     </div>
   </header>
 
@@ -123,6 +123,7 @@
 
 <audio id="audio" preload="auto" playsinline></audio>
 
+<script src="/menu.js"></script>
 <script>
 (function () {
   'use strict'
@@ -624,5 +625,6 @@
     })
 })()
 </script>
+<script>try{OkayMenu.mount(document.getElementById('mslot'))}catch(e){}</script>
 </body>
 </html>

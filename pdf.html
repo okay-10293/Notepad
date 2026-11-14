@@ -88,8 +88,8 @@
 <body>
 <div id="listView">
   <div class="top">
-    <a class="link" href="/"><svg viewBox="0 0 24 24" class="st"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>스튜디오</a>
     <h1>PDF 오프너</h1>
+    <span id="mslot"></span>
   </div>
   <div class="pick" id="toolbarRow">
     <label><svg viewBox="0 0 24 24" class="st"><path d="M12 5v14M5 12h14"/></svg>PDF 열기<input id="pickFile" type="file" accept="application/pdf,.pdf" hidden /></label>
@@ -159,6 +159,7 @@
   </div>
 </div>
 
+<script src="/menu.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PDF 뷰어 라이브러리: 구버전(3.11.174) 사용 - 최신 버전(4.x)은 최근 추가된 JS 기능에
      의존하고 옛날 방식(.js) 파일을 더 이상 제공하지 않아 오래된 Safari/iOS 등에서 아예 동작하지
@@ -1013,5 +1014,6 @@
   init()
 
 </script>
+<script>try{OkayMenu.mount(document.getElementById('mslot'))}catch(e){}</script>
 </body>
 </html>

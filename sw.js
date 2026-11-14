@@ -1,7 +1,7 @@
 // 오케이 스튜디오 오프라인용 Service Worker
 // 허브(/), 음악, PDF 오프너 페이지와 그 페이지가 쓰는 라이브러리만 캐시한다.
 // 그 외 요청(노트패드 본체, Supabase 데이터 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-studio-v8'
+const CACHE = 'okay-studio-v9'
 const PDFJS = '3.11.174'
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
@@ -9,7 +9,7 @@ const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS + '/pdf.worker.min.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'
 ]
-const STATIC = ['/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon-180.png', '/assets/favicon-32.png']
+const STATIC = ['/menu.js', '/manifest.webmanifest', '/assets/favicon.svg', '/assets/favicon-180.png', '/assets/favicon-32.png']
 // 주소 → 캐시 키 (Cloudflare Pages가 .html을 떼는 리다이렉트도 같이 처리)
 const PAGES = {
   '/': '/', '/index.html': '/',

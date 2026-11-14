@@ -5,11 +5,11 @@
   <meta name="google-site-verification" content="TJQkf_GJ_qnSZjyXC1GaZMYe65FUmW0EDua6TGiO6Ps" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>오케이 스튜디오 (구 오케이 노트패드) — 노트패드, PDF, 드로잉, 음악</title>
-  <meta name="description" content="오케이 노트패드가 오케이 스튜디오로 바뀌었습니다. 노트패드, PDF 오프너, 드로잉, 음악을 하나의 계정으로 쓰는 무료 웹 서비스입니다. PC, 스마트폰, 태블릿 어디서든 이어서 사용하고, 앱 설치 없이 브라우저에서 바로 시작하세요." />
+  <title>오케이 스튜디오 — 노트패드, PDF, 드로잉, 음악</title>
+  <meta name="description" content="노트패드, PDF 오프너, 드로잉, 음악을 하나의 계정으로 쓰는 무료 웹 서비스입니다. PC, 스마트폰, 태블릿 어디서든 이어서 사용하고, 앱 설치 없이 브라우저에서 바로 시작하세요." />
   <link rel="canonical" href="https://okaynotepad.pages.dev/" />
   <meta property="og:site_name" content="오케이 스튜디오" />
-  <meta property="og:title" content="오케이 스튜디오 (구 오케이 노트패드) — 노트패드, PDF, 드로잉, 음악" />
+  <meta property="og:title" content="오케이 스튜디오 — 노트패드, PDF, 드로잉, 음악" />
   <meta property="og:description" content="하나의 계정으로 노트, PDF 필기, 그림, 음악을 모든 기기에서. 무료, 설치 없음." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://okaynotepad.pages.dev/" />
@@ -24,7 +24,7 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "오케이 스튜디오",
-    "alternateName": ["OkayStudio", "오케이 노트패드", "OkayNotepad", "오케이노트패드"],
+    "alternateName": ["OkayStudio"],
     "url": "https://okaynotepad.pages.dev/",
     "description": "노트패드, PDF 오프너, 드로잉, 음악을 하나의 계정으로 쓰는 무료 웹 서비스.",
     "applicationCategory": "ProductivityApplication",
@@ -89,8 +89,6 @@
     /* 로그인 후 */
     #appview { display: none; }
     .me { font-size: 0.85rem; color: var(--ink-2); }
-    .menu-btn { border: none; background: none; padding: 0.4rem; margin-right: -0.4rem; cursor: pointer; color: var(--ink); display: grid; }
-    .menu-btn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
     .sec-t { margin: 2.4rem 0 0.9rem; font-size: 0.82rem; color: var(--ink-3); font-weight: 600; letter-spacing: 0.03em; }
     .recent { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
     .rc { position: relative; display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 1 / 1; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; text-decoration: none; background: var(--surface); color: var(--ink); transition: border-color 0.15s, transform 0.12s; }
@@ -106,17 +104,6 @@
     .rc .ti { font-size: 0.92rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rc.ph { border-style: dashed; background: transparent; }
     @media (max-width: 640px) { .recent { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
-    .dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 40; }
-    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 86vw); background: var(--bg); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.22s; z-index: 41; padding: calc(1.2rem + env(safe-area-inset-top, 0px)) 1.2rem 1.2rem; display: flex; flex-direction: column; }
-    .open-d .dim { opacity: 1; pointer-events: auto; }
-    .open-d .drawer { transform: none; }
-    .drawer .dh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-weight: 800; font-size: 1.1rem; }
-    .drawer .dx { border: none; background: none; color: var(--ink-2); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0.2rem 0.4rem; }
-    .drawer a, .drawer .mi { display: block; text-align: left; width: 100%; padding: 0.85rem 0.7rem; border: none; background: none; color: var(--ink); font: inherit; font-size: 1.05rem; font-weight: 600; text-decoration: none; border-radius: 10px; cursor: pointer; }
-    .drawer a:hover, .drawer .mi:hover { background: var(--surface); }
-    .drawer small { display: block; font-size: 0.78rem; color: var(--ink-3); font-weight: 400; margin-top: 0.1rem; }
-    .drawer hr { border: none; border-top: 1px solid var(--border); margin: 0.8rem 0; }
-    .drawer .who { font-size: 0.85rem; color: var(--ink-2); padding: 0.3rem 0.7rem; }
     .off .drawer a.net { opacity: 0.55; }
     .offmsg { display: none; margin-top: 1rem; font-size: 0.82rem; color: var(--ink-2); }
     .off .offmsg { display: block; }
@@ -156,7 +143,7 @@
     <header class="hero">
       <div class="tag">하나의 계정, 네 가지 도구</div>
       <h1>노트, PDF, 그림, 음악.<br>한곳에서 모든 기기로.</h1>
-      <p>오케이 노트패드가 오케이 스튜디오로 이름을 바꾸고 PDF 오프너, 드로잉, 음악이 더해졌습니다. 로그인 한 번으로 노트패드, PDF 오프너, 드로잉, 음악을 어느 기기에서든 이어서 사용합니다. 설치 없이 브라우저에서 바로 시작하세요.</p>
+      <p>로그인 한 번으로 노트패드, PDF 오프너, 드로잉, 음악을 어느 기기에서든 이어서 사용합니다. 설치 없이 브라우저에서 바로 시작하세요.</p>
       <div class="row">
         <button class="btn btn-p btn-lg" onclick="openModal('login')">로그인</button>
         <button class="btn btn-lg" onclick="openModal('signup')">회원가입</button>
@@ -184,7 +171,7 @@
 
     <section class="about">
       <h2>오케이 스튜디오란?</h2>
-      <p>오케이 스튜디오는 기기를 오가며 작업하는 분들을 위한 무료 웹 서비스입니다. 이전에는 오케이 노트패드라는 이름의 클라우드 메모장으로 시작했고, 지금은 PDF 필기, 드로잉, 음악까지 한 계정으로 쓸 수 있도록 확장했습니다. 별도 앱 설치 없이 웹 브라우저만으로 접속할 수 있습니다.</p>
+      <p>오케이 스튜디오는 기기를 오가며 작업하는 분들을 위한 무료 웹 서비스입니다. 노트패드, PDF 필기, 드로잉, 음악을 한 계정으로 쓸 수 있고, 별도 앱 설치 없이 웹 브라우저만으로 접속할 수 있습니다.</p>
       <p>메모는 컴퓨터에서 쓰고 스마트폰에서 확인하고, 태블릿에서 PDF에 필기하고, 그림은 어디서든 이어서 그리는 식으로 사용할 수 있습니다. 데이터는 Supabase의 보안 인프라에 저장되며, 비밀번호는 단방향 암호화되어 보관됩니다.</p>
     </section>
 
@@ -211,23 +198,12 @@
   <div class="wrap">
     <nav>
       <a class="brand" href="/">오케이 스튜디오</a>
-      <button class="menu-btn" onclick="toggleMenu(true)" aria-label="메뉴"><svg viewBox="0 0 30 30"><path d="M4 8h22M4 15h22M4 22h22"/></svg></button>
+      <span id="menuSlot"></span>
     </nav>
     <div class="offmsg">오프라인 상태입니다. 이 기기에서 열었던 항목과 음악, 드로잉은 계속 사용할 수 있습니다.</div>
     <div class="sec-t">최근 항목</div>
     <div class="recent" id="recent"></div>
   </div>
-  <div class="dim" onclick="toggleMenu(false)"></div>
-  <aside class="drawer" aria-label="메뉴">
-    <div class="dh"><span>오케이 스튜디오</span><button class="dx" onclick="toggleMenu(false)" aria-label="닫기">×</button></div>
-    <a class="net" href="/notepad.html">노트패드<small>글, 파일 저장</small></a>
-    <a href="/pdf.html">PDF 오프너<small>PDF 열기, 필기</small></a>
-    <a href="/draw.html">드로잉<small>그림 그리기</small></a>
-    <a href="/music.html">음악<small>저장한 곡 재생</small></a>
-    <hr>
-    <div class="who" id="who"></div>
-    <button class="mi" onclick="doLogout()">로그아웃</button>
-  </aside>
 </div>
 
 <div class="wrap"><footer>
@@ -271,6 +247,7 @@
   </div>
 </div>
 
+<script src="/menu.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
@@ -285,7 +262,7 @@
     $('appview').style.display = 'block'
     const nm = (user && user.email ? user.email : '').replace('@notepad.app', '')
     $('who').textContent = nm
-    toggleMenu(false)
+    if (!window.__menuMounted && window.OkayMenu) { window.__menuMounted = true; OkayMenu.mount($('menuSlot')) }
     buildRecent(user)
     offUpdate()
   }
@@ -303,8 +280,6 @@
     }
   }
 
-  window.toggleMenu = (o) => document.body.classList.toggle('open-d', o)
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false) })
 
   // ── 최근 항목 ──
   const TY = { note: '노트', image: '이미지', pdf: 'PDF', draw: '그림', music: '음악' }
