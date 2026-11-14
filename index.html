@@ -261,7 +261,6 @@
     $('landing').style.display = 'none'
     $('appview').style.display = 'block'
     const nm = (user && user.email ? user.email : '').replace('@notepad.app', '')
-    $('who').textContent = nm
     if (!window.__menuMounted && window.OkayMenu) { window.__menuMounted = true; OkayMenu.mount($('menuSlot')) }
     buildRecent(user)
     offUpdate()
