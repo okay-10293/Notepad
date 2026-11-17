@@ -103,6 +103,19 @@
     .rc .ty { font-size: 0.7rem; color: var(--ink-3); font-weight: 600; }
     .rc .ti { font-size: 0.92rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rc.ph { border-style: dashed; background: transparent; }
+    .pk { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 70; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .pk .box { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; width: min(560px, 100%); max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; }
+    .pk .hd { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.1rem 0.4rem; font-size: 1rem; }
+    .pk .x { border: none; background: none; color: var(--ink-2); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.3rem; }
+    .pk .tabs { display: flex; gap: 0.4rem; padding: 0.4rem 1.1rem 0.7rem; }
+    .pk .tabs button { border: 1px solid var(--border); background: none; color: var(--ink); border-radius: 999px; padding: 0.4rem 0.9rem; font: inherit; font-size: 0.88rem; cursor: pointer; }
+    .pk .tabs button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .pk .lst { overflow-y: auto; padding: 0 0.6rem 1rem; min-height: 120px; }
+    .pk .rw { display: flex; align-items: center; gap: 0.8rem; width: 100%; text-align: left; padding: 0.6rem; border: none; background: none; color: var(--ink); font: inherit; border-radius: 10px; cursor: pointer; }
+    .pk .rw:hover { background: var(--surface); }
+    .pk .tm { width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface) center / cover; flex-shrink: 0; }
+    .pk .tt { font-size: 0.95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pk .em { padding: 1.4rem; text-align: center; color: var(--ink-3); font-size: 0.9rem; }
     .rc .cap { padding-right: 2.9rem; }
     .rc .dots { position: absolute; right: 0.4rem; bottom: 0.55rem; width: 34px; height: 34px; border: none; background: none; color: var(--ink-2); border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
     .rc .dots:hover { background: var(--surface); }
@@ -299,34 +312,63 @@
     music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>'
   }
   const unb64 = (seg) => { try { let x = seg.replace(/-/g, '+').replace(/_/g, '/'); while (x.length % 4) x += '='; return new TextDecoder().decode(Uint8Array.from(atob(x), c => c.charCodeAt(0))) } catch (e) { return '그림' } }
-  // ── 고정(핀) / 더보기 메뉴 ──
-  let curUser = null, curItems = []
-  const pinKey = (u) => 'okay-pins-' + u
-  const getPins = (u) => { try { return JSON.parse(localStorage.getItem(pinKey(u)) || '[]') } catch (e) { return [] } }
-  const setPins = (u, a) => { try { localStorage.setItem(pinKey(u), JSON.stringify(a)) } catch (e) {} }
-  function togglePin(it) {
-    if (!curUser || !it.key) return
-    const pins = getPins(curUser.id), i = pins.findIndex(p => p.key === it.key)
-    if (i >= 0) pins.splice(i, 1)
-    else {
-      if (pins.length >= 6) { alert('고정은 최대 6개까지 가능합니다.'); return }
-      const c = Object.assign({}, it); delete c.pinned; delete c.ph
-      pins.unshift(c)
-    }
-    setPins(curUser.id, pins)
-    buildRecent(curUser)
+  // ── 칸 설정: 6칸 각각을 '자동(최근 항목)', '내가 고른 작품', '도구 바로가기' 중 하나로 정한다 ──
+  const TOOLS = { note: ['노트패드', '/notepad.html', '새 노트'], pdf: ['PDF 오프너', '/pdf.html', 'PDF 열기'], draw: ['드로잉', '/draw.html', '새 그림'], music: ['음악', '/music.html', '음악 재생'] }
+  const slotKey = (u) => 'okay-slots-' + u
+  const thumbMap = {}
+  let curUser = null, slots = null, autoItems = [], lastCards = [], pushT = 0
+  const loadSlots = (u) => { try { const j = JSON.parse(localStorage.getItem(slotKey(u))); if (j && Array.isArray(j.s)) return j } catch (e) {} return { at: 0, s: [null, null, null, null, null, null] } }
+  function saveSlots() {
+    slots.at = Date.now()
+    try { localStorage.setItem(slotKey(curUser.id), JSON.stringify(slots)) } catch (e) {}
+    clearTimeout(pushT); pushT = setTimeout(pushSlots, 700)
   }
+  // 칸 설정은 계정(내 폴더의 home.json)에도 저장해서 다른 기기에서도 같은 칸이 보이게 한다
+  async function pushSlots() {
+    if (!sb || !navigator.onLine || !curUser) return
+    try {
+      const bk = sb.storage.from('images'), path = curUser.id + '/home.json'
+      await bk.remove([path])
+      await bk.upload(path, new Blob([JSON.stringify(slots)], { type: 'application/json' }), { contentType: 'application/json', upsert: false })
+    } catch (e) {}
+  }
+  async function pullSlots() {
+    if (!sb || !navigator.onLine || !curUser) return false
+    try {
+      const r = await sb.storage.from('images').download(curUser.id + '/home.json')
+      if (r.error || !r.data) return false
+      const j = JSON.parse(await r.data.text())
+      if (j && Array.isArray(j.s) && (j.at || 0) > (slots.at || 0)) { slots = j; try { localStorage.setItem(slotKey(curUser.id), JSON.stringify(j)) } catch (e) {} return true }
+    } catch (e) {}
+    return false
+  }
+  function setSlot(i, v) { slots.s[i] = v; saveSlots(); assemble() }
+
+  function assemble() {
+    const fixed = new Set(), cards = new Array(6).fill(null)
+    slots.s.slice(0, 6).forEach((c, i) => {
+      if (c && c.k === 'item' && c.it) { cards[i] = Object.assign({}, c.it, { fixed: 1 }); fixed.add(c.it.key) }
+      else if (c && c.k === 'tool' && TOOLS[c.t]) cards[i] = { t: c.t, tool: 1, title: TOOLS[c.t][0], url: TOOLS[c.t][1] }
+    })
+    const pool = autoItems.filter(x => !fixed.has(x.key))
+    for (let i = 0, k = 0; i < 6; i++) if (!cards[i]) cards[i] = pool[k++] || null
+    const free = Object.keys(TOOLS).filter(t => !cards.some(c => c && c.tool && c.t === t)), SC = free.length ? free : Object.keys(TOOLS)
+    for (let i = 0, k = 0; i < 6; i++) if (!cards[i]) { const t = SC[k++ % SC.length]; cards[i] = { ph: 1, t, title: TOOLS[t][2], url: TOOLS[t][1] } }
+    cards.forEach(c => { if (c.t === 'note' && !c.thumb && c.key && thumbMap[c.key]) c.thumb = thumbMap[c.key] })
+    renderRecent(cards)
+  }
+
   function closePopover() { const m = document.querySelector('.pm'); if (m) m.remove() }
-  function openPopover(btn, it) {
+  function openPopover(btn, i) {
     closePopover()
-    const m = document.createElement('div'); m.className = 'pm'
-    const net = !navigator.onLine ? ' style="opacity:.5"' : ''
-    m.innerHTML = '<button data-a="pin"></button><hr><div class="lb">이동</div>' +
-      '<a href="/notepad.html"' + net + '>노트패드</a><a href="/pdf.html">PDF 오프너</a><a href="/draw.html">드로잉</a><a href="/music.html">음악</a>'
-    m.querySelector('[data-a="pin"]').textContent = it.pinned ? '고정 해제' : '고정'
-    m.querySelector('[data-a="pin"]').onclick = () => { closePopover(); togglePin(it) }
+    const cur = slots.s[i], m = document.createElement('div'); m.className = 'pm'
+    m.innerHTML = '<div class="lb">이 칸에 표시할 것</div><button data-a="pick">내 작품 고르기</button><div class="lb">바로가기로 설정</div>' +
+      Object.keys(TOOLS).map(t => '<button data-t="' + t + '"></button>').join('') + (cur ? '<hr><button data-a="auto">자동(최근 항목)으로</button>' : '')
+    m.querySelectorAll('[data-t]').forEach(b => { b.textContent = TOOLS[b.dataset.t][0] + ' 바로가기'; b.onclick = () => { closePopover(); setSlot(i, { k: 'tool', t: b.dataset.t }) } })
+    m.querySelector('[data-a="pick"]').onclick = () => { closePopover(); openPicker(i) }
+    const au = m.querySelector('[data-a="auto"]'); if (au) au.onclick = () => { closePopover(); setSlot(i, null) }
     document.body.appendChild(m)
-    const r = btn.getBoundingClientRect(), w = m.offsetWidth || 200, h = m.offsetHeight || 220
+    const r = btn.getBoundingClientRect(), w = m.offsetWidth || 210, h = m.offsetHeight || 300
     m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px'
     m.style.top = (r.bottom + h + 8 > innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px'
   }
@@ -335,10 +377,58 @@
   addEventListener('scroll', closePopover, true)
   addEventListener('resize', closePopover)
 
-  function renderRecent(items) {
-    curItems = items
+  // 저장된 파일명(앞의 숫자 + base64) → 원래 이름
+  const decNm = (seg) => { try { let b = seg.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder('utf-8', { fatal: true }).decode(u) } catch (e) { return null } }
+  const origName = (f) => { const w = f.replace(/^\d+_\d+_/, ''), m = w.match(/\.[a-zA-Z0-9]+$/), ext = m ? m[0] : '', stem = ext ? w.slice(0, -ext.length) : w, d = decNm(stem); return (d !== null && d.length > 0 ? d : stem) + ext }
+
+  // 내가 한 작품 중에서 이 칸에 고정할 것을 고른다
+  function openPicker(i) {
+    const ov = document.createElement('div'); ov.className = 'pk'
+    ov.innerHTML = '<div class="box"><div class="hd"><b>이 칸에 둘 작품 고르기</b><button class="x" aria-label="닫기">×</button></div><div class="tabs"><button data-k="note">노트</button><button data-k="pdf">PDF</button><button data-k="draw">그림</button></div><div class="lst"></div></div>'
+    const lst = ov.querySelector('.lst'), close = () => ov.remove()
+    ov.onclick = (e) => { if (e.target === ov) close() }
+    ov.querySelector('.x').onclick = close
+    const recents = (t) => { try { return JSON.parse(localStorage.getItem('okay-recent') || '[]').filter(x => x.u === curUser.id && x.t === t) } catch (e) { return [] } }
+    const load = async (k) => {
+      ov.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === k))
+      lst.innerHTML = '<div class="em">불러오는 중…</div>'
+      let rows = [], online = sb && navigator.onLine
+      try {
+        if (k === 'note' && online) {
+          const r = await sb.from('notes').select('id,title,body,updated_at').eq('user_id', curUser.id).order('updated_at', { ascending: false }).limit(40)
+          rows = (r.data || []).map(n => ({ t: 'note', key: 'note:' + n.id, title: n.title || '제목 없음', snip: (n.body || '').slice(0, 120), url: '/notepad.html?note=' + n.id }))
+        } else if (k === 'draw' && online) {
+          const l = await sb.storage.from('images').list(curUser.id + '/draw', { limit: 100 })
+          rows = (l.data || []).filter(o => /\.json$/.test(o.name)).map(o => o.name.slice(0, -5)).sort().reverse().slice(0, 40).map(id => ({ t: 'draw', key: 'draw:' + id.split('_')[0], title: unb64(id.split('_').slice(1).join('_')), thumb: sb.storage.from('images').getPublicUrl(curUser.id + '/draw/' + id + '.jpg').data.publicUrl, url: '/draw.html?open=' + id }))
+        } else if (k === 'pdf') {
+          const seen = new Set(); rows = recents('pdf').map(x => { seen.add(x.key); return x })
+          if (online) {
+            const l = await sb.storage.from('images').list(curUser.id + '/pdf', { limit: 100 })
+            ;(l.data || []).filter(o => /\.pdf$/i.test(o.name)).forEach(o => { const path = curUser.id + '/pdf/' + o.name, key = 'pdf:' + path; if (!seen.has(key)) { seen.add(key); const nm = origName(o.name); rows.push({ t: 'pdf', key, title: nm, url: '/pdf.html?path=' + encodeURIComponent(path) + '&name=' + encodeURIComponent(nm) }) } })
+          }
+        }
+        if (!rows.length && !online) rows = recents(k)
+      } catch (e) {}
+      lst.textContent = ''
+      if (!rows.length) { lst.innerHTML = '<div class="em">고를 항목이 없습니다.</div>'; return }
+      rows.forEach(it => {
+        const b = document.createElement('button'); b.className = 'rw'
+        b.innerHTML = '<span class="tm"></span><span class="tt"></span>'
+        if (it.thumb) b.querySelector('.tm').style.backgroundImage = 'url("' + String(it.thumb).replace(/"/g, '%22') + '")'
+        b.querySelector('.tt').textContent = it.title
+        b.onclick = () => { close(); setSlot(i, { k: 'item', it: { t: it.t, key: it.key, title: it.title, snip: it.snip, thumb: (it.thumb && !String(it.thumb).startsWith('data:')) ? it.thumb : undefined, url: it.url } }) }
+        lst.appendChild(b)
+      })
+    }
+    ov.querySelectorAll('.tabs button').forEach(b => b.onclick = () => load(b.dataset.k))
+    document.body.appendChild(ov)
+    load('note')
+  }
+
+  function renderRecent(cards) {
+    lastCards = cards
     const box = $('recent'); box.textContent = ''
-    items.forEach((it) => {
+    cards.forEach((it, idx) => {
       const a = document.createElement('a'); a.className = 'rc' + (it.ph ? ' ph' : ''); a.href = it.url
       let top = ''
       if (it.thumb) top = '<div class="th"></div>'
@@ -347,67 +437,61 @@
       a.innerHTML = top + '<div class="cap"><div class="ty"></div><div class="ti"></div></div>'
       if (it.thumb) a.querySelector('.th').style.backgroundImage = 'url("' + String(it.thumb).replace(/"/g, '%22') + '")'
       else if (it.snip) a.querySelector('.paper').textContent = it.snip
-      a.querySelector('.ty').textContent = it.ph ? '시작하기' : (TY[it.t] || '') + (it.pinned ? ' · 고정' : '')
+      a.querySelector('.ty').textContent = it.ph ? '시작하기' : it.tool ? '바로가기' : (TY[it.t] || '') + (it.fixed ? ' · 고정' : '')
       a.querySelector('.ti').textContent = it.title || ''
-      if (!it.ph) {
-        const d = document.createElement('button'); d.className = 'dots'; d.setAttribute('aria-label', '더보기')
-        d.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>'
-        d.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openPopover(d, it) }
-        a.appendChild(d)
-      }
+      const d = document.createElement('button'); d.className = 'dots'; d.setAttribute('aria-label', '이 칸 설정')
+      d.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>'
+      d.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openPopover(d, idx) }
+      a.appendChild(d)
       box.appendChild(a)
     })
   }
+
   // 노트에 이미지가 첨부돼 있으면 첫 이미지를 썸네일로 쓴다 (조회 결과는 기기에 잠시 저장)
-  async function noteThumbs(items, user) {
+  async function noteThumbs(cards, user) {
     if (!sb || !navigator.onLine) return
     let cache = {}; try { cache = JSON.parse(localStorage.getItem('okay-note-thumb') || '{}') } catch (e) {}
-    const now = Date.now(); let changed = false
-    await Promise.all(items.filter(it => it.t === 'note' && !it.thumb && !it.ph && /^note:/.test(it.key || '')).map(async (it) => {
+    const now = Date.now(); let changed = false, found = false
+    await Promise.all(cards.filter(it => it && it.t === 'note' && !it.thumb && !it.ph && !it.tool && /^note:/.test(it.key || '')).map(async (it) => {
       const id = it.key.slice(5), c = cache[id]
-      if (c && (c.u || now - c.at < 864e5)) { if (c.u) it.thumb = c.u; return }
+      if (c && (c.u || now - c.at < 864e5)) { if (c.u && !thumbMap[it.key]) { thumbMap[it.key] = c.u; found = true } return }
       try {
         const l = await sb.storage.from('images').list(user.id + '/' + id, { limit: 20 })
         const f = (l.data || []).find(o => /\.(jpe?g|png|gif|webp)$/i.test(o.name))
         const u = f ? sb.storage.from('images').getPublicUrl(user.id + '/' + id + '/' + f.name).data.publicUrl : ''
         cache[id] = { u, at: now }; changed = true
-        if (u) it.thumb = u
+        if (u) { thumbMap[it.key] = u; found = true }
       } catch (e) {}
     }))
     if (changed) { try { localStorage.setItem('okay-note-thumb', JSON.stringify(cache)) } catch (e) {} }
-    if (items.some(it => it.thumb)) renderRecent(items)
+    if (found) assemble()
   }
+
   async function buildRecent(user) {
+    curUser = user; slots = loadSlots(user.id)
     let items = []
     try { items = JSON.parse(localStorage.getItem('okay-recent') || '[]').filter(x => x.u === user.id) } catch (e) {}
-    curUser = user
-    const pins = getPins(user.id), pk = new Set(pins.map(p => p.key))
-    items = pins.map(p => Object.assign({}, p, { pinned: true })).concat(items.filter(x => !pk.has(x.key))).slice(0, 6)
-    renderRecent(items)   // 고정한 항목을 맨 앞에, 이 기기에서 연 항목을 바로 보여준다
-    if (items.length < 6 && navigator.onLine && sb) {
-      const seen = new Set(items.map(x => x.key))
+    autoItems = items.slice(0, 12)
+    assemble()   // 이 기기의 기록과 저장된 칸 설정으로 먼저 바로 보여준다
+    if (!navigator.onLine || !sb) return
+    if (await pullSlots()) assemble()   // 다른 기기에서 정해 둔 칸 설정이 더 최근이면 그걸 쓴다
+    if (autoItems.length < 6) {
+      // 새 기기라 기록이 없을 땐 계정에 있는 최근 노트와 그림으로 자동 칸을 채운다
+      const seen = new Set(autoItems.map(x => x.key))
       try {
-        // 새 기기라 기록이 없을 땐 계정에 있는 최근 노트와 그림으로 채운다
         const r = await sb.from('notes').select('id,title,body,updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(6)
-        ;(r.data || []).forEach(n => { const key = 'note:' + n.id; if (!seen.has(key)) { seen.add(key); items.push({ t: 'note', key, title: n.title || '제목 없음', snip: (n.body || '').slice(0, 120), url: '/notepad.html?note=' + n.id }) } })
+        ;(r.data || []).forEach(n => { const key = 'note:' + n.id; if (!seen.has(key)) { seen.add(key); autoItems.push({ t: 'note', key, title: n.title || '제목 없음', snip: (n.body || '').slice(0, 120), url: '/notepad.html?note=' + n.id }) } })
       } catch (e) {}
       try {
         const l = await sb.storage.from('images').list(user.id + '/draw', { limit: 100 })
         ;((l.data || []).filter(o => /\.json$/.test(o.name)).map(o => o.name.slice(0, -5)).sort().reverse().slice(0, 3)).forEach(id => {
           const key = 'draw:' + id.split('_')[0]
-          if (!seen.has(key)) { seen.add(key); items.push({ t: 'draw', key, title: unb64(id.split('_').slice(1).join('_')), thumb: sb.storage.from('images').getPublicUrl(user.id + '/draw/' + id + '.jpg').data.publicUrl, url: '/draw.html?open=' + id }) }
+          if (!seen.has(key)) { seen.add(key); autoItems.push({ t: 'draw', key, title: unb64(id.split('_').slice(1).join('_')), thumb: sb.storage.from('images').getPublicUrl(user.id + '/draw/' + id + '.jpg').data.publicUrl, url: '/draw.html?open=' + id }) }
         })
       } catch (e) {}
-      items = items.slice(0, 6)
-      const SC = [{ t: 'note', title: '새 노트', url: '/notepad.html' }, { t: 'pdf', title: 'PDF 열기', url: '/pdf.html' }, { t: 'draw', title: '새 그림', url: '/draw.html' }, { t: 'music', title: '음악 재생', url: '/music.html' }]
-      for (let i = 0; items.length < 6 && i < SC.length; i++) items.push(Object.assign({ ph: 1 }, SC[i]))
-      renderRecent(items)
-    } else if (items.length < 6) {
-      const SC = [{ t: 'music', title: '음악 재생', url: '/music.html' }, { t: 'draw', title: '새 그림', url: '/draw.html' }, { t: 'pdf', title: 'PDF 열기', url: '/pdf.html' }]
-      for (let i = 0; items.length < 6 && i < SC.length; i++) items.push(Object.assign({ ph: 1 }, SC[i]))
-      renderRecent(items)
+      assemble()
     }
-    noteThumbs(items, user)
+    noteThumbs(lastCards, user)
   }
 
   window.openModal = (t) => { $('authModal').classList.add('open'); switchModal(t) }
