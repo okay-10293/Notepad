@@ -1,7 +1,7 @@
 // 오케이 스튜디오 오프라인용 Service Worker
 // 허브(/), 음악, PDF 오프너 페이지와 그 페이지가 쓰는 라이브러리만 캐시한다.
 // 그 외 요청(노트패드 본체, Supabase 데이터 등)은 건드리지 않고 그대로 네트워크로 보낸다.
-const CACHE = 'okay-studio-v9'
+const CACHE = 'okay-studio-v10'
 const PDFJS = '3.11.174'
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
@@ -92,6 +92,14 @@ self.addEventListener('fetch', (event) => {
       }
       return res
     }).catch(() => null)
+    if (pageKey) {
+      // 페이지: 네트워크 우선(3초 안에 응답하면 최신 화면), 느리거나 오프라인이면 저장된 화면
+      const r = await Promise.race([refresh, new Promise((res) => setTimeout(() => res(null), 3000))])
+      if (r && r.ok) return await cleanResponse(r)
+      if (cached) { event.waitUntil(refresh); return cached }
+      const late = await refresh
+      return late ? await cleanResponse(late) : new Response('오프라인이고 아직 저장된 페이지가 없어요.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    }
     if (cached) { event.waitUntil(refresh); return cached }
     const net = await refresh
     return net || new Response('오프라인이고 아직 저장된 페이지가 없어요.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
