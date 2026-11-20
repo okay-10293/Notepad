@@ -239,6 +239,23 @@
     .attach-download:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     .attach-rename { position: absolute; bottom: -6px; left: -6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.1); transition: all 0.15s; }
     .attach-rename svg { width: 12px; height: 12px; }
+    /* 노트 안 첨부파일: 큰 카드로 보여준다 */
+    .attach-area { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; padding: 1rem 2.5rem 0.25rem; }
+    .attach-item { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+    .attach-item .attach-img { width: 100%; height: 160px; border: 0; border-radius: 0; object-fit: cover; display: block; background: var(--surface); }
+    .attach-item .attach-img:hover { transform: none; }
+    .attach-item .attach-file { width: 100%; max-width: none; height: 160px; border: 0; border-radius: 0; padding: 0; background: var(--surface) center top / cover no-repeat; gap: 0; align-items: center; justify-content: center; }
+    .attach-item .attach-file.hasthumb .fbadge { display: none; }
+    .fbadge { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.04em; color: var(--ink-2); border: 2px solid var(--ink-3); border-radius: 10px; padding: 0.55rem 0.9rem; }
+    .attach-cap { padding: 0.55rem 0.8rem; font-size: 0.8rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+    .attach-acts { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 3; }
+    .attach-acts .attach-del, .attach-acts .attach-download, .attach-acts .attach-rename { position: static; width: 34px; height: 34px; border-radius: 50%; background: var(--bg); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 1px 6px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; padding: 0; font-size: 14px; line-height: 1; cursor: pointer; opacity: 0.94; }
+    .attach-acts .attach-del { color: #c0392b; }
+    .attach-acts button svg { width: 16px; height: 16px; }
+    .attach-acts button:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); opacity: 1; }
+    @media (max-width: 640px) { .attach-area { grid-template-columns: repeat(2, 1fr); gap: 10px; } .attach-item .attach-img, .attach-item .attach-file { height: 130px; } }
+    /* 책장 카드 썸네일 */
+    .note-card-thumb { margin: -1rem -1.1rem 0.3rem; height: 130px; border-radius: 8px 8px 0 0; background: var(--surface) center top / cover no-repeat; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .attach-rename:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     .attach-rename-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: init-spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
 
@@ -1175,13 +1192,16 @@
       const fileNote = isFileNote(n)
       const icon = fileNote ? getFileIcon(n.title) + ' ' : ''
       const preview = n.body ? escHtml(n.body.slice(0, 80)) : (fileNote ? '첨부파일 노트' : '내용 없음')
-      return `<div class="note-card ${activeClass}" ${selectedStyle} onclick="${clickFn}">
-        ${checkbox}
+      const ts = thumbSrc(n.id)
+      const thumb = ts ? `<div class="note-card-thumb" style="background-image:url('${escHtml(ts)}')"></div>` : ''
+      return `<div class="note-card ${activeClass}" data-id="${n.id}" ${selectedStyle} onclick="${clickFn}">
+        ${checkbox}${thumb}
         <div class="note-card-title">${icon}${escHtml(n.title || '제목 없음')}</div>
         <div class="note-card-preview">${preview}</div>
         <div class="note-card-date">${formatDate(n.updated_at)}</div>
       </div>`
     }).join('')
+    scheduleThumbs(list)
   }
 
   function renderFilteredNotes() {
@@ -1327,6 +1347,65 @@
     return '📄'
   }
 
+  // ── 노트 썸네일 (첨부한 첫 이미지, 없으면 첫 PDF의 첫 페이지) ──
+  const ntLoad = () => { try { return JSON.parse(localStorage.getItem('okay-note-thumbs') || '{}') } catch (e) { return {} } }
+  const ntSave = (m) => { try { localStorage.setItem('okay-note-thumbs', JSON.stringify(m)) } catch (e) {} }
+  const ptLoad = () => { try { return JSON.parse(localStorage.getItem('okay-pdf-thumbs') || '{}') } catch (e) { return {} } }
+  function ptSave(m) { const k = Object.keys(m); while (k.length > 40) delete m[k.shift()]; try { localStorage.setItem('okay-pdf-thumbs', JSON.stringify(m)) } catch (e) {} }
+  const fileBadge = (name) => { const e = (name.split('.').pop() || '').toUpperCase(); return e.length > 4 ? e.slice(0, 4) : (e || 'FILE') }
+  let pdfJsP = null
+  function ensurePdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib)
+    if (!pdfJsP) pdfJsP = new Promise((res, rej) => {
+      const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+      sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(window.pdfjsLib) }
+      sc.onerror = () => { pdfJsP = null; rej(new Error('pdfjs')) }
+      document.head.appendChild(sc)
+    })
+    return pdfJsP
+  }
+  async function pdfThumb(path, url) {
+    const c = ptLoad(); if (c[path]) return c[path]
+    const lib = await ensurePdfJs()
+    const pdf = await lib.getDocument(url).promise, pg = await pdf.getPage(1), v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 420 / v0.width })
+    const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise
+    const d = cv.toDataURL('image/jpeg', 0.6), m = ptLoad(); m[path] = d; ptSave(m)
+    return d
+  }
+  function ntFromFiles(noteId, files) {
+    const base = currentUser.id + '/' + noteId, bk = sb.storage.from('images')
+    const img = files.find(f => /\.(jpe?g|png|gif|webp)$/i.test(f.name)), pdf = files.find(f => /\.pdf$/i.test(f.name))
+    let e = { k: 'none', u: '', at: Date.now() }
+    if (img) e = { k: 'img', u: bk.getPublicUrl(base + '/' + img.name).data.publicUrl, at: Date.now() }
+    else if (pdf) e = { k: 'pdf', u: base + '/' + pdf.name, at: Date.now() }
+    const c = ntLoad(); c[noteId] = e; ntSave(c)
+    return e
+  }
+  function thumbSrc(noteId) { const e = ntLoad()[noteId]; if (!e) return ''; if (e.k === 'img') return e.u; if (e.k === 'pdf') return ptLoad()[e.u] || ''; return '' }
+  function applyThumb(noteId) {
+    const card = document.querySelector('#notesList .note-card[data-id="' + noteId + '"]'); if (!card) return
+    const src = thumbSrc(noteId); let t = card.querySelector('.note-card-thumb')
+    if (!src) { if (t) t.remove(); return }
+    if (!t) { t = document.createElement('div'); t.className = 'note-card-thumb'; card.querySelector('.note-card-title').before(t) }
+    t.style.backgroundImage = 'url("' + src.replace(/"/g, '%22') + '")'
+  }
+  async function resolveThumb(noteId) {
+    const bk = sb.storage.from('images'), base = currentUser.id + '/' + noteId
+    const { data } = await bk.list(base, { limit: 50 })
+    const e = ntFromFiles(noteId, (data || []).filter(f => !f.name.endsWith('.ink.json')))
+    if (e.k === 'pdf') { try { await pdfThumb(e.u, bk.getPublicUrl(e.u).data.publicUrl) } catch (err) {} }
+    applyThumb(noteId)
+  }
+  function scheduleThumbs(list) {
+    if (demoMode || !currentUser || !navigator.onLine) return
+    const now = Date.now(), c = ntLoad(), pt = ptLoad()
+    const todo = list.filter(n => { const e = c[n.id]; return !e || now - e.at > 3600e3 || (e.k === 'pdf' && !pt[e.u]) }).slice(0, 60)
+    let i = 0
+    const worker = async () => { while (i < todo.length) { const n = todo[i++]; try { await resolveThumb(n.id) } catch (e) {} } }
+    for (let k = 0; k < 3; k++) worker()
+  }
+
   // ── File Attachments ──
   async function uploadFiles(event) {
     if (!activeNote) return
@@ -1340,12 +1419,14 @@
     if (demoMode) { container.innerHTML = ''; return }
     const { data, error } = await sb.storage.from('images').list(`${currentUser.id}/${noteId}`)
     if (error || !data || !data.length) {
+      if (!error) ntFromFiles(noteId, [])
       container.innerHTML = ''
       return
     }
     // *.ink.json은 PDF 필기 레이어를 저장해두는 내부용 사이드카 파일이라,
     // 사용자에게는 진짜 첨부파일처럼 보이면 안 되므로 목록에서 제외한다.
     const visibleFiles = data.filter(file => !file.name.endsWith('.ink.json'))
+    ntFromFiles(noteId, visibleFiles)   // 책장 썸네일 정보도 같이 갱신
     if (!visibleFiles.length) {
       container.innerHTML = ''
       return
@@ -1361,10 +1442,10 @@
       // 자세한 설명은 decodeOriginalName 근처 주석 참고.)
       const originalName = decodeOriginalName(file.name)
       const inner = isImage
-        ? `<img class="attach-img" src="${escHtml(url)}" style="cursor:pointer;" />`
-        : `<div class="attach-file" style="cursor:pointer;">${getFileIcon(originalName)} <span title="${escHtml(originalName)}">${escHtml(originalName)}</span></div>`
+        ? `<img class="attach-img" src="${escHtml(url)}" loading="lazy" style="cursor:pointer;" />`
+        : `<div class="attach-file" style="cursor:pointer;"><span class="fbadge">${escHtml(fileBadge(originalName))}</span></div>`
       // 원본 값은 data 속성에 저장 — onclick 인자 인젝션 완전 방지
-      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}"><button class="attach-download" title="다운로드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 20h14"/></svg></button>${inner}<button class="attach-rename" title="이름 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="attach-del">✕</button></div>`
+      return `<div class="attach-item" data-url="${escHtml(url)}" data-name="${escHtml(originalName)}" data-path="${escHtml(path)}">${inner}<div class="attach-cap" title="${escHtml(originalName)}">${escHtml(originalName)}</div><div class="attach-acts"><button class="attach-download" title="다운로드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 20h14"/></svg></button><button class="attach-rename" title="이름 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="attach-del" title="삭제">✕</button></div></div>`
     }).join('')
     container.querySelectorAll('.attach-item').forEach(item => {
       const rawUrl  = unescHtml(item.dataset.url)
@@ -1372,6 +1453,11 @@
       const rawPath = unescHtml(item.dataset.path)
       const clickEl = item.querySelector('img, .attach-file')
       if (clickEl) clickEl.addEventListener('click', () => openAttachment(rawUrl, rawName, rawPath))
+      const cap = item.querySelector('.attach-cap'); if (cap) cap.addEventListener('click', () => openAttachment(rawUrl, rawName, rawPath))
+      if (/\.pdf$/i.test(rawName)) {
+        // PDF는 첫 페이지를 미리보기로 보여준다
+        pdfThumb(rawPath, rawUrl).then(d => { const f = item.querySelector('.attach-file'); if (f) { f.style.backgroundImage = 'url("' + d + '")'; f.classList.add('hasthumb') } }).catch(() => {})
+      }
       item.querySelector('.attach-del').addEventListener('click', () => deleteAttachment(rawPath))
       item.querySelector('.attach-download').addEventListener('click', (e) => {
         e.stopPropagation()
