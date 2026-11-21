@@ -706,13 +706,14 @@
         if (remoteMap[t.id]) continue
         if (t.size > MAX_BYTES) { failed++; lastErr = '50MB가 넘는 곡은 올릴 수 없어요'; failNames.push(label(t)); badUp[t.id] = '50MB가 넘어요'; continue }
         // 이 기기 저장소에서 곡 데이터가 비었거나 읽히지 않으면(iOS가 정리했을 때 등) 올리지 않고 어떤 곡인지 알려준다
-        var readable = !!t.blob && t.blob.size > 0
-        if (readable) { try { await t.blob.slice(0, 1024).arrayBuffer() } catch (e) { readable = false } }
-        if (!readable) { failed++; lastErr = '곡 데이터가 이 기기에서 비어 있어요. 삭제하고 파일을 다시 추가해 주세요'; failNames.push(label(t)); badUp[t.id] = '곡 데이터가 비어 있어요'; continue }
+        // Blob을 그대로 올리면 iOS 사파리에서 빈 내용으로 전송되는 경우가 있어, 먼저 메모리로 전부 읽은 뒤 그 데이터를 올린다
+        var buf = null
+        try { buf = t.blob ? await t.blob.arrayBuffer() : null } catch (e) { buf = null }
+        if (!buf || !buf.byteLength) { failed++; lastErr = '곡 데이터가 이 기기에서 비어 있어요. 삭제하고 파일을 다시 추가해 주세요'; failNames.push(label(t)); badUp[t.id] = '곡 데이터가 비어 있어요'; continue }
         setSync('올리는 중 (' + (b + 1) + '/' + local.length + ')', true)
         var rid = makeRid(t.name)
         var ext = rid.split('.').pop()
-        var ur = await bk.upload(prefix + '/' + rid, t.blob, { contentType: MIME[ext] || 'audio/mpeg', upsert: false })
+        var ur = await bk.upload(prefix + '/' + rid, buf, { contentType: MIME[ext] || 'audio/mpeg', upsert: false })
         if (ur.error) { failed++; lastErr = /no content/i.test(ur.error.message || '') ? '곡 데이터가 비어 있어요' : ur.error.message; failNames.push(label(t)); badUp[t.id] = lastErr; continue }
         remoteMap[t.id] = rid; saveMap(); have[rid] = true; up++
         var oi = order.indexOf('l:' + t.id); if (oi > -1) { order[oi] = rid; try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)) } catch (e) {} }
