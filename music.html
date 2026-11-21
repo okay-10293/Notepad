@@ -266,6 +266,7 @@
 
   // ── 목록 렌더 ──
   var dragging = false
+  var badUp = {}   // 올리지 못한 곡 id → 이유 (목록에 표시)
   function render() {
     if (dragging) return
     var ul = $('list')
@@ -277,10 +278,11 @@
       var li = document.createElement('li')
       if (i === cur) li.className = 'cur'
       li.innerHTML = '<button class="grip" title="꾹 눌러서 순서 바꾸기" aria-label="순서 바꾸기">' + ic('grip') + '</button><span class="idx">' + (i === cur && !audio.paused ? ic('eq') : (i + 1)) + '</span>' +
-        '<span class="name"></span><span class="size">' + (t.size ? mb(t.size) : '') + (t.remote ? ' · 클라우드' : '') + '</span>' +
+        '<span class="name"></span><span class="size">' + (t.size ? mb(t.size) : '') + (t.remote ? ' · 클라우드' : '') + (badUp[t.id] ? ' · ⚠ 업로드 실패' : '') + '</span>' +
         '<button class="del ren" title="이름 수정" aria-label="이름 수정">' + ic('edit') + '</button>' +
         '<button class="del" title="삭제" aria-label="삭제">' + ic('close') + '</button>'
       li.querySelector('.name').textContent = label(t)
+      if (badUp[t.id]) li.title = badUp[t.id]
       li.querySelector('.name').onclick = function () { skipN = 0; play(i) }
       li.querySelector('.ren').onclick = function () { renameTrack(i) }
       li.querySelectorAll('.del')[1].onclick = function () { removeTrack(i) }
@@ -662,7 +664,8 @@
   async function runSync() {
     if (syncing || !sb || !uid || !navigator.onLine) return
     syncing = true
-    var up = 0, down = 0, gone = 0, failed = 0, lastErr = ''
+    var up = 0, down = 0, gone = 0, failed = 0, lastErr = '', failNames = []
+    badUp = {}
     try {
       var last = localStorage.getItem(UID_KEY)
       if (last && last !== uid) { var id0 = curId(); await wipeSynced(); fixCur(id0) }   // 다른 계정이면 이전 계정의 동기화 곡은 이 기기에서 치움
@@ -701,12 +704,16 @@
       for (var b = 0; b < local.length; b++) {
         var t = local[b]
         if (remoteMap[t.id]) continue
-        if (t.size > MAX_BYTES) { failed++; lastErr = '50MB가 넘는 곡은 올릴 수 없어요'; continue }
+        if (t.size > MAX_BYTES) { failed++; lastErr = '50MB가 넘는 곡은 올릴 수 없어요'; failNames.push(label(t)); badUp[t.id] = '50MB가 넘어요'; continue }
+        // 이 기기 저장소에서 곡 데이터가 비었거나 읽히지 않으면(iOS가 정리했을 때 등) 올리지 않고 어떤 곡인지 알려준다
+        var readable = !!t.blob && t.blob.size > 0
+        if (readable) { try { await t.blob.slice(0, 1024).arrayBuffer() } catch (e) { readable = false } }
+        if (!readable) { failed++; lastErr = '곡 데이터가 이 기기에서 비어 있어요. 삭제하고 파일을 다시 추가해 주세요'; failNames.push(label(t)); badUp[t.id] = '곡 데이터가 비어 있어요'; continue }
         setSync('올리는 중 (' + (b + 1) + '/' + local.length + ')', true)
         var rid = makeRid(t.name)
         var ext = rid.split('.').pop()
         var ur = await bk.upload(prefix + '/' + rid, t.blob, { contentType: MIME[ext] || 'audio/mpeg', upsert: false })
-        if (ur.error) { failed++; lastErr = ur.error.message; continue }
+        if (ur.error) { failed++; lastErr = /no content/i.test(ur.error.message || '') ? '곡 데이터가 비어 있어요' : ur.error.message; failNames.push(label(t)); badUp[t.id] = lastErr; continue }
         remoteMap[t.id] = rid; saveMap(); have[rid] = true; up++
         var oi = order.indexOf('l:' + t.id); if (oi > -1) { order[oi] = rid; try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)) } catch (e) {} }
       }
@@ -743,7 +750,7 @@
 
       fixCur(idBefore)
       render(); updateNow()
-      if (failed) setSync('일부 곡을 못 올렸어요 (' + failed + '곡): ' + lastErr)
+      if (failed) setSync('일부 곡을 못 올렸어요 (' + failed + '곡): ' + lastErr + ' — ' + failNames.join(', '))
       else setSync('동기화됨 · ' + tracks.length + '곡' + ((up || down || gone) ? ' (올림 ' + up + ' / 클라우드 ' + down + ' / 삭제 ' + gone + ')' : ''), true)
       cacheQueue()
     } catch (e) {
