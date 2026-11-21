@@ -443,11 +443,31 @@
   })
   // 깨진 파일은 건너뛰되, 전부 깨졌을 때 무한 반복되지 않게 연속 오류 횟수 제한
   var errStreak = 0, skipN = 0
+  // 곡 중간에서 재생 오류가 나면(파일 앱은 읽는데 브라우저 재생기는 못 읽는 구간 등) 바로 다음 곡으로 넘기지 않고,
+  // 곡을 다시 불러와 그 지점 조금 뒤부터 이어서 재생한다 (최대 6번, 매번 2초씩 더 건너뜀)
+  var recN = 0, recId = null
+  function tryRecover() {
+    var t = audio.currentTime, d = audio.duration
+    if (!isFinite(t) || t < 1 || (isFinite(d) && d - t < 1.5)) return false   // 시작부터 안 되는 파일이거나 거의 끝난 곡은 제외
+    var id = curId(); if (recId !== id) { recId = id; recN = 0 }
+    if (++recN > 6) return false
+    var at = t + 2
+    audio.load()
+    audio.addEventListener('loadedmetadata', function f() {
+      audio.removeEventListener('loadedmetadata', f)
+      try { audio.currentTime = at } catch (e) {}
+      var pr = audio.play(); if (pr && pr.catch) pr.catch(function () {})
+    })
+    return true
+  }
   audio.addEventListener('error', function () {
     if (cur === -1) return
+    var tt = tracks[cur], code = audio.error ? audio.error.code : '?', pos = fmt(audio.currentTime) + ' / ' + fmt(audio.duration)
+    if (tryRecover()) { setSync('"' + (tt ? label(tt) : '') + '" 재생 오류(코드 ' + code + ', ' + pos + ') · 그 부분을 건너뛰고 이어서 재생해요'); return }
     errStreak++
     if (errStreak >= tracks.length) { errStreak = 0; alert('재생할 수 없는 파일이에요. 삭제 후 다시 추가해주세요.'); return }
     next(true)
+    setSync('"' + (tt ? label(tt) : '') + '" 재생 오류(코드 ' + code + ', ' + pos + ') · 다음 곡으로 넘어갔어요')
   })
   audio.addEventListener('playing', function () { errStreak = 0; skipN = 0 })
 
