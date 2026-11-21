@@ -74,6 +74,25 @@
     .badge { font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 8px; background: var(--border); color: var(--ink-2); display: inline-flex; align-items: center; gap: 0.25rem; }
     .badge svg { width: 12px; height: 12px; stroke-width: 3; }
     .badge.ok { background: var(--accent-light); color: var(--accent); }
+    /* 곡 순서 바꾸기: 맨 왼쪽 손잡이를 꾹 눌러 끌기 */
+    li .grip { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--ink-3); background: transparent; border-color: transparent; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; margin-left: -0.2rem; }
+    li .grip svg { width: 18px; height: 18px; }
+    li.shift { transition: transform 0.15s; }
+    li.drag { position: relative; z-index: 5; background: var(--surface); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.2); transition: none; }
+    li.drag .grip { cursor: grabbing; color: var(--accent); }
+    /* 다른 화면으로 이동했을 때: 그 화면 아래에 작은 노래바 */
+    #host { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: var(--bg); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+    #host[hidden] { display: none; }
+    #hostFrame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--bg); }
+    #mini { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: 0.15rem; height: calc(52px + env(safe-area-inset-bottom)); padding: 0 0.4rem env(safe-area-inset-bottom) 0.9rem; border-top: 1px solid var(--border); background: var(--surface); }
+    #miniProg { position: absolute; left: 0; right: 0; top: -1px; height: 2px; }
+    #miniProgBar { display: block; height: 100%; width: 0; background: var(--accent); }
+    #miniInfo { flex: 1; min-width: 0; text-align: left; border: none; background: none; padding: 0.6rem 0; font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+    #miniTitle { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mbtn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); background: transparent; border-color: transparent; flex-shrink: 0; }
+    .mbtn svg { width: 18px; height: 18px; }
+    .mbtn.main { color: var(--ink); }
+    .mbtn.main svg { width: 22px; height: 22px; }
   </style>
 </head>
 <body>
@@ -121,6 +140,17 @@
   </div>
 </div>
 
+<div id="host" hidden>
+  <iframe id="hostFrame" title="오케이 스튜디오" allow="clipboard-read; clipboard-write; fullscreen" allowfullscreen></iframe>
+  <div id="mini">
+    <div id="miniProg"><i id="miniProgBar"></i></div>
+    <button type="button" id="miniInfo" aria-label="음악 화면으로 돌아가기"><span id="miniTitle">재생 중인 곡 없음</span></button>
+    <button type="button" class="mbtn" id="miniPrev" aria-label="이전"></button>
+    <button type="button" class="mbtn main" id="miniPlay" aria-label="재생/일시정지"></button>
+    <button type="button" class="mbtn" id="miniNext" aria-label="다음"></button>
+  </div>
+</div>
+
 <audio id="audio" preload="auto" playsinline></audio>
 
 <script src="/menu.js"></script>
@@ -128,6 +158,8 @@
 (function () {
   'use strict'
   var $ = function (id) { return document.getElementById(id) }
+  // 다른 화면 위에 프레임으로 열린 상태에서 음악 화면이 또 열리면(메뉴/홈 링크), 소리를 겹쳐 내지 않고 원래 음악 화면으로 돌아간다
+  if (window.parent !== window) { try { if (window.parent.OkayMusicHost) { window.parent.OkayMusicHost.close(); return } } catch (e) {} }
 
   // ── SVG 아이콘 ──
   var ICONS = {
@@ -145,6 +177,7 @@
     close:   ['st', '<path d="M18 6 6 18M6 6l12 12"/>'],
     eq:      ['st', '<path d="M5 20V10M12 20V4M19 20v-7"/>'],
     check:   ['st', '<path d="M20 6 9 17l-5-5"/>'],
+    grip:    ['fl', '<circle cx="9" cy="5" r="1.7"/><circle cx="15" cy="5" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="19" r="1.7"/><circle cx="15" cy="19" r="1.7"/>'],
     cloud:   ['st', '<path d="M18 10a6 6 0 0 0-11.6-2A4.5 4.5 0 0 0 7 17h11a3.5 3.5 0 0 0 0-7z"/>']
   }
   function ic(n) { var d = ICONS[n]; return '<svg viewBox="0 0 24 24" class="' + d[0] + '" aria-hidden="true">' + d[1] + '</svg>' }
@@ -154,6 +187,9 @@
   $('btnPlay').innerHTML = ic('play')
   $('btnNext').innerHTML = ic('next')
   $('btnRepeat').innerHTML = ic('repeat')
+  $('miniPrev').innerHTML = ic('prev')
+  $('miniPlay').innerHTML = ic('play')
+  $('miniNext').innerHTML = ic('next')
   var audio = $('audio')
   function addRecent(it, u) { try { var k = 'okay-recent', a = JSON.parse(localStorage.getItem(k) || '[]'); a = a.filter(function (x) { return x.key !== it.key }); it.at = Date.now(); it.u = u; a.unshift(it); localStorage.setItem(k, JSON.stringify(a.slice(0, 30))) } catch (e) {} }
   var tracks = []          // { id, name, size, blob }
@@ -184,7 +220,7 @@
     })
   }
   function loadAll() {
-    return tx('readonly', function (s) { return s.getAll() }).then(function (rows) { tracks = (rows || []).concat(ghost) })
+    return tx('readonly', function (s) { return s.getAll() }).then(function (rows) { tracks = (rows || []).concat(ghost); sortTracks() })
   }
 
   // ── 유틸 ──
@@ -201,10 +237,37 @@
   var titles = {}
   try { titles = JSON.parse(localStorage.getItem(TITLES_KEY) || '{}') || {} } catch (e) { titles = {} }
   function saveTitles() { try { localStorage.setItem(TITLES_KEY, JSON.stringify(titles)) } catch (e) {} }
+
+  // 곡 순서: 곡 키(서버 파일명, 아직 안 올린 곡은 'l:번호')를 순서대로 저장. 이 목록에 없는 곡은 맨 뒤에 붙는다.
+  var ORDER_KEY = 'okay-music-order', ODIRTY_KEY = 'okay-music-order-dirty'
+  var order = []
+  try { order = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]') || [] } catch (e) { order = [] }
+  function tkey(t) { return t.remote ? t.rid : (remoteMap[t.id] || ('l:' + t.id)) }
+  function sortTracks() {
+    if (!order.length) return
+    var pos = {}
+    order.forEach(function (k, n) { pos[k] = n })
+    tracks = tracks.map(function (t, n) { var q = pos[tkey(t)]; return { t: t, n: n, p: q === undefined ? order.length + n : q } })
+      .sort(function (a, b) { return a.p - b.p || a.n - b.n }).map(function (x) { return x.t })
+  }
+  function saveOrder() {
+    order = tracks.map(tkey)
+    try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); localStorage.setItem(ODIRTY_KEY, '1') } catch (e) {}
+    pushOrder()
+  }
+  function moveTrack(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= tracks.length || to >= tracks.length) return
+    var ct = tracks[cur], t = tracks.splice(from, 1)[0]
+    tracks.splice(to, 0, t)
+    cur = ct ? tracks.indexOf(ct) : -1
+    saveOrder()
+  }
   function label(t) { return titles[t.id] || t.title || clean(t.name) }
 
   // ── 목록 렌더 ──
+  var dragging = false
   function render() {
+    if (dragging) return
     var ul = $('list')
     ul.innerHTML = ''
     if (!tracks.length) {
@@ -213,7 +276,7 @@
     tracks.forEach(function (t, i) {
       var li = document.createElement('li')
       if (i === cur) li.className = 'cur'
-      li.innerHTML = '<span class="idx">' + (i === cur && !audio.paused ? ic('eq') : (i + 1)) + '</span>' +
+      li.innerHTML = '<button class="grip" title="꾹 눌러서 순서 바꾸기" aria-label="순서 바꾸기">' + ic('grip') + '</button><span class="idx">' + (i === cur && !audio.paused ? ic('eq') : (i + 1)) + '</span>' +
         '<span class="name"></span><span class="size">' + (t.size ? mb(t.size) : '') + (t.remote ? ' · 클라우드' : '') + '</span>' +
         '<button class="del ren" title="이름 수정" aria-label="이름 수정">' + ic('edit') + '</button>' +
         '<button class="del" title="삭제" aria-label="삭제">' + ic('close') + '</button>'
@@ -221,10 +284,81 @@
       li.querySelector('.name').onclick = function () { skipN = 0; play(i) }
       li.querySelector('.ren').onclick = function () { renameTrack(i) }
       li.querySelectorAll('.del')[1].onclick = function () { removeTrack(i) }
+      bindDrag(li.querySelector('.grip'), li, i)
       ul.appendChild(li)
     })
     var total = tracks.reduce(function (a, t) { return a + t.size }, 0)
     $('stat').textContent = tracks.length ? (tracks.length + '곡 · ' + mb(total)) : ''
+  }
+
+  // 손잡이를 꾹 누르면(0.3초) 곡이 떠오르고, 끌어서 원하는 자리에 놓으면 순서가 바뀐다
+  function bindDrag(grip, li, i) {
+    var timer = null, on = false, pid = null, cx0 = 0, cy0 = 0, cy = 0, startPage = 0, rects = [], lis = [], target = i, scroller = null
+    function update() {
+      var dy = cy + window.scrollY - startPage, h = rects[i].h, c = rects[i].top + h / 2 + dy
+      li.style.transform = 'translateY(' + dy + 'px)'
+      target = i
+      for (var j = 0; j < rects.length; j++) {
+        var m = rects[j].top + rects[j].h / 2
+        if (j > i && c > m) target = j
+        if (j < i && c < m && j < target) target = j
+      }
+      for (var k = 0; k < lis.length; k++) {
+        if (k === i) continue
+        var sh = 0
+        if (k > i && k <= target) sh = -h
+        else if (k < i && k >= target) sh = h
+        lis[k].style.transform = sh ? 'translateY(' + sh + 'px)' : ''
+      }
+    }
+    function begin() {
+      on = true; dragging = true
+      lis = Array.prototype.slice.call(li.parentNode.children)
+      rects = lis.map(function (x) { var r = x.getBoundingClientRect(); return { top: r.top + window.scrollY, h: r.height } })
+      startPage = cy + window.scrollY
+      li.classList.add('drag')
+      lis.forEach(function (x) { if (x !== li) x.classList.add('shift') })
+      try { grip.setPointerCapture(pid) } catch (e) {}
+      if (navigator.vibrate) { try { navigator.vibrate(12) } catch (e) {} }
+      // 화면 위/아래 끝으로 끌면 목록이 같이 스크롤된다
+      scroller = setInterval(function () {
+        var vh = window.innerHeight, sp = 0
+        if (cy < 70) sp = -Math.ceil((70 - cy) / 6)
+        else if (cy > vh - 70) sp = Math.ceil((cy - (vh - 70)) / 6)
+        if (sp) { window.scrollBy(0, sp); update() }
+      }, 16)
+    }
+    function end(cancel) {
+      clearTimeout(timer)
+      if (!on) return
+      clearInterval(scroller); on = false; dragging = false
+      try { grip.releasePointerCapture(pid) } catch (e) {}
+      lis.forEach(function (x) { x.style.transform = ''; x.classList.remove('drag', 'shift') })
+      if (!cancel) moveTrack(i, target)
+      render()
+    }
+    grip.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      pid = e.pointerId; cx0 = e.clientX; cy0 = cy = e.clientY
+      clearTimeout(timer)
+      timer = setTimeout(begin, e.pointerType === 'mouse' ? 120 : 300)
+    })
+    grip.addEventListener('pointermove', function (e) {
+      cy = e.clientY
+      if (!on) { if (Math.abs(e.clientY - cy0) > 12 || Math.abs(e.clientX - cx0) > 12) clearTimeout(timer); return }
+      e.preventDefault(); update()
+    })
+    grip.addEventListener('pointerup', function () { end(false) })
+    grip.addEventListener('pointercancel', function () { end(true) })
+    grip.addEventListener('contextmenu', function (e) { e.preventDefault() })
+    grip.addEventListener('keydown', function (e) {   // 키보드: 손잡이에서 ↑ ↓
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+      e.preventDefault()
+      var j = i + (e.key === 'ArrowUp' ? -1 : 1)
+      if (j < 0 || j >= tracks.length) return
+      moveTrack(i, j); render()
+      var g = $('list').children[j] && $('list').children[j].querySelector('.grip'); if (g) g.focus()
+    })
   }
 
   function updateNow() {
@@ -232,6 +366,8 @@
     $('nowTitle').textContent = t ? label(t) : '재생 중인 곡 없음'
     $('nowSub').textContent = t ? ((cur + 1) + ' / ' + tracks.length) : ''
     $('btnPlay').innerHTML = ic(audio.paused ? 'play' : 'pause')
+    $('miniPlay').innerHTML = ic(audio.paused ? 'play' : 'pause')
+    $('miniTitle').textContent = t ? label(t) : '재생 중인 곡 없음'
     document.title = t ? (label(t) + ' · 오케이 음악') : '오케이 음악'
     if ('mediaSession' in navigator && t) {
       try { navigator.mediaSession.metadata = new MediaMetadata({ title: label(t), artist: '오케이 음악' }) } catch (e) {}
@@ -301,6 +437,7 @@
     if (audio.duration) $('seek').value = Math.round(audio.currentTime / audio.duration * 1000)
     $('tCur').textContent = fmt(audio.currentTime)
     $('tDur').textContent = fmt(audio.duration)
+    $('miniProgBar').style.width = (audio.duration ? audio.currentTime / audio.duration * 100 : 0) + '%'
   })
   // 깨진 파일은 건너뛰되, 전부 깨졌을 때 무한 반복되지 않게 연속 오류 횟수 제한
   var errStreak = 0, skipN = 0
@@ -500,6 +637,7 @@
   function wipeSynced() {
     var ids = Object.keys(remoteMap).map(Number)
     remoteMap = {}; saveMap(); ghost = []; saveGhost(); pending = []; savePending(); setDirty(false)
+    order = []; try { localStorage.removeItem(ORDER_KEY); localStorage.removeItem(ODIRTY_KEY) } catch (e) {}
     return ids.reduce(function (p, id) { return p.then(function () { delete titles[id]; return tx('readwrite', function (s) { return s.delete(id) }) }) }, Promise.resolve())
       .then(function () { saveTitles(); return loadAll() })
   }
@@ -511,6 +649,14 @@
     var blob = new Blob([JSON.stringify(obj)], { type: 'application/json' })
     return sb.storage.from(BUCKET).upload(uid + '/music/titles.json', blob, { upsert: true, contentType: 'application/json' })
       .then(function (r) { if (!r.error) setDirty(false) }).catch(function () {})
+  }
+
+  function pushOrder() {
+    if (!sb || !uid || !navigator.onLine) return Promise.resolve()
+    var arr = order.filter(function (k) { return k.indexOf('l:') !== 0 })
+    var blob = new Blob([JSON.stringify(arr)], { type: 'application/json' })
+    return sb.storage.from(BUCKET).upload(uid + '/music/order.json', blob, { upsert: true, contentType: 'application/json' })
+      .then(function (r) { if (!r.error) { try { localStorage.removeItem(ODIRTY_KEY) } catch (e) {} } }).catch(function () {})
   }
 
   async function runSync() {
@@ -527,7 +673,7 @@
       var lr = await bk.list(prefix, { limit: 1000 })
       if (lr.error) throw lr.error
       var remote = {}
-      ;(lr.data || []).forEach(function (o) { if (o.name !== 'titles.json' && pending.indexOf(o.name) === -1) remote[o.name] = o })
+      ;(lr.data || []).forEach(function (o) { if (o.name !== 'titles.json' && o.name !== 'order.json' && pending.indexOf(o.name) === -1) remote[o.name] = o })
 
       // 1) 다른 기기에서 지운 곡 → 이 기기에서도 삭제
       var idBefore = curId(), toRemove = []
@@ -562,6 +708,7 @@
         var ur = await bk.upload(prefix + '/' + rid, t.blob, { contentType: MIME[ext] || 'audio/mpeg', upsert: false })
         if (ur.error) { failed++; lastErr = ur.error.message; continue }
         remoteMap[t.id] = rid; saveMap(); have[rid] = true; up++
+        var oi = order.indexOf('l:' + t.id); if (oi > -1) { order[oi] = rid; try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)) } catch (e) {} }
       }
 
       // 3) 곡 이름(수정한 제목) 맞추기
@@ -580,6 +727,19 @@
         })
         saveTitles()
       } else { await pushTitles() }
+
+      // 곡 순서 맞추기 (이 기기에서 바꾼 게 아직 안 올라갔으면 올리고, 아니면 서버 순서를 따른다)
+      var ro = null
+      try {
+        var orr = await bk.download(prefix + '/order.json')
+        if (!orr.error && orr.data) ro = JSON.parse(await orr.data.text())
+      } catch (e) { ro = null }
+      if (localStorage.getItem(ODIRTY_KEY)) { await pushOrder() }
+      else if (Array.isArray(ro)) {
+        order = ro.filter(function (k) { return typeof k === 'string' })
+        try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)) } catch (e) {}
+        await loadAll()
+      }
 
       fixCur(idBefore)
       render(); updateNow()
@@ -617,6 +777,43 @@
   $('ac').checked = localStorage.getItem('okay-music-autocache') !== '0'
   $('ac').onchange = function () { try { localStorage.setItem('okay-music-autocache', this.checked ? '1' : '0') } catch (e) {} if (this.checked) cacheQueue() }
   window.addEventListener('online', function () { if (sb && uid) runSync(); else initSync() })
+
+  // ── 다른 오케이 스튜디오 화면으로 이동해도 노래가 끊기지 않게 ──
+  // 페이지를 떠나면 소리가 멈추므로, 이 화면은 그대로 둔 채 이동할 화면을 그 위에 프레임으로 열고 아래에 작은 노래바를 띄운다.
+  var host = $('host'), frame = $('hostFrame'), hostOpen = false
+  function openHost(url) {
+    if (!hostOpen) { try { history.pushState({ okayHost: 1 }, '') } catch (e) {} }
+    hostOpen = true
+    host.hidden = false
+    document.documentElement.style.overflow = 'hidden'
+    frame.src = url
+  }
+  function closeHost() {
+    if (!hostOpen) return
+    hostOpen = false
+    host.hidden = true
+    document.documentElement.style.overflow = ''
+    frame.src = 'about:blank'
+  }
+  window.OkayMusicHost = { close: function () { setTimeout(closeHost, 0) } }
+  window.addEventListener('popstate', function (e) { if (hostOpen && !(e.state && e.state.okayHost)) closeHost() })
+  $('miniInfo').onclick = closeHost
+  $('miniPlay').onclick = toggle
+  $('miniNext').onclick = function () { next(false) }
+  $('miniPrev').onclick = prev
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    var a = e.target.closest && e.target.closest('a[href]')
+    if (!a || a.target || a.hasAttribute('download')) return
+    var u; try { u = new URL(a.href, location.href) } catch (x) { return }
+    if (u.origin !== location.origin) return
+    var path = u.pathname.replace(/\/index\.html$/, '/').replace(/\.html$/, '') || '/'
+    document.documentElement.classList.remove('okm-open')
+    if (path === '/music') { e.preventDefault(); closeHost(); return }   // 이미 음악 화면이면 새로고침하지 않는다
+    if (cur === -1) return                                                 // 재생할 곡을 고른 적 없으면 그냥 이동
+    e.preventDefault()
+    openHost(u.pathname + u.search + u.hash)
+  }, true)
 
   // ── 시작 ──
   openDB().then(function (d) { db = d; return loadAll() }).then(function () { render(); updateNow(); initSync() })
