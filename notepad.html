@@ -254,6 +254,19 @@
     .attach-acts button svg { width: 16px; height: 16px; }
     .attach-acts button:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); opacity: 1; }
     @media (max-width: 640px) { .attach-area { grid-template-columns: repeat(2, 1fr); gap: 10px; } .attach-item .attach-img, .attach-item .attach-file { height: 130px; } }
+    /* 노트 안 첨부파일: 네모난 카드 + 아래 한 줄 버튼 */
+    .attach-item { display: flex; flex-direction: column; border-radius: 0; box-shadow: none; }
+    .attach-item .attach-img, .attach-item .attach-file { border-radius: 0; }
+    .attach-cap { order: 2; padding: 0 0.8rem; height: 36px; line-height: 36px; box-sizing: border-box; font-size: 0.8rem; font-weight: 500; color: var(--ink); border-top: 1px solid var(--border); }
+    .attach-acts { order: 3; position: static; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--border); }
+    .attach-acts .attach-del, .attach-acts .attach-download, .attach-acts .attach-rename { width: auto; height: 36px; border: 0; border-radius: 0; box-shadow: none; background: var(--bg); color: var(--ink-2); opacity: 1; }
+    .attach-acts .attach-download, .attach-acts .attach-rename { border-right: 1px solid var(--border); }
+    .attach-acts .attach-del { color: #c0392b; font-size: 15px; }
+    .attach-acts button svg { width: 17px; height: 17px; }
+    .attach-acts button:hover { background: var(--accent); color: var(--on-accent); }
+    .attach-acts .attach-del:hover { background: #c0392b; color: #fff; }
+    .attach-acts button:active { background: var(--accent-light); color: var(--ink); }
+    .fbadge { border-radius: 0; border-width: 2px; }
     /* 책장 카드 썸네일 */
     .note-card.has-thumb { padding-right: calc(1.1rem + 84px + 0.8rem); }
     .note-card.has-thumb .note-card-check { z-index: 2; }
