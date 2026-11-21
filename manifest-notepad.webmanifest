@@ -1,0 +1,25 @@
+{
+  "name": "노트패드 · 오케이 스튜디오",
+  "short_name": "노트패드",
+  "description": "글과 파일을 저장하는 노트패드",
+  "id": "/notepad.html",
+  "start_url": "/notepad.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/assets/favicon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

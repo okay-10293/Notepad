@@ -1,0 +1,25 @@
+{
+  "name": "PDF 오프너 · 오케이 스튜디오",
+  "short_name": "PDF",
+  "description": "PDF 열기와 필기",
+  "id": "/pdf.html",
+  "start_url": "/pdf.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/assets/favicon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

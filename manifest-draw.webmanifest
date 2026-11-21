@@ -1,0 +1,25 @@
+{
+  "name": "드로잉 · 오케이 스튜디오",
+  "short_name": "드로잉",
+  "description": "그림 그리기",
+  "id": "/draw.html",
+  "start_url": "/draw.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/assets/favicon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
