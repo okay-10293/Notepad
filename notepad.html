@@ -255,7 +255,7 @@
     .attach-acts button:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); opacity: 1; }
     @media (max-width: 640px) { .attach-area { grid-template-columns: repeat(2, 1fr); gap: 10px; } .attach-item .attach-img, .attach-item .attach-file { height: 130px; } }
     /* 책장 카드 썸네일 */
-    .note-card-thumb { margin: -1rem -1.1rem 0.3rem; height: 130px; border-radius: 8px 8px 0 0; background: var(--surface) center top / cover no-repeat; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .note-card-thumb { display: inline-block; width: 22px; height: 22px; border-radius: 5px; margin-right: 0.45rem; vertical-align: middle; position: relative; top: -1px; border: 1px solid var(--border); background: var(--surface) center / cover no-repeat; }
     .attach-rename:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     .attach-rename-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: init-spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
 
@@ -1195,8 +1195,8 @@
       const ts = thumbSrc(n.id)
       const thumb = ts ? `<div class="note-card-thumb" style="background-image:url('${escHtml(ts)}')"></div>` : ''
       return `<div class="note-card ${activeClass}" data-id="${n.id}" ${selectedStyle} onclick="${clickFn}">
-        ${checkbox}${thumb}
-        <div class="note-card-title">${icon}${escHtml(n.title || '제목 없음')}</div>
+        ${checkbox}
+        <div class="note-card-title">${thumb}${icon}${escHtml(n.title || '제목 없음')}</div>
         <div class="note-card-preview">${preview}</div>
         <div class="note-card-date">${formatDate(n.updated_at)}</div>
       </div>`
@@ -1387,7 +1387,7 @@
     const card = document.querySelector('#notesList .note-card[data-id="' + noteId + '"]'); if (!card) return
     const src = thumbSrc(noteId); let t = card.querySelector('.note-card-thumb')
     if (!src) { if (t) t.remove(); return }
-    if (!t) { t = document.createElement('div'); t.className = 'note-card-thumb'; card.querySelector('.note-card-title').before(t) }
+    if (!t) { t = document.createElement('div'); t.className = 'note-card-thumb'; card.querySelector('.note-card-title').prepend(t) }
     t.style.backgroundImage = 'url("' + src.replace(/"/g, '%22') + '")'
   }
   async function resolveThumb(noteId) {
