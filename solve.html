@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AI 문제풀이 · 오케이 스튜디오</title>
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <link rel="manifest" href="/manifest-solve.webmanifest" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="AI 풀이" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" />
+  <style>
+    :root { --bg: #ffffff; --surface: #f6f6f6; --ink: #0a0a0a; --ink-2: #5c5c5c; --ink-3: #9b9b9b; --accent: #0a0a0a; --border: #e6e6e6; --on-accent: #ffffff; --err: #c0392b; color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #121212; --ink: #f5f5f5; --ink-2: #a8a8a8; --ink-3: #6e6e6e; --accent: #f5f5f5; --border: #2a2a2a; --on-accent: #0a0a0a; --err: #ff8a80; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; line-height: 1.6; min-height: 100dvh; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; }
+    h1 { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+    .sub { color: var(--ink-2); font-size: 0.88rem; margin-top: 0.2rem; }
+    .card { border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem; margin-top: 1rem; }
+    .btn { border: 1px solid var(--border); background: transparent; color: var(--ink); border-radius: 8px; padding: 0.6rem 1rem; font: inherit; font-size: 0.92rem; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-p { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .drop { border: 2px dashed var(--border); border-radius: 12px; padding: 1.6rem 1rem; text-align: center; color: var(--ink-2); font-size: 0.92rem; cursor: pointer; }
+    .drop.over { border-color: var(--ink); color: var(--ink); }
+    .thumbs { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
+    .th { position: relative; width: 84px; height: 84px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface) center / cover no-repeat; display: grid; place-items: center; font-size: 0.8rem; font-weight: 800; color: var(--ink-2); }
+    .th button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--ink); cursor: pointer; line-height: 1; }
+    .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-top: 0.9rem; font-size: 0.9rem; }
+    .row label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+    textarea { width: 100%; margin-top: 0.8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--ink); font: inherit; font-size: 0.92rem; padding: 0.7rem 0.8rem; resize: vertical; min-height: 64px; }
+    #msg { margin-top: 0.8rem; font-size: 0.88rem; color: var(--ink-2); min-height: 1.2em; white-space: pre-wrap; }
+    #msg.err { color: var(--err); }
+    .note { font-size: 0.78rem; color: var(--ink-3); margin-top: 0.8rem; line-height: 1.7; }
+    #result { display: none; }
+    #out { white-space: pre-wrap; word-break: break-word; font-size: 0.98rem; line-height: 1.9; }
+    #out.hand { font-family: 'Nanum Pen Script', 'Pretendard Variable', cursive; font-size: 1.45rem; line-height: 1.7; }
+    .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    #login { display: none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <nav><div><h1>AI 문제풀이</h1><div class="sub">문제 사진이나 PDF를 올리면 풀이를 써 줍니다</div></div><span id="mslot"></span></nav>
+
+  <div id="login" class="card">로그인이 필요합니다. <a href="/?login=1" style="color:var(--ink);font-weight:700;">오케이 스튜디오에서 로그인</a>한 뒤 다시 열어 주세요. (홈 화면 앱은 사파리와 로그인이 따로입니다)</div>
+
+  <div id="main" class="card" style="display:none">
+    <div class="drop" id="drop">사진 또는 PDF 선택 (최대 5개) · 여기에 끌어다 놓아도 됩니다<input id="pick" type="file" accept="image/*,application/pdf" multiple hidden /></div>
+    <div class="thumbs" id="thumbs"></div>
+    <textarea id="memo" placeholder="요청 사항 (선택) 예: 3번과 5번만 풀어 줘, 풀이를 더 자세히"></textarea>
+    <div class="row">
+      <label><input type="radio" name="mode" value="fast" checked /> 빠른 풀이 (저렴)</label>
+      <label><input type="radio" name="mode" value="accurate" /> 정확한 풀이 (비용 약 20배)</label>
+    </div>
+    <div class="row"><button class="btn btn-p" id="go" disabled>풀기</button><span id="left" style="color:var(--ink-3);font-size:0.82rem;"></span></div>
+    <div id="msg"></div>
+    <div class="note">AI 풀이는 틀릴 수 있습니다. 특히 손글씨나 그림이 섞인 문제는 잘못 읽을 수 있으니 꼭 검토해서 쓰세요. 올린 파일은 풀이를 위해 AI 제공사(Anthropic)에 전달되며 이 서비스에 저장되지 않습니다. 하루 사용 횟수에 제한이 있습니다.</div>
+  </div>
+
+  <div id="result" class="card">
+    <div id="out"></div>
+    <div class="acts">
+      <button class="btn" id="hand">손글씨체로 보기</button>
+      <button class="btn" id="copy">복사</button>
+      <button class="btn btn-p" id="save">노트패드에 필기로 저장</button>
+      <a class="btn" id="open" href="#" style="display:none">저장된 노트 열기</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/menu.js"></script>
+<script>
+(function () {
+  const SB_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg'
+  const $ = (id) => document.getElementById(id)
+  const MAX_FILES = 5, MAX_B64 = 6000000
+  let sb = null, session = null, files = [], lastText = ''
+
+  const msg = (t, err) => { const m = $('msg'); m.textContent = t || ''; m.className = err ? 'err' : '' }
+  const readB64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob) })
+
+  // 사진은 가로·세로 1600px 이내 JPEG로 줄여서 올린다 (전송량과 AI 입력 비용이 줄어든다)
+  async function shrink(file) {
+    const url = URL.createObjectURL(file)
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('image')); i.src = url })
+      const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight))
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k)
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height)
+      const b = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85))
+      return { type: 'image/jpeg', data: await readB64(b), preview: URL.createObjectURL(b), name: file.name }
+    } finally { URL.revokeObjectURL(url) }
+  }
+
+  function renderThumbs() {
+    const box = $('thumbs'); box.textContent = ''
+    files.forEach((f, i) => {
+      const d = document.createElement('div'); d.className = 'th'
+      if (f.preview) d.style.backgroundImage = 'url("' + f.preview + '")'; else d.textContent = 'PDF'
+      const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '빼기')
+      x.onclick = () => { files.splice(i, 1); renderThumbs() }
+      d.appendChild(x); box.appendChild(d)
+    })
+    $('go').disabled = !files.length
+  }
+
+  async function addFiles(list) {
+    msg('')
+    for (const f of Array.from(list)) {
+      if (files.length >= MAX_FILES) { msg('파일은 최대 ' + MAX_FILES + '개까지 올릴 수 있어요.', true); break }
+      try {
+        if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
+          if (f.size > 4.5e6) { msg('PDF는 4.5MB 이하만 올릴 수 있어요. 페이지를 나눠서 올려 주세요.', true); continue }
+          files.push({ type: 'application/pdf', data: await readB64(f), name: f.name })
+        } else if (f.type.startsWith('image/')) files.push(await shrink(f))
+        else msg('사진 또는 PDF만 올릴 수 있어요.', true)
+      } catch (e) { msg('파일을 읽지 못했어요: ' + f.name, true) }
+    }
+    renderThumbs()
+  }
+
+  async function solve() {
+    if (!session) return msg('로그인이 필요해요.', true)
+    if (!navigator.onLine) return msg('인터넷 연결이 필요해요.', true)
+    const total = files.reduce((n, f) => n + f.data.length, 0)
+    if (total > MAX_B64) return msg('파일이 너무 커요. 사진 수를 줄이거나 PDF를 나눠서 올려 주세요.', true)
+    $('go').disabled = true; msg('풀이를 만드는 중… (보통 10~40초)')
+    $('result').style.display = 'none'; $('open').style.display = 'none'
+    try {
+      const { data: s } = await sb.auth.getSession(); session = s.session
+      const r = await fetch(SB_URL + '/functions/v1/solve', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: files.map(f => ({ type: f.type, data: f.data })), mode: document.querySelector('input[name=mode]:checked').value, note: $('memo').value.trim() })
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { msg(j.message || (r.status === 401 ? '로그인이 풀렸어요. 다시 로그인해 주세요.' : '풀이에 실패했어요. (' + r.status + ')'), true); return }
+      lastText = j.text
+      $('out').textContent = j.text; $('out').classList.remove('hand'); $('hand').textContent = '손글씨체로 보기'
+      $('result').style.display = 'block'
+      $('left').textContent = typeof j.remaining === 'number' ? '오늘 남은 횟수 ' + j.remaining + '번' : ''
+      msg(''); $('result').scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } catch (e) { msg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.', true) }
+    finally { $('go').disabled = !files.length }
+  }
+
+  async function saveNote() {
+    if (!lastText || !session) return
+    $('save').disabled = true
+    const d = new Date(), title = 'AI 풀이 · ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일'
+    const { data, error } = await sb.from('notes').insert({ user_id: session.user.id, title, body: lastText }).select('id').single()
+    $('save').disabled = false
+    if (error || !data) return msg('노트에 저장하지 못했어요.', true)
+    const a = $('open'); a.href = '/notepad.html?note=' + data.id; a.style.display = 'inline-block'; msg('노트패드에 저장했어요.')
+  }
+
+  $('drop').onclick = () => $('pick').click()
+  $('pick').onchange = (e) => { addFiles(e.target.files); e.target.value = '' }
+  ;['dragenter', 'dragover'].forEach(t => $('drop').addEventListener(t, (e) => { e.preventDefault(); $('drop').classList.add('over') }))
+  ;['dragleave', 'drop'].forEach(t => $('drop').addEventListener(t, (e) => { e.preventDefault(); $('drop').classList.remove('over') }))
+  $('drop').addEventListener('drop', (e) => addFiles(e.dataTransfer.files))
+  $('go').onclick = solve
+  $('save').onclick = saveNote
+  $('hand').onclick = () => { const on = $('out').classList.toggle('hand'); $('hand').textContent = on ? '기본 글꼴로 보기' : '손글씨체로 보기' }
+  $('copy').onclick = async () => { try { await navigator.clipboard.writeText(lastText); msg('복사했어요.') } catch (e) { msg('복사하지 못했어요.', true) } }
+
+  ;(async () => {
+    try { sb = window.supabase.createClient(SB_URL, SB_KEY); const r = await sb.auth.getSession(); session = r.data.session } catch (e) {}
+    if (session) $('main').style.display = 'block'; else $('login').style.display = 'block'
+  })()
+})()
+</script>
+<script>try{OkayMenu.mount(document.getElementById('mslot'))}catch(e){}</script>
+</body>
+</html>

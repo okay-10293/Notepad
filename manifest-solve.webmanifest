@@ -1,0 +1,25 @@
+{
+  "name": "AI 문제풀이 · 오케이 스튜디오",
+  "short_name": "AI 풀이",
+  "description": "문제 사진·PDF를 올리면 풀이를 써 주는 AI 문제풀이",
+  "id": "/solve.html",
+  "start_url": "/solve.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/assets/favicon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

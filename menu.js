@@ -4,7 +4,7 @@
   var REF = 'iksctrteeygnvfcsyjea'
   var SB_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg'
-  var ITEMS = [['/', '홈', '모든 도구'], ['/notepad.html', '노트패드', '글, 파일 저장', 1], ['/pdf.html', 'PDF 오프너', 'PDF 열기, 필기'], ['/draw.html', '드로잉', '그림 그리기'], ['/music.html', '음악', '저장한 곡 재생']]
+  var ITEMS = [['/', '홈', '모든 도구'], ['/notepad.html', '노트패드', '글, 파일 저장', 1], ['/pdf.html', 'PDF 오프너', 'PDF 열기, 필기'], ['/draw.html', '드로잉', '그림 그리기'], ['/music.html', '음악', '저장한 곡 재생'], ['/solve.html', 'AI 문제풀이', '사진·PDF 문제 풀이', 1]]
   var CSS = ':root{--okm-bg:#fff;--okm-ink:#0a0a0a;--okm-ink2:#5c5c5c;--okm-ink3:#9b9b9b;--okm-bd:#e6e6e6;--okm-sf:#f3f3f3}' +
     '@media (prefers-color-scheme:dark){:root{--okm-bg:#000;--okm-ink:#f5f5f5;--okm-ink2:#a8a8a8;--okm-ink3:#6e6e6e;--okm-bd:#2a2a2a;--okm-sf:#171717}}' +
     '.okm-btn{border:none;background:none;padding:.35rem;cursor:pointer;color:var(--okm-ink);display:inline-grid;flex-shrink:0;-webkit-tap-highlight-color:transparent}' +
