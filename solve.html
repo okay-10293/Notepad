@@ -193,31 +193,112 @@
     }
     return out
   }
-  // 상자에 들어가는 가장 큰 글씨 크기를 찾는다 (너무 작아지면 그 크기로 쓰고 상자 밖으로 넘친다)
-  function drawFit(ctx, text, bx, by, bw, bh, W) {
-    const hi = Math.max(16, Math.min(Math.round(W * 0.055), bh)), lo = Math.max(14, Math.round(W * 0.024))
-    let fs = hi, lines = []
-    for (; fs >= lo; fs -= 1) {
-      ctx.font = fs + 'px "Nanum Pen Script", "Pretendard Variable", cursive'
-      lines = wrapLines(ctx, text, bw)
-      if (lines.length * fs * 1.12 <= bh) break
+  const FONT = (fs) => fs + 'px "Nanum Pen Script", "Pretendard Variable", cursive'
+  const RED = '#d92d2d'
+  // 원본에서 글자·그림·기존 필기가 있는 칸을 표시한 격자(적분 이미지)를 만든다
+  function inkGrid(img, W, H, g) {
+    const gw = Math.ceil(W / g), gh = Math.ceil(H / g)
+    const t = document.createElement('canvas'); t.width = W; t.height = H
+    const tc = t.getContext('2d', { willReadFrequently: true }); tc.fillStyle = '#fff'; tc.fillRect(0, 0, W, H); tc.drawImage(img, 0, 0, W, H)
+    const d = tc.getImageData(0, 0, W, H).data
+    const cell = new Uint8Array(gw * gh)
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4
+      const mn = Math.min(d[i], d[i + 1], d[i + 2])
+      if (mn < 205) cell[((y / g) | 0) * gw + ((x / g) | 0)] = 1
     }
-    if (fs < lo) { fs = lo; ctx.font = fs + 'px "Nanum Pen Script", "Pretendard Variable", cursive'; lines = wrapLines(ctx, text, bw) }
-    ctx.fillStyle = INK; ctx.textBaseline = 'top'
-    lines.forEach((ln, i) => ctx.fillText(ln, bx, by + i * fs * 1.12, bw + fs))
+    const occ = new Uint8Array(gw * gh)   // 한 칸 여유를 두고 넓힌다
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) if (cell[y * gw + x])
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = y + dy, xx = x + dx; if (yy >= 0 && yy < gh && xx >= 0 && xx < gw) occ[yy * gw + xx] = 1
+      }
+    return { gw, gh, g, occ }
   }
-  async function annotate(entry, items) {
+  function sumTable(G) {
+    const { gw, gh, occ } = G, S = new Int32Array((gw + 1) * (gh + 1))
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++)
+      S[(y + 1) * (gw + 1) + x + 1] = occ[y * gw + x] + S[y * (gw + 1) + x + 1] + S[(y + 1) * (gw + 1) + x] - S[y * (gw + 1) + x]
+    return S
+  }
+  function rectBusy(G, S, x0, y0, x1, y1) {   // 칸 좌표 [x0,x1) × [y0,y1)
+    const w = G.gw + 1
+    return S[y1 * w + x1] - S[y0 * w + x1] - S[y1 * w + x0] + S[y0 * w + x0] > 0
+  }
+  function markBusy(G, x0, y0, x1, y1) {
+    for (let y = Math.max(0, y0); y < Math.min(G.gh, y1); y++) for (let x = Math.max(0, x0); x < Math.min(G.gw, x1); x++) G.occ[y * G.gw + x] = 1
+  }
+  // 빈 공간만 골라 글 위치를 정한다. 못 찾으면 null (아래 빈 종이에 쓴다)
+  function findSpot(G, mctx, text, hint, W, H) {
+    const g = G.g, hi = Math.round(W * 0.05), lo = Math.round(W * 0.026)
+    const hcx = (hint.x + hint.w / 2) / 1000 * W, hcy = (hint.y + hint.h / 2) / 1000 * H
+    for (let fs = hi; fs >= lo; fs -= 2) {
+      mctx.font = FONT(fs)
+      const S = sumTable(G); let best = null
+      const widths = [hint.w / 1000 * W, W * 0.6, W * 0.45, W * 0.33, W * 0.24].map(v => Math.min(Math.max(v, W * 0.2), W - 8))
+      for (const bw of new Set(widths.map(Math.round))) {
+        const lines = wrapLines(mctx, text, bw - 6), bh = Math.ceil(lines.length * fs * 1.12 + 6)
+        const cw = Math.ceil(bw / g), ch = Math.ceil(bh / g)
+        if (cw > G.gw || ch > G.gh) continue
+        for (let gy = 0; gy + ch <= G.gh; gy++) for (let gx = 0; gx + cw <= G.gw; gx++) {
+          if (rectBusy(G, S, gx, gy, gx + cw, gy + ch)) continue
+          const dist = Math.hypot(gx * g + bw / 2 - hcx, gy * g + bh / 2 - hcy)
+          if (!best || dist < best.dist) best = { dist, x: gx * g, y: gy * g, w: bw, h: bh, fs, lines, cw, ch, gx, gy }
+        }
+      }
+      if (best) { markBusy(G, best.gx, best.gy, best.gx + best.cw, best.gy + best.ch); return best }
+    }
+    return null
+  }
+  function drawLines(ctx, lines, x, y, fs, maxW) {
+    ctx.font = FONT(fs); ctx.fillStyle = INK; ctx.textBaseline = 'top'
+    lines.forEach((ln, i) => ctx.fillText(ln, x + 3, y + 3 + i * fs * 1.12, maxW))
+  }
+  // 손으로 그은 듯한 표시
+  function wobble(ctx, x0, y0, x1, y1, amp) {
+    const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / 40))
+    ctx.beginPath(); ctx.moveTo(x0, y0 + (Math.random() - .5) * amp)
+    for (let i = 1; i <= n; i++) ctx.lineTo(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n + (Math.random() - .5) * amp)
+    ctx.stroke()
+  }
+  function drawMark(ctx, m, W, H) {
+    const x = m.x / 1000 * W, y = m.y / 1000 * H, w = m.w / 1000 * W, h = m.h / 1000 * H
+    ctx.save()
+    if (m.kind === 'highlight') {
+      ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,226,60,0.55)'; ctx.fillRect(x - 2, y, w + 4, h)
+    } else if (m.kind === 'circle') {
+      ctx.strokeStyle = RED; ctx.lineWidth = Math.max(2, W * 0.0028); ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2 + 5, h / 2 + 4, -0.05, 0.2, Math.PI * 2 + 0.3); ctx.stroke()
+    } else {
+      ctx.strokeStyle = RED; ctx.lineWidth = Math.max(2, W * 0.0028); ctx.lineCap = 'round'
+      wobble(ctx, x, y + h + 2, x + w, y + h + 2, 3)
+    }
+    ctx.restore()
+  }
+  async function annotate(entry, items, marks) {
     const img = await loadImg(entry.preview), W = img.naturalWidth, H = img.naturalHeight
-    let bottom = 1000
-    items.forEach((it) => { bottom = Math.max(bottom, it.y + it.h) })
-    const extra = Math.round((Math.min(bottom, 1800) - 1000) / 1000 * H)   // 빈 공간이 모자라면 아래에 빈 종이를 붙인다
+    const g = Math.max(6, Math.round(W / 150)), G = inkGrid(img, W, H, g)
+    const mc = document.createElement('canvas').getContext('2d')
+    const placed = [], rest = []
+    for (const it of items) {
+      const sp = findSpot(G, mc, it.text, it, W, H)
+      if (sp) placed.push({ sp, text: it.text }); else rest.push(it)
+    }
+    // 못 넣은 풀이는 아래에 붙인 빈 종이에 쓴다
+    const fs2 = Math.round(W * 0.045), tail = []
+    let extra = 0
+    if (rest.length) {
+      mc.font = FONT(fs2); extra = Math.round(fs2 * 0.8)
+      for (const it of rest) {
+        const lines = wrapLines(mc, it.text, W - 40); tail.push({ lines, y: extra }); extra += Math.ceil(lines.length * fs2 * 1.12) + Math.round(fs2 * 0.6)
+      }
+    }
     const c = document.createElement('canvas'); c.width = W; c.height = H + extra
     const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, W, H)
-    if (extra) { ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, H); ctx.stroke(); ctx.setLineDash([]) }
-    for (const it of items) {
-      const bx = it.x / 1000 * W, by = it.y / 1000 * H
-      const bw = Math.min(it.w / 1000 * W, W - bx - 4), bh = it.h / 1000 * H
-      if (bw > 20 && bh > 10) drawFit(ctx, (it.label ? '' : '') + it.text, bx + 3, by + 2, bw - 6, bh - 4, W)
+    for (const m of marks || []) drawMark(ctx, m, W, H)
+    for (const p of placed) drawLines(ctx, p.sp.lines, p.sp.x, p.sp.y, p.sp.fs, p.sp.w)
+    if (extra) {
+      ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, H); ctx.stroke(); ctx.setLineDash([])
+      for (const t of tail) drawLines(ctx, t.lines, 20, H + t.y, fs2, W - 40)
     }
     return c
   }
@@ -240,7 +321,7 @@
     const sizes = []
     for (const pg of pages) {
       const entry = files[pg.image - 1]; if (!entry) continue
-      const c = await annotate(entry, pg.items)
+      const c = await annotate(entry, pg.items, pg.marks)
       const cap = document.createElement('div'); cap.className = 'pg-cap'; cap.textContent = entry.name
       box.appendChild(cap); box.appendChild(c)
       outBlobs.push(await toBlob(c, 0.92)); sizes.push({ w: c.width, h: c.height })

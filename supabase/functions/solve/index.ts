@@ -25,7 +25,8 @@ const SYSTEM = [
   "첨부된 이미지는 문제지의 각 쪽입니다(첨부한 순서대로 1, 2, 3…번 이미지). 문제를 읽고 풀어서, 풀이를 문제지 위에 손으로 필기하듯 써 넣을 위치와 글을 write_solutions 도구로 제출하세요.",
   "- 문제마다 항목(items)을 하나씩 만듭니다. 한 문제가 여러 쪽에 걸쳐 있으면 쪽마다 따로 만듭니다.",
   "- x, y, w, h는 그 이미지 전체를 가로 1000 × 세로 1000으로 본 좌표입니다(왼쪽 위가 0,0). 풀이를 쓸 '빈 공간'의 사각형입니다.",
-  "- 빈 공간은 문제 글자·그림·표·보기를 가리지 않는 곳(문제 바로 아래, 옆 여백, 빈 줄)에서 고릅니다. 상자끼리 겹치지 않게 합니다.",
+  "- 빈 공간은 문제 글자·그림·표·보기·학생이 이미 손으로 쓴 필기를 절대 가리지 않는 곳(문제 바로 아래, 옆 여백, 빈 줄)에서 고릅니다. 애매하면 더 넓은 여백이나 아래 빈 종이를 고릅니다. 상자끼리 겹치지 않게 합니다. (프로그램이 글자·필기가 있는 곳을 피해 위치를 다시 조정하므로 상자는 대략의 희망 위치입니다.)",
+  "- marks에는 문제에서 중요한 부분(조건, 핵심 숫자·단서, 구하라는 것)을 표시합니다. 쪽당 3~10개 이내, 해당 글자만 딱 감싸는 작은 사각형(x,y,w,h)으로 쓰고 kind는 underline(밑줄, 기본), highlight(형광펜, 구하는 것·핵심 조건), circle(동그라미, 숫자·기호 하나)입니다. 문제 지문의 글자 위에만 표시하고 학생의 필기에는 표시하지 않습니다.",
   "- 빈 공간이 모자라면 이미지 아래에 빈 종이가 이어져 있다고 보고 y+h가 1000을 넘는 상자를 씁니다(최대 1800까지).",
   "- text는 노트 필기처럼 짧게 씁니다. 핵심 식과 계산만 줄바꿈(\\n)으로 나누어 쓰고 마지막 줄에 '정답: …'을 적습니다. 상자에 들어갈 만큼만 쓰고, 상자가 작으면 글을 줄입니다. 한 줄에 20글자 안팎이 읽기 좋습니다.",
   "- 수식은 일반 글자로 씁니다(예: x^2, 분수는 a/b, 루트는 √). LaTeX 기호($, \\frac 등)는 쓰지 않습니다.",
@@ -47,6 +48,17 @@ const TOOL = {
           type: "object",
           properties: {
             image: { type: "integer", description: "첨부한 이미지 번호(1부터)" },
+            marks: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
+                  kind: { type: "string", enum: ["underline", "highlight", "circle"] },
+                },
+                required: ["x", "y", "w", "h"],
+              },
+            },
             items: {
               type: "array",
               items: {
@@ -148,12 +160,16 @@ Deno.serve(async (req: Request) => {
     // 위치/글 정리: 이미지 번호가 범위 안인지, 좌표가 말이 되는지 확인한다
     const pages = (Array.isArray(inp.pages) ? inp.pages : []).map((pg: any) => ({
       image: Math.round(Number(pg?.image) || 0),
+      marks: (Array.isArray(pg?.marks) ? pg.marks : []).slice(0, 14).map((m: any) => ({
+        x: num(m?.x, 0, 1000), y: num(m?.y, 0, 1000), w: num(m?.w, 5, 1000), h: num(m?.h, 5, 300),
+        kind: ["underline", "highlight", "circle"].includes(m?.kind) ? m.kind : "underline",
+      })),
       items: (Array.isArray(pg?.items) ? pg.items : []).slice(0, 40).map((it: any) => ({
         label: String(it?.label ?? "").slice(0, 20),
         x: num(it?.x, 0, 990), y: num(it?.y, 0, 1790), w: num(it?.w, 30, 1000), h: num(it?.h, 20, 1000),
         text: String(it?.text ?? "").slice(0, 1500),
       })).filter((it: { text: string }) => it.text.trim()),
-    })).filter((pg: { image: number; items: unknown[] }) => pg.image >= 1 && pg.image <= files.length && pg.items.length);
+    })).filter((pg: { image: number; items: unknown[] }) => pg.image >= 1 && pg.image <= files.length && (pg.items.length || pg.marks.length));
     let text = typeof inp.summary === "string" ? inp.summary.trim() : "";
     if (!text) text = blocks.filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
     if (!text && !pages.length) {
