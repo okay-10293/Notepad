@@ -296,9 +296,13 @@
     ctx.save()
     if (m.kind === 'highlight') {
       ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,226,60,0.55)'; ctx.fillRect(x - 2, y, w + 4, h)
-    } else if (m.kind === 'circle') {
+    } else if (m.kind === 'wrong') {
+      ctx.strokeStyle = RED; ctx.lineWidth = Math.max(2, W * 0.003); ctx.lineCap = 'round'
+      const px = Math.max(3, w * 0.25), py = Math.max(3, h * 0.2)
+      wobble(ctx, x - px, y - py, x + w + px, y + h + py, 3); wobble(ctx, x + w + px, y - py, x - px, y + h + py, 3)
+    } else if (m.kind === 'circle' || m.kind === 'correct') {
       ctx.strokeStyle = RED; ctx.lineWidth = Math.max(2, W * 0.0028); ctx.lineCap = 'round'
-      ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2 + 5, h / 2 + 4, -0.05, 0.2, Math.PI * 2 + 0.3); ctx.stroke()
+      ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2 + (m.kind === 'correct' ? 8 : 5), h / 2 + (m.kind === 'correct' ? 6 : 4), -0.05, 0.2, Math.PI * 2 + 0.3); ctx.stroke()
     } else {
       ctx.strokeStyle = RED; ctx.lineWidth = Math.max(2, W * 0.0028); ctx.lineCap = 'round'
       wobble(ctx, x, y + h + 2, x + w, y + h + 2, 3)

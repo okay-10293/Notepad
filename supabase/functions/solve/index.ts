@@ -26,7 +26,8 @@ const SYSTEM = [
   "- 문제마다 항목(items)을 하나씩 만듭니다. 한 문제가 여러 쪽에 걸쳐 있으면 쪽마다 따로 만듭니다.",
   "- x, y, w, h는 그 이미지 전체를 가로 1000 × 세로 1000으로 본 좌표입니다(왼쪽 위가 0,0). 풀이를 쓸 '빈 공간'의 사각형입니다.",
   "- 빈 공간은 문제 글자·그림·표·보기·학생이 이미 손으로 쓴 필기를 절대 가리지 않는 곳(문제 바로 아래, 옆 여백, 빈 줄)에서 고릅니다. 애매하면 가장 가까운 좁은 여백을 고릅니다. 상자끼리 겹치지 않게 합니다. (프로그램이 글자·필기가 있는 곳을 피해 위치를 다시 조정하므로 상자는 대략의 희망 위치입니다.)",
-  "- marks에는 문제에서 중요한 부분(조건, 핵심 숫자·단서, 구하라는 것)을 표시합니다. 쪽당 3~10개 이내, 해당 글자만 딱 감싸는 작은 사각형(x,y,w,h)으로 쓰고 kind는 underline(밑줄, 기본), highlight(형광펜, 구하는 것·핵심 조건), circle(동그라미, 숫자·기호 하나)입니다. 문제 지문의 글자 위에만 표시하고 학생의 필기에는 표시하지 않습니다.",
+  "- marks에는 문제에서 중요한 부분(조건, 핵심 숫자·단서, 구하라는 것)을 표시합니다. 쪽당 20개 이내, 해당 글자만 딱 감싸는 작은 사각형(x,y,w,h)으로 쓰고 kind는 underline(밑줄, 기본), highlight(형광펜, 구하는 것·핵심 조건), circle(동그라미, 숫자·기호 하나)입니다. 문제 지문의 글자 위에만 표시하고 학생의 필기에는 표시하지 않습니다.",
+  "- 보기(ㄱ, ㄴ, ㄷ…)나 선택지(①~⑤)가 있는 문제는 사람이 푼 것처럼 표시합니다: 각 보기를 판단해서 맞는 보기는 kind=correct, 틀린 보기는 kind=wrong으로 그 보기 기호(예: 'ㄱ.')의 글자 부분만 감싸는 작은 사각형에 표시하고, 마지막에 최종 정답 선택지 번호(예: ③)도 kind=correct로 표시합니다. 또 문제의 핵심 조건·구하는 것 3~6곳에는 반드시 underline을 표시합니다. marks는 생략하지 말고 채웁니다.",
   "- 이미지 밖(아래 빈 종이 등)에는 절대 쓰지 않습니다. 모든 상자는 0~1000 안에 있어야 하고, 해당 문제 바로 근처여야 합니다. 여백이 좁아도 그 문제 가까이에 짧게 줄여 씁니다.",
   "- 서술형·단답형처럼 답을 쓰는 칸(네모 상자, 밑줄 빈칸, 괄호, 그래프 틀 등)이 있는 문제는, 그 칸의 사각형을 x,y,w,h로 쓰고 kind를 answer_box로 하며 text에는 그 칸에 들어갈 답만 간결하게 씁니다(풀이 과정 제외). 답칸이 없는 문제의 풀이는 kind를 free로 합니다.",
   "- text는 노트 필기처럼 짧게 씁니다. 핵심 식과 계산만 줄바꿈(\\n)으로 나누어 쓰고 마지막 줄에 '정답: …'을 적습니다. 상자에 들어갈 만큼만 쓰고, 상자가 작으면 글을 줄입니다. 한 줄에 20글자 안팎이 읽기 좋습니다.",
@@ -55,7 +56,7 @@ const TOOL = {
                 type: "object",
                 properties: {
                   x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
-                  kind: { type: "string", enum: ["underline", "highlight", "circle"] },
+                  kind: { type: "string", enum: ["underline", "highlight", "circle", "correct", "wrong"] },
                 },
                 required: ["x", "y", "w", "h"],
               },
@@ -162,9 +163,9 @@ Deno.serve(async (req: Request) => {
     // 위치/글 정리: 이미지 번호가 범위 안인지, 좌표가 말이 되는지 확인한다
     const pages = (Array.isArray(inp.pages) ? inp.pages : []).map((pg: any) => ({
       image: Math.round(Number(pg?.image) || 0),
-      marks: (Array.isArray(pg?.marks) ? pg.marks : []).slice(0, 14).map((m: any) => ({
+      marks: (Array.isArray(pg?.marks) ? pg.marks : []).slice(0, 30).map((m: any) => ({
         x: num(m?.x, 0, 1000), y: num(m?.y, 0, 1000), w: num(m?.w, 5, 1000), h: num(m?.h, 5, 300),
-        kind: ["underline", "highlight", "circle"].includes(m?.kind) ? m.kind : "underline",
+        kind: ["underline", "highlight", "circle", "correct", "wrong"].includes(m?.kind) ? m.kind : "underline",
       })),
       items: (Array.isArray(pg?.items) ? pg.items : []).slice(0, 40).map((it: any) => ({
         label: String(it?.label ?? "").slice(0, 20),
