@@ -42,16 +42,20 @@
     #out.hand { font-family: 'Nanum Pen Script', 'Pretendard Variable', cursive; font-size: 1.45rem; line-height: 1.7; }
     .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
     #login { display: none; }
+    #pages { display: grid; gap: 0.9rem; }
+    #pages canvas { width: 100%; height: auto; display: block; border: 1px solid var(--border); background: #fff; }
+    .pg-cap { font-size: 0.78rem; color: var(--ink-3); margin: 0 0 0.3rem; }
+    #textbox { display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <nav><div><h1>AI 문제풀이</h1><div class="sub">문제 사진이나 PDF를 올리면 풀이를 써 줍니다</div></div><span id="mslot"></span></nav>
+  <nav><div><h1>AI 문제풀이</h1><div class="sub">문제 사진이나 PDF를 올리면, 그 위에 풀이를 필기해서 돌려줍니다</div></div><span id="mslot"></span></nav>
 
   <div id="login" class="card">로그인이 필요합니다. <a href="/?login=1" style="color:var(--ink);font-weight:700;">오케이 스튜디오에서 로그인</a>한 뒤 다시 열어 주세요. (홈 화면 앱은 사파리와 로그인이 따로입니다)</div>
 
   <div id="main" class="card" style="display:none">
-    <div class="drop" id="drop">사진 또는 PDF 선택 (최대 5개) · 여기에 끌어다 놓아도 됩니다<input id="pick" type="file" accept="image/*,application/pdf" multiple hidden /></div>
+    <div class="drop" id="drop">사진 또는 PDF 선택 (최대 8쪽) · 여기에 끌어다 놓아도 됩니다<input id="pick" type="file" accept="image/*,application/pdf" multiple hidden /></div>
     <div class="thumbs" id="thumbs"></div>
     <textarea id="memo" placeholder="요청 사항 (선택) 예: 3번과 5번만 풀어 줘, 풀이를 더 자세히"></textarea>
     <div class="row">
@@ -60,79 +64,196 @@
     </div>
     <div class="row"><button class="btn btn-p" id="go" disabled>풀기</button><span id="left" style="color:var(--ink-3);font-size:0.82rem;"></span></div>
     <div id="msg"></div>
-    <div class="note">AI 풀이는 틀릴 수 있습니다. 특히 손글씨나 그림이 섞인 문제는 잘못 읽을 수 있으니 꼭 검토해서 쓰세요. 올린 파일은 풀이를 위해 AI 제공사(Anthropic)에 전달되며 이 서비스에 저장되지 않습니다. 하루 사용 횟수에 제한이 있습니다.</div>
+    <div class="note">AI 풀이는 틀릴 수 있습니다. 특히 손글씨나 그림이 섞인 문제는 잘못 읽을 수 있으니 꼭 검토해서 쓰세요. 올린 파일(PDF는 쪽별 이미지로 바꿔서)은 풀이를 위해 AI 제공사(Anthropic)에 전달되며 이 서비스에 저장되지 않습니다. 필기 위치도 AI가 정해서 글자가 문제와 조금 겹치거나 어긋날 수 있습니다. 하루 사용 횟수에 제한이 있습니다.</div>
   </div>
 
   <div id="result" class="card">
-    <div id="out"></div>
+    <div id="pages"></div>
     <div class="acts">
-      <button class="btn" id="hand">손글씨체로 보기</button>
-      <button class="btn" id="copy">복사</button>
-      <button class="btn btn-p" id="save">노트패드에 필기로 저장</button>
-      <a class="btn" id="open" href="#" style="display:none">저장된 노트 열기</a>
+      <button class="btn btn-p" id="dlPdf">PDF로 받기</button>
+      <button class="btn" id="dlImg">이미지로 받기</button>
+      <button class="btn" id="showText">글자로 보기</button>
+    </div>
+    <div id="textbox">
+      <div id="out"></div>
+      <div class="acts">
+        <button class="btn" id="hand">손글씨체로 보기</button>
+        <button class="btn" id="copy">복사</button>
+        <button class="btn" id="save">노트패드에 필기로 저장</button>
+        <a class="btn" id="open" href="#" style="display:none">저장된 노트 열기</a>
+      </div>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="/menu.js"></script>
 <script>
 (function () {
   const SB_URL = 'https://iksctrteeygnvfcsyjea.supabase.co'
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc2N0cnRlZXlnbnZmY3N5amVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTExMTMsImV4cCI6MjA5NjE2NzExM30.DcsqSXHE4tu_B_vNX9UhGIYAt9CyMvNj3gzRS7T45hg'
   const $ = (id) => document.getElementById(id)
-  const MAX_FILES = 5, MAX_B64 = 6000000
-  let sb = null, session = null, files = [], lastText = ''
+  const MAX_PAGES = 8, MAX_B64 = 6000000, PDFJS = '3.11.174'
+  const INK = '#1d3fd1'   // 파란 볼펜색
+  let sb = null, session = null, files = [], lastText = '', outBlobs = [], outPdf = null, busy = false
 
   const msg = (t, err) => { const m = $('msg'); m.textContent = t || ''; m.className = err ? 'err' : '' }
   const readB64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob) })
+  const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('image')); i.src = src })
+  const toBlob = (c, q) => new Promise((res) => c.toBlob(res, 'image/jpeg', q))
 
-  // 사진은 가로·세로 1600px 이내 JPEG로 줄여서 올린다 (전송량과 AI 입력 비용이 줄어든다)
-  async function shrink(file) {
+  // 한 쪽(캔버스)을 JPEG로 줄여서 목록에 넣는다. 서버가 보는 그림 = 나중에 필기를 얹는 그림이라서 좌표가 어긋나지 않는다.
+  async function pushCanvas(c, name) {
+    const b = await toBlob(c, 0.85)
+    files.push({ type: 'image/jpeg', data: await readB64(b), preview: URL.createObjectURL(b), name })
+  }
+
+  // 사진은 가로·세로 1600px 이내로 줄인다 (전송량과 AI 입력 비용이 줄어든다)
+  async function addPhoto(file) {
     const url = URL.createObjectURL(file)
     try {
-      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('image')); i.src = url })
+      const img = await loadImg(url)
       const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight))
       const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k)
       const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height)
-      const b = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85))
-      return { type: 'image/jpeg', data: await readB64(b), preview: URL.createObjectURL(b), name: file.name }
+      await pushCanvas(c, file.name)
     } finally { URL.revokeObjectURL(url) }
+  }
+
+  // PDF는 pdf.js로 쪽마다 그림으로 바꾼다
+  let pdfjsP = null
+  function loadPdfjs() {
+    if (window.pdfjsLib) return Promise.resolve()
+    if (pdfjsP) return pdfjsP
+    const one = (src, worker) => new Promise((res, rej) => {
+      const t = document.createElement('script'); t.src = src
+      t.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = worker; res() }
+      t.onerror = () => rej(new Error('pdfjs')); document.head.appendChild(t)
+    })
+    pdfjsP = one('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS + '/pdf.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS + '/pdf.worker.min.js')
+      .catch(() => one('https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS + '/build/pdf.min.js', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS + '/build/pdf.worker.min.js'))
+    pdfjsP.catch(() => { pdfjsP = null })
+    return pdfjsP
+  }
+  async function addPdf(file) {
+    await loadPdfjs()
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+    const room = MAX_PAGES - files.length
+    const n = Math.min(pdf.numPages, room)
+    for (let p = 1; p <= n; p++) {
+      const page = await pdf.getPage(p)
+      const v1 = page.getViewport({ scale: 1 })
+      const k = Math.min(2.5, 1500 / Math.max(v1.width, v1.height))
+      const v = page.getViewport({ scale: k })
+      const c = document.createElement('canvas'); c.width = Math.round(v.width); c.height = Math.round(v.height)
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height)
+      await page.render({ canvasContext: x, viewport: v }).promise
+      await pushCanvas(c, file.name + ' ' + p + '쪽')
+    }
+    if (pdf.numPages > n) msg('PDF가 ' + pdf.numPages + '쪽인데 쪽 수 제한(' + MAX_PAGES + '쪽) 때문에 앞의 ' + n + '쪽만 올렸어요. 나머지는 따로 올려 주세요.', true)
   }
 
   function renderThumbs() {
     const box = $('thumbs'); box.textContent = ''
     files.forEach((f, i) => {
       const d = document.createElement('div'); d.className = 'th'
-      if (f.preview) d.style.backgroundImage = 'url("' + f.preview + '")'; else d.textContent = 'PDF'
+      d.style.backgroundImage = 'url("' + f.preview + '")'; d.title = f.name
       const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '빼기')
-      x.onclick = () => { files.splice(i, 1); renderThumbs() }
+      x.onclick = () => { URL.revokeObjectURL(f.preview); files.splice(i, 1); renderThumbs() }
       d.appendChild(x); box.appendChild(d)
     })
-    $('go').disabled = !files.length
+    $('go').disabled = busy || !files.length
   }
 
   async function addFiles(list) {
     msg('')
     for (const f of Array.from(list)) {
-      if (files.length >= MAX_FILES) { msg('파일은 최대 ' + MAX_FILES + '개까지 올릴 수 있어요.', true); break }
+      if (files.length >= MAX_PAGES) { msg('쪽은 최대 ' + MAX_PAGES + '개까지 올릴 수 있어요.', true); break }
       try {
-        if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
-          if (f.size > 4.5e6) { msg('PDF는 4.5MB 이하만 올릴 수 있어요. 페이지를 나눠서 올려 주세요.', true); continue }
-          files.push({ type: 'application/pdf', data: await readB64(f), name: f.name })
-        } else if (f.type.startsWith('image/')) files.push(await shrink(f))
+        if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) { msg('PDF를 읽는 중…'); await addPdf(f); if ($('msg').className !== 'err') msg('') }
+        else if (f.type.startsWith('image/')) await addPhoto(f)
         else msg('사진 또는 PDF만 올릴 수 있어요.', true)
       } catch (e) { msg('파일을 읽지 못했어요: ' + f.name, true) }
     }
     renderThumbs()
   }
 
+  // ── 원본 위에 손글씨로 풀이 얹기 ──
+  function wrapLines(ctx, text, maxW) {
+    const out = []
+    for (const para of String(text).replace(/\r/g, '').split('\n')) {
+      let line = ''
+      for (const ch of Array.from(para)) {
+        if (ctx.measureText(line + ch).width <= maxW || !line) { line += ch; continue }
+        const sp = line.lastIndexOf(' ')
+        if (sp > 0 && ch !== ' ') { out.push(line.slice(0, sp)); line = line.slice(sp + 1) + ch } else { out.push(line); line = ch.trim() ? ch : '' }
+      }
+      out.push(line)
+    }
+    return out
+  }
+  // 상자에 들어가는 가장 큰 글씨 크기를 찾는다 (너무 작아지면 그 크기로 쓰고 상자 밖으로 넘친다)
+  function drawFit(ctx, text, bx, by, bw, bh, W) {
+    const hi = Math.max(16, Math.min(Math.round(W * 0.055), bh)), lo = Math.max(14, Math.round(W * 0.024))
+    let fs = hi, lines = []
+    for (; fs >= lo; fs -= 1) {
+      ctx.font = fs + 'px "Nanum Pen Script", "Pretendard Variable", cursive'
+      lines = wrapLines(ctx, text, bw)
+      if (lines.length * fs * 1.12 <= bh) break
+    }
+    if (fs < lo) { fs = lo; ctx.font = fs + 'px "Nanum Pen Script", "Pretendard Variable", cursive'; lines = wrapLines(ctx, text, bw) }
+    ctx.fillStyle = INK; ctx.textBaseline = 'top'
+    lines.forEach((ln, i) => ctx.fillText(ln, bx, by + i * fs * 1.12, bw + fs))
+  }
+  async function annotate(entry, items) {
+    const img = await loadImg(entry.preview), W = img.naturalWidth, H = img.naturalHeight
+    let bottom = 1000
+    items.forEach((it) => { bottom = Math.max(bottom, it.y + it.h) })
+    const extra = Math.round((Math.min(bottom, 1800) - 1000) / 1000 * H)   // 빈 공간이 모자라면 아래에 빈 종이를 붙인다
+    const c = document.createElement('canvas'); c.width = W; c.height = H + extra
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, W, H)
+    if (extra) { ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, H); ctx.stroke(); ctx.setLineDash([]) }
+    for (const it of items) {
+      const bx = it.x / 1000 * W, by = it.y / 1000 * H
+      const bw = Math.min(it.w / 1000 * W, W - bx - 4), bh = it.h / 1000 * H
+      if (bw > 20 && bh > 10) drawFit(ctx, (it.label ? '' : '') + it.text, bx + 3, by + 2, bw - 6, bh - 4, W)
+    }
+    return c
+  }
+
+  async function buildPdf(blobs, sizes) {
+    if (!window.PDFLib) return null
+    const doc = await PDFLib.PDFDocument.create()
+    for (let i = 0; i < blobs.length; i++) {
+      const jpg = await doc.embedJpg(new Uint8Array(await blobs[i].arrayBuffer()))
+      const w = 595, h = Math.round(sizes[i].h * 595 / sizes[i].w)
+      doc.addPage([w, h]).drawImage(jpg, { x: 0, y: 0, width: w, height: h })
+    }
+    return new Blob([await doc.save()], { type: 'application/pdf' })
+  }
+
+  async function showPages(pages) {
+    const box = $('pages'); box.textContent = ''; outBlobs = []; outPdf = null
+    const text = lastText
+    try { await document.fonts.load('32px "Nanum Pen Script"', text + '정답0123456789') } catch (e) {}
+    const sizes = []
+    for (const pg of pages) {
+      const entry = files[pg.image - 1]; if (!entry) continue
+      const c = await annotate(entry, pg.items)
+      const cap = document.createElement('div'); cap.className = 'pg-cap'; cap.textContent = entry.name
+      box.appendChild(cap); box.appendChild(c)
+      outBlobs.push(await toBlob(c, 0.92)); sizes.push({ w: c.width, h: c.height })
+    }
+    try { outPdf = await buildPdf(outBlobs, sizes) } catch (e) { outPdf = null }
+  }
+
   async function solve() {
     if (!session) return msg('로그인이 필요해요.', true)
     if (!navigator.onLine) return msg('인터넷 연결이 필요해요.', true)
     const total = files.reduce((n, f) => n + f.data.length, 0)
-    if (total > MAX_B64) return msg('파일이 너무 커요. 사진 수를 줄이거나 PDF를 나눠서 올려 주세요.', true)
-    $('go').disabled = true; msg('풀이를 만드는 중… (보통 10~40초)')
+    if (total > MAX_B64) return msg('파일이 너무 커요. 쪽 수를 줄여서 올려 주세요.', true)
+    busy = true; $('go').disabled = true; msg('풀이를 만드는 중… (보통 10~60초)')
     $('result').style.display = 'none'; $('open').style.display = 'none'
     try {
       const { data: s } = await sb.auth.getSession(); session = s.session
@@ -143,14 +264,36 @@
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) { msg((j.message || (r.status === 401 ? '로그인이 풀렸어요. 다시 로그인해 주세요.' : '풀이에 실패했어요. (' + r.status + ')')) + (j.error === 'empty' && j.detail ? ' [' + j.detail + ']' : ''), true); return }
-      lastText = j.text
-      $('out').textContent = j.text; $('out').classList.remove('hand'); $('hand').textContent = '손글씨체로 보기'
+      lastText = j.text || ''
+      $('out').textContent = lastText; $('out').classList.remove('hand'); $('hand').textContent = '손글씨체로 보기'
+      const pages = Array.isArray(j.pages) ? j.pages : []
+      await showPages(pages)
+      const has = !!pages.length
+      $('pages').style.display = has ? 'grid' : 'none'
+      $('dlPdf').style.display = $('dlImg').style.display = has ? '' : 'none'
+      $('showText').style.display = has ? '' : 'none'
+      $('textbox').style.display = has ? 'none' : 'block'
+      $('showText').textContent = '글자로 보기'
       $('result').style.display = 'block'
       $('left').textContent = typeof j.remaining === 'number' ? '오늘 남은 횟수 ' + j.remaining + '번' : ''
-      msg(''); $('result').scrollIntoView({ behavior: 'smooth', block: 'start' })
+      msg(has ? '' : 'AI가 필기할 위치를 정하지 못해서 글자로만 보여드려요.'); $('result').scrollIntoView({ behavior: 'smooth', block: 'start' })
     } catch (e) { msg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.', true) }
-    finally { $('go').disabled = !files.length }
+    finally { busy = false; $('go').disabled = !files.length }
   }
+
+  // 파일 받기: 공유창(저장·파일 앱·메시지 등)이 되는 기기는 그걸로, 아니면 바로 내려받기
+  async function deliver(blobs, names, type) {
+    const fl = blobs.map((b, i) => new File([b], names[i], { type }))
+    try { if (navigator.canShare && navigator.canShare({ files: fl })) { await navigator.share({ files: fl }); return } } catch (e) { if (e && e.name === 'AbortError') return }
+    fl.forEach((f, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000) }, i * 400))
+  }
+  const stamp = () => { const d = new Date(); return (d.getMonth() + 1) + '월' + d.getDate() + '일' }
+  $('dlPdf').onclick = () => {
+    if (outPdf) deliver([outPdf], ['풀이_' + stamp() + '.pdf'], 'application/pdf')
+    else if (outBlobs.length) { msg('PDF 만들기가 안 돼서 이미지로 받아요.', true); $('dlImg').click() }
+  }
+  $('dlImg').onclick = () => { if (outBlobs.length) deliver(outBlobs, outBlobs.map((_, i) => '풀이_' + stamp() + '_' + (i + 1) + '.jpg'), 'image/jpeg') }
+  $('showText').onclick = () => { const on = $('textbox').style.display !== 'block'; $('textbox').style.display = on ? 'block' : 'none'; $('showText').textContent = on ? '글자 숨기기' : '글자로 보기' }
 
   async function saveNote() {
     if (!lastText || !session) return
