@@ -297,8 +297,20 @@
     return { x: x - 3, y: y - 3, w: bw, h: bh, fs: Math.max(fs, 9), lines }
   }
   function drawLines(ctx, lines, x, y, fs, maxW) {
-    ctx.font = FONT(fs); ctx.fillStyle = INK; ctx.textBaseline = 'top'
-    lines.forEach((ln, i) => ctx.fillText(ln, x + 3, y + fs * 0.28 + i * fs * 1.1, maxW))
+    ctx.font = FONT(fs); ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.textBaseline = 'top'; ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+    lines.forEach((ln, i) => {
+      const parts = ln.split(/(-)/).filter(Boolean), widths = parts.map(p => ctx.measureText(p).width)
+      const total = widths.reduce((a, b) => a + b, 0), k = total > maxW ? maxW / total : 1   // 상자보다 길면 가로로 눌러 맞춘다(기존 fillText maxW와 같은 동작)
+      ctx.save(); ctx.translate(x + 3, y + fs * 0.28 + i * fs * 1.1); ctx.scale(k, 1)
+      let cx = 0
+      parts.forEach((p, j) => {
+        ctx.fillText(p, cx, 0)
+        // 필기 글꼴의 '-'는 글자 높이의 8%밖에 안 되는 가는 선이라 사진 위에서 안 보인다 → 테두리를 덧그려 굵게 한다
+        if (p === '-') { ctx.lineWidth = Math.max(1.8, fs * 0.09); ctx.strokeText(p, cx, 0) }
+        cx += widths[j]
+      })
+      ctx.restore()
+    })
   }
   // 손으로 그은 듯한 표시
   function wobble(ctx, x0, y0, x1, y1, amp) {
@@ -329,6 +341,8 @@
     const img = await loadImg(entry.preview), W = img.naturalWidth, H = img.naturalHeight
     const g = Math.max(4, Math.round(W / 220)), G = inkGrid(img, W, H, g)
     const mc = document.createElement('canvas').getContext('2d')
+    // 진짜 마이너스(−)·대시(–, —)는 필기 글꼴에 글리프가 없어 다른 글꼴로 가늘게 그려진다 → 모두 '-'로 통일해서 위 drawLines가 굵게 그리게 한다
+    items = (items || []).map(it => ({ ...it, text: String(it.text || '').replace(/[−–—‒－﹣]/g, '-') }))
     const okMarks = (marks || []).filter(m => markOnInk(G, m, W, H))   // 글 상자(빈 칸)를 놓기 전에 거른다
     const placed = []
     for (const it of items) {
