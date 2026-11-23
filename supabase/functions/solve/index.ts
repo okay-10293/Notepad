@@ -120,7 +120,11 @@ Deno.serve(async (req: Request) => {
     total += f.data.length;
   }
   if (total > MAX_TOTAL_B64) return json({ error: "too_large", message: "파일이 너무 커요. 사진은 줄여서, PDF는 페이지를 나눠서 올려 주세요." }, 413);
-  const model = MODELS[body?.mode === "accurate" ? "accurate" : "fast"];
+  const mode = body?.mode === "accurate" ? "accurate" : "fast";
+  const model = MODELS[mode];
+  // "생각 끄기" 값이 모델마다 다르다: Sonnet은 disabled를 거부하고 between_tools를 요구한다(400, 로그로 확인).
+  const THINK_OFF: Record<string, { type: string }> = { fast: { type: "disabled" }, accurate: { type: "between_tools" } };
+  const THINK_ALT: Record<string, { type: string }> = { fast: { type: "between_tools" }, accurate: { type: "disabled" } };
   const note = typeof body?.note === "string" ? body.note.slice(0, 500) : "";
 
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -155,13 +159,12 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({ model, max_tokens: 8000, ...extra, system: SYSTEM, tools: [TOOL], tool_choice: { type: "tool", name: "write_solutions" }, messages: [{ role: "user", content }] }),
       signal: ctrl.signal,
     });
-    let r = await call({ thinking: { type: "disabled" } });
+    let r = await call({ thinking: THINK_OFF[mode] });
     let out = await r.json().catch(() => ({}));
-    // 정확한 모드(Sonnet)에서만 실패하는 경우 대비: 서버 일시 오류(5xx/529)는 그대로 한 번 재시도하고,
-    // 400(파라미터 거부)이면 thinking 옵션을 빼고 한 번 재시도한다. (강제 도구 호출에서는 thinking이 어차피 꺼져 있어야 함)
+    // 서버 일시 오류(5xx/529)는 그대로 한 번 재시도하고, 400(thinking 값 거부)이면 다른 쪽 값으로 한 번 재시도한다.
     if (!r.ok && (r.status >= 500 || r.status === 400)) {
       console.error("anthropic retry", JSON.stringify({ model, status: r.status, err: JSON.stringify(out).slice(0, 300) }));
-      r = await call(r.status === 400 ? {} : { thinking: { type: "disabled" } });
+      r = await call({ thinking: r.status === 400 ? THINK_ALT[mode] : THINK_OFF[mode] });
       out = await r.json().catch(() => ({}));
     }
     if (!r.ok) {
