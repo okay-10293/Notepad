@@ -21,7 +21,7 @@ const MAX_TOTAL_B64 = 6_000_000;  // base64 글자 수 합계 (약 4.5MB)
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
 
 const SYSTEM = [
-  "당신은 학생의 문제 풀이를 도와주는 선생님입니다.",
+  "당신은 학생의 문제 풀이를 도와주는 선생님입니다. 답변은 반드시 write_solutions 도구를 한 번 호출해서 제출하고, 도구 밖에는 글을 쓰지 않습니다.",
   "첨부된 이미지는 문제지의 각 쪽입니다(첨부한 순서대로 1, 2, 3…번 이미지). 문제를 읽고 풀어서, 풀이를 문제지 위에 손으로 필기하듯 써 넣을 위치와 글을 write_solutions 도구로 제출하세요.",
   "- 문제마다 항목(items)을 하나씩 만듭니다. 한 문제가 여러 쪽에 걸쳐 있으면 쪽마다 따로 만듭니다.",
   "- x, y, w, h는 그 이미지 전체를 가로 1000 × 세로 1000으로 본 좌표입니다(왼쪽 위가 0,0). 풀이를 쓸 '빈 공간'의 사각형입니다.",
@@ -122,9 +122,11 @@ Deno.serve(async (req: Request) => {
   if (total > MAX_TOTAL_B64) return json({ error: "too_large", message: "파일이 너무 커요. 사진은 줄여서, PDF는 페이지를 나눠서 올려 주세요." }, 413);
   const mode = body?.mode === "accurate" ? "accurate" : "fast";
   const model = MODELS[mode];
-  // "생각 끄기" 값이 모델마다 다르다: Sonnet은 disabled를 거부하고 between_tools를 요구한다(400, 로그로 확인).
+  // 모델마다 요청 옵션이 다르다(둘 다 400 로그로 확인):
+  // - "생각 끄기": Haiku는 disabled, Sonnet은 disabled를 거부하고 between_tools를 요구한다.
+  // - 도구 강제 호출(tool_choice type=tool)은 Sonnet이 지원하지 않는다 → auto로 두고, 시스템 프롬프트로 write_solutions 호출을 지시한다.
   const THINK_OFF: Record<string, { type: string }> = { fast: { type: "disabled" }, accurate: { type: "between_tools" } };
-  const THINK_ALT: Record<string, { type: string }> = { fast: { type: "between_tools" }, accurate: { type: "disabled" } };
+  const TOOL_CHOICE: Record<string, { type: string; name?: string }> = { fast: { type: "tool", name: "write_solutions" }, accurate: { type: "auto" } };
   const note = typeof body?.note === "string" ? body.note.slice(0, 500) : "";
 
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -153,18 +155,18 @@ Deno.serve(async (req: Request) => {
     // thinking을 끈다: 응답이 16~17초 걸리고 비어 있던 원인이 "생각하는 데 토큰을 다 써서 글이 안 나온 것"일 것으로 추정(미확인).
     // 그래도 비면 아래 "empty answer" 로그/응답의 stop_reason, blocks 값으로 실제 원인을 확인한다.
     // 필기 위치와 글은 도구 호출(write_solutions)로 받는다 → 항상 정해진 JSON 모양으로 온다.
-    const call = (extra: Record<string, unknown>) => fetch("https://api.anthropic.com/v1/messages", {
+    const call = () => fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 8000, ...extra, system: SYSTEM, tools: [TOOL], tool_choice: { type: "tool", name: "write_solutions" }, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model, max_tokens: 8000, thinking: THINK_OFF[mode], system: SYSTEM, tools: [TOOL], tool_choice: TOOL_CHOICE[mode], messages: [{ role: "user", content }] }),
       signal: ctrl.signal,
     });
-    let r = await call({ thinking: THINK_OFF[mode] });
+    let r = await call();
     let out = await r.json().catch(() => ({}));
-    // 서버 일시 오류(5xx/529)는 그대로 한 번 재시도하고, 400(thinking 값 거부)이면 다른 쪽 값으로 한 번 재시도한다.
-    if (!r.ok && (r.status >= 500 || r.status === 400)) {
+    // 서버 일시 오류(5xx/529)만 한 번 재시도한다. 400은 요청 자체가 잘못된 것이라 재시도해도 같으므로 그대로 사유를 돌려준다.
+    if (!r.ok && r.status >= 500) {
       console.error("anthropic retry", JSON.stringify({ model, status: r.status, err: JSON.stringify(out).slice(0, 300) }));
-      r = await call({ thinking: r.status === 400 ? THINK_ALT[mode] : THINK_OFF[mode] });
+      r = await call();
       out = await r.json().catch(() => ({}));
     }
     if (!r.ok) {
