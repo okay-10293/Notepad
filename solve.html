@@ -142,7 +142,7 @@
         body: JSON.stringify({ files: files.map(f => ({ type: f.type, data: f.data })), mode: document.querySelector('input[name=mode]:checked').value, note: $('memo').value.trim() })
       })
       const j = await r.json().catch(() => ({}))
-      if (!r.ok) { msg(j.message || (r.status === 401 ? '로그인이 풀렸어요. 다시 로그인해 주세요.' : '풀이에 실패했어요. (' + r.status + ')'), true); return }
+      if (!r.ok) { msg((j.message || (r.status === 401 ? '로그인이 풀렸어요. 다시 로그인해 주세요.' : '풀이에 실패했어요. (' + r.status + ')')) + (j.error === 'empty' && j.detail ? ' [' + j.detail + ']' : ''), true); return }
       lastText = j.text
       $('out').textContent = j.text; $('out').classList.remove('hand'); $('hand').textContent = '손글씨체로 보기'
       $('result').style.display = 'block'

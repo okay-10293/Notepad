@@ -81,7 +81,9 @@ Deno.serve(async (req: Request) => {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 3500, system: SYSTEM, messages: [{ role: "user", content }] }),
+      // thinking을 끈다: 응답이 16~17초 걸리고 비어 있던 원인이 "생각하는 데 토큰을 다 써서 글이 안 나온 것"일 것으로 추정(미확인).
+      // 그래도 비면 아래 "empty answer" 로그/응답의 stop_reason, blocks 값으로 실제 원인을 확인한다.
+      body: JSON.stringify({ model, max_tokens: 4096, thinking: { type: "disabled" }, system: SYSTEM, messages: [{ role: "user", content }] }),
       signal: ctrl.signal,
     });
     const out = await r.json().catch(() => ({}));
@@ -95,7 +97,13 @@ Deno.serve(async (req: Request) => {
       return json({ error: "ai_error", status: r.status, message: msg, detail: out?.error?.message ?? null }, 502);
     }
     const text = (out.content || []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("\n").trim();
-    if (!text) { await refund(); return json({ error: "empty", message: "풀이가 비어 있어요. 다시 시도해 주세요." }, 502); }
+    if (!text) {
+      await refund();
+      // 왜 비었는지 알 수 있게 종료 이유와 블록 종류를 로그와 응답에 남긴다
+      const types = (out.content || []).map((c: { type: string }) => c.type).join(",");
+      console.error("empty answer", JSON.stringify({ model, stop_reason: out.stop_reason, types, usage: out.usage ?? null }));
+      return json({ error: "empty", message: "풀이가 비어 있어요. 다시 시도해 주세요.", detail: `stop_reason=${out.stop_reason ?? "?"}, blocks=${types || "none"}` }, 502);
+    }
     return json({ text, remaining, model, usage: out.usage ?? null });
   } catch (e) {
     await refund();
