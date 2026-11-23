@@ -238,31 +238,51 @@
   function markBusy(G, x0, y0, x1, y1) {
     for (let y = Math.max(0, y0); y < Math.min(G.gh, y1); y++) for (let x = Math.max(0, x0); x < Math.min(G.gw, x1); x++) G.occ[y * G.gw + x] = 1
   }
-  // 빈 공간만 골라 글 위치를 정한다. 못 찾으면 null (아래 빈 종이에 쓴다)
+  // 글 위치 정하기: 빈 공간 중 문제에서 가장 가까운 곳. 글씨를 줄여서라도 문제 근처에 넣고, 정 안 되면 겹침이 가장 적은 곳에 쓴다 (아래 종이는 쓰지 않음)
   function findSpot(G, mctx, text, hint, W, H) {
-    const g = G.g, hi = Math.round(W * 0.05), lo = Math.round(W * 0.019)
+    const g = G.g, hi = Math.round(W * 0.045), lo = Math.round(W * 0.012)
     const hcx = (hint.x + hint.w / 2) / 1000 * W, hcy = (hint.y + hint.h / 2) / 1000 * H
+    const S = sumTable(G)
+    const hw = Math.min(Math.max(hint.w / 1000 * W, W * 0.1), W - 8)
+    const widths = [...new Set([hw, W * 0.5, W * 0.38, W * 0.28, W * 0.2, W * 0.14].map(v => Math.round(Math.min(v, W - 8))))]
+    const near = (gx, gy, bw, bh) => Math.hypot(gx * g + bw / 2 - hcx, gy * g + bh / 2 - hcy)
     for (let fs = hi; fs >= lo; fs -= 2) {
-      mctx.font = FONT(fs)
-      const S = sumTable(G); let best = null
-      const widths = [hint.w / 1000 * W, W * 0.6, W * 0.45, W * 0.33, W * 0.24].map(v => Math.min(Math.max(v, W * 0.2), W - 8))
-      for (const bw of new Set(widths.map(Math.round))) {
-        const lines = wrapLines(mctx, text, bw - 6), bh = Math.ceil(lines.length * fs * 1.12 + 6)
+      mctx.font = FONT(fs); let best = null
+      for (const bw of widths) {
+        const lines = wrapLines(mctx, text, bw - 6), bh = Math.ceil(lines.length * fs * 1.1 + 4)
         const cw = Math.ceil(bw / g), ch = Math.ceil(bh / g)
         if (cw > G.gw || ch > G.gh) continue
         for (let gy = 0; gy + ch <= G.gh; gy++) for (let gx = 0; gx + cw <= G.gw; gx++) {
           if (rectBusy(G, S, gx, gy, gx + cw, gy + ch)) continue
-          const dist = Math.hypot(gx * g + bw / 2 - hcx, gy * g + bh / 2 - hcy)
+          const dist = near(gx, gy, bw, bh)
           if (!best || dist < best.dist) best = { dist, x: gx * g, y: gy * g, w: bw, h: bh, fs, lines, cw, ch, gx, gy }
         }
       }
-      if (best) { markBusy(G, best.gx, best.gy, best.gx + best.cw, best.gy + best.ch); return best }
+      // 큰 글씨로 멀리 가느니, 가까운 곳에 한 단계 작은 글씨로 쓰는 편이 낫다
+      if (best && best.dist < W * 0.18) { markBusy(G, best.gx, best.gy, best.gx + best.cw, best.gy + best.ch); return best }
+      if (best && fs <= lo + 2) { markBusy(G, best.gx, best.gy, best.gx + best.cw, best.gy + best.ch); return best }
     }
-    return null
+    // 빈 곳이 없으면 겹침이 가장 적은 곳(문제 근처)에 작게 쓴다
+    const fs = Math.round(W * 0.016); mctx.font = FONT(fs)
+    const bw = Math.round(hw), lines = wrapLines(mctx, text, bw - 6), bh = Math.ceil(lines.length * fs * 1.1 + 4)
+    const cw = Math.min(G.gw, Math.ceil(bw / g)), ch = Math.min(G.gh, Math.ceil(bh / g)); let best = null
+    for (let gy = 0; gy + ch <= G.gh; gy++) for (let gx = 0; gx + cw <= G.gw; gx++) {
+      const sc = (S[(gy + ch) * (G.gw + 1) + gx + cw] - S[gy * (G.gw + 1) + gx + cw] - S[(gy + ch) * (G.gw + 1) + gx] + S[gy * (G.gw + 1) + gx]) * 40 + near(gx, gy, bw, bh)
+      if (!best || sc < best.sc) best = { sc, x: gx * g, y: gy * g, w: bw, h: bh, fs, lines, cw, ch, gx, gy }
+    }
+    if (best) markBusy(G, best.gx, best.gy, best.gx + best.cw, best.gy + best.ch)
+    return best
+  }
+  // 서술형 답칸: AI가 알려준 칸 안에 글씨를 줄여 가며 맞춰 쓴다
+  function fitInBox(mctx, text, hint, W, H) {
+    const x = hint.x / 1000 * W + 4, y = hint.y / 1000 * H + 3, bw = Math.max(30, hint.w / 1000 * W - 8), bh = Math.max(16, hint.h / 1000 * H - 6)
+    let fs = Math.min(Math.round(W * 0.04), Math.round(bh)), lines = []
+    for (; fs >= 9; fs--) { mctx.font = FONT(fs); lines = wrapLines(mctx, text, bw); if (lines.length * fs * 1.1 <= bh) break }
+    return { x: x - 3, y: y - 3, w: bw, h: bh, fs: Math.max(fs, 9), lines }
   }
   function drawLines(ctx, lines, x, y, fs, maxW) {
     ctx.font = FONT(fs); ctx.fillStyle = INK; ctx.textBaseline = 'top'
-    lines.forEach((ln, i) => ctx.fillText(ln, x + 3, y + 3 + i * fs * 1.12, maxW))
+    lines.forEach((ln, i) => ctx.fillText(ln, x + 3, y + 3 + i * fs * 1.1, maxW))
   }
   // 손으로 그은 듯한 표시
   function wobble(ctx, x0, y0, x1, y1, amp) {
@@ -289,28 +309,15 @@
     const img = await loadImg(entry.preview), W = img.naturalWidth, H = img.naturalHeight
     const g = Math.max(6, Math.round(W / 150)), G = inkGrid(img, W, H, g)
     const mc = document.createElement('canvas').getContext('2d')
-    const placed = [], rest = []
+    const placed = []
     for (const it of items) {
-      const sp = findSpot(G, mc, it.text, it, W, H)
-      if (sp) placed.push({ sp, text: it.text }); else rest.push(it)
+      const sp = it.kind === 'answer_box' ? fitInBox(mc, it.text, it, W, H) : findSpot(G, mc, it.text, it, W, H)
+      if (sp) placed.push(sp)
     }
-    // 못 넣은 풀이는 아래에 붙인 빈 종이에 쓴다
-    const fs2 = Math.round(W * 0.045), tail = []
-    let extra = 0
-    if (rest.length) {
-      mc.font = FONT(fs2); extra = Math.round(fs2 * 0.8)
-      for (const it of rest) {
-        const lines = wrapLines(mc, (it.label ? it.label + '번  ' : '') + it.text, W - 40); tail.push({ lines, y: extra }); extra += Math.ceil(lines.length * fs2 * 1.12) + Math.round(fs2 * 0.6)
-      }
-    }
-    const c = document.createElement('canvas'); c.width = W; c.height = H + extra
-    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, W, H)
+    const c = document.createElement('canvas'); c.width = W; c.height = H
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.drawImage(img, 0, 0, W, H)
     for (const m of marks || []) drawMark(ctx, m, W, H)
-    for (const p of placed) drawLines(ctx, p.sp.lines, p.sp.x, p.sp.y, p.sp.fs, p.sp.w)
-    if (extra) {
-      ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, H); ctx.stroke(); ctx.setLineDash([])
-      for (const t of tail) drawLines(ctx, t.lines, 20, H + t.y, fs2, W - 40)
-    }
+    for (const sp of placed) drawLines(ctx, sp.lines, sp.x, sp.y, sp.fs, sp.w)
     return c
   }
 
