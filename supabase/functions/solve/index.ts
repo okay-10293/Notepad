@@ -100,6 +100,18 @@ Deno.serve(async (req: Request) => {
   // 2) 요청 검사
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400); }
+
+  // 쿠폰 등록: 코드가 맞으면 사용 횟수를 더해 준다(한 사람이 같은 코드는 한 번만)
+  if (body?.action === "redeem") {
+    const code = typeof body?.code === "string" ? body.code.trim().slice(0, 40) : "";
+    if (!code) return json({ error: "bad_code", message: "쿠폰 코드를 입력해 주세요." }, 400);
+    const { data: rd, error: re } = await admin.rpc("ai_redeem", { p_user: uid, p_code: code });
+    if (re) return json({ error: "server_error", message: "쿠폰을 확인하지 못했어요. 잠시 후 다시 시도해 주세요." }, 500);
+    if (rd === "already") return json({ error: "already", message: "이미 사용한 쿠폰이에요." }, 409);
+    if (typeof rd !== "string" || !rd.startsWith("ok:")) return json({ error: "invalid", message: "올바르지 않은 쿠폰 코드예요." }, 404);
+    const [, bonus, credits] = rd.split(":");
+    return json({ ok: true, bonus: Number(bonus), credits: Number(credits), message: `문제풀이 ${bonus}번이 추가됐어요.` });
+  }
   const files = Array.isArray(body?.files) ? body.files : [];
   if (!files.length || files.length > MAX_FILES) return json({ error: "bad_files", message: `파일은 1~${MAX_FILES}개까지 올릴 수 있어요.` }, 400);
   let total = 0;
@@ -120,7 +132,9 @@ Deno.serve(async (req: Request) => {
   if (bump === "user_limit") return json({ error: "user_limit", message: `오늘 사용 횟수(${USER_LIMIT}번)를 다 썼어요. 내일 다시 이용해 주세요.` }, 429);
   if (bump === "global_limit") return json({ error: "global_limit", message: "오늘은 전체 사용량이 가득 찼어요. 내일 다시 이용해 주세요." }, 429);
   const remaining = Number(String(bump).split(":")[1] ?? 0);
-  const refund = () => admin.rpc("ai_usage_refund", { p_user: uid });
+  // 쿠폰으로 받은 횟수를 쓴 경우(credit:…)는 실패 시 그 횟수를 돌려준다
+  const usedCredit = String(bump).startsWith("credit:");
+  const refund = () => usedCredit ? admin.rpc("ai_credit_refund", { p_user: uid }) : admin.rpc("ai_usage_refund", { p_user: uid });
 
   // 4) Claude 호출
   const content: unknown[] = files.map((f: { type: string; data: string }) =>

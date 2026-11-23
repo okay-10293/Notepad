@@ -64,6 +64,8 @@
     </div>
     <div class="row"><button class="btn btn-p" id="go" disabled>풀기</button><span id="left" style="color:var(--ink-3);font-size:0.82rem;"></span></div>
     <div id="msg"></div>
+    <div class="row" style="margin-top:1.1rem;"><input id="coupon" type="text" placeholder="쿠폰 코드" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:0.92rem;padding:0.6rem 0.8rem;" /><button class="btn" id="redeem">등록</button></div>
+    <div id="cmsg" style="font-size:0.85rem;margin-top:0.4rem;"></div>
     <div class="note">AI 풀이는 틀릴 수 있습니다. 특히 손글씨나 그림이 섞인 문제는 잘못 읽을 수 있으니 꼭 검토해서 쓰세요. 올린 파일(PDF는 쪽별 이미지로 바꿔서)은 풀이를 위해 AI 제공사(Anthropic)에 전달되며 이 서비스에 저장되지 않습니다. 필기 위치도 AI가 정해서 글자가 문제와 조금 겹치거나 어긋날 수 있습니다. 하루 사용 횟수에 제한이 있습니다.</div>
   </div>
 
@@ -378,7 +380,7 @@
       $('textbox').style.display = has ? 'none' : 'block'
       $('showText').textContent = '글자로 보기'
       $('result').style.display = 'block'
-      $('left').textContent = typeof j.remaining === 'number' ? '오늘 남은 횟수 ' + j.remaining + '번' : ''
+      $('left').textContent = typeof j.remaining === 'number' ? '남은 횟수 ' + j.remaining + '번' : ''
       msg(has ? '' : 'AI가 필기할 위치를 정하지 못해서 글자로만 보여드려요.'); $('result').scrollIntoView({ behavior: 'smooth', block: 'start' })
     } catch (e) { msg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.', true) }
     finally { busy = false; $('go').disabled = !files.length }
@@ -413,6 +415,25 @@
   ;['dragenter', 'dragover'].forEach(t => $('drop').addEventListener(t, (e) => { e.preventDefault(); $('drop').classList.add('over') }))
   ;['dragleave', 'drop'].forEach(t => $('drop').addEventListener(t, (e) => { e.preventDefault(); $('drop').classList.remove('over') }))
   $('drop').addEventListener('drop', (e) => addFiles(e.dataTransfer.files))
+  $('redeem').onclick = async () => {
+    const code = $('coupon').value.trim(), cm = $('cmsg')
+    const say = (t, bad) => { cm.textContent = t; cm.style.color = bad ? 'var(--err, #c0392b)' : 'var(--ink-2, inherit)' }
+    if (!code) return say('쿠폰 코드를 입력해 주세요.', true)
+    if (!session) return say('로그인이 필요해요.', true)
+    $('redeem').disabled = true; say('확인하는 중…')
+    try {
+      const { data: s2 } = await sb.auth.getSession(); session = s2.session
+      const r = await fetch(SB_URL + '/functions/v1/solve', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'redeem', code })
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j.ok) { say(j.message + ' (쿠폰 남은 횟수 ' + j.credits + '번)'); $('coupon').value = '' }
+      else say(j.message || '쿠폰을 등록하지 못했어요. (' + r.status + ')', true)
+    } catch (e) { say('연결에 실패했어요. 잠시 후 다시 시도해 주세요.', true) }
+    finally { $('redeem').disabled = false }
+  }
   $('go').onclick = solve
   $('save').onclick = saveNote
   $('hand').onclick = () => { const on = $('out').classList.toggle('hand'); $('hand').textContent = on ? '기본 글꼴로 보기' : '손글씨체로 보기' }
