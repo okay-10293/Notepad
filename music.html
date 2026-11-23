@@ -664,21 +664,27 @@
       .then(function () { saveTitles(); return loadAll() })
   }
 
+  // 작은 JSON 파일을 올린다. 덮어쓰기(upsert)는 이 저장소에서 막혀 있어서 지운 뒤 같은 이름으로 다시 올린다.
+  function putJson(path, obj) {
+    var bk = sb.storage.from(BUCKET)
+    var bytes = new TextEncoder().encode(JSON.stringify(obj))   // Blob/FormData 대신 바이트로 보내 사파리 문제를 피한다
+    return bk.remove([path]).catch(function () {}).then(function () {
+      return bk.upload(path, bytes, { contentType: 'application/json', upsert: false })
+    })
+  }
   function pushTitles() {
     if (!sb || !uid || !navigator.onLine) return Promise.resolve()
     var obj = {}
     tracks.forEach(function (t) { var r = t.remote ? t.rid : remoteMap[t.id]; if (r && titles[t.id]) obj[r] = titles[t.id] })
-    var blob = new Blob([JSON.stringify(obj)], { type: 'application/json' })
-    return sb.storage.from(BUCKET).upload(uid + '/music/titles.json', blob, { upsert: true, contentType: 'application/json' })
-      .then(function (r) { if (!r.error) setDirty(false) }).catch(function () {})
+    return putJson(uid + '/music/titles.json', obj)
+      .then(function (r) { if (r && !r.error) setDirty(false) }).catch(function () {})
   }
 
   function pushOrder() {
     if (!sb || !uid || !navigator.onLine) return Promise.resolve()
     var arr = order.filter(function (k) { return k.indexOf('l:') !== 0 })
-    var blob = new Blob([JSON.stringify(arr)], { type: 'application/json' })
-    return sb.storage.from(BUCKET).upload(uid + '/music/order.json', blob, { upsert: true, contentType: 'application/json' })
-      .then(function (r) { if (!r.error) { try { localStorage.removeItem(ODIRTY_KEY) } catch (e) {} } }).catch(function () {})
+    return putJson(uid + '/music/order.json', arr)
+      .then(function (r) { if (r && !r.error) { try { localStorage.removeItem(ODIRTY_KEY) } catch (e) {} } }).catch(function () {})
   }
 
   async function runSync() {
@@ -805,6 +811,8 @@
   $('ac').checked = localStorage.getItem('okay-music-autocache') !== '0'
   $('ac').onchange = function () { try { localStorage.setItem('okay-music-autocache', this.checked ? '1' : '0') } catch (e) {} if (this.checked) cacheQueue() }
   window.addEventListener('online', function () { if (sb && uid) runSync(); else initSync() })
+  // 다른 기기에서 바꾼 곡 이름·순서를 돌아왔을 때 바로 가져온다
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && sb && uid && navigator.onLine) runSync() })
 
   // ── 다른 오케이 스튜디오 화면으로 이동해도 노래가 끊기지 않게 ──
   // 페이지를 떠나면 소리가 멈추므로, 이 화면은 그대로 둔 채 이동할 화면을 그 위에 프레임으로 열고 아래에 작은 노래바를 띄운다.
