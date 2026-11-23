@@ -146,19 +146,27 @@ Deno.serve(async (req: Request) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 110_000);
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    // thinking을 끈다: 응답이 16~17초 걸리고 비어 있던 원인이 "생각하는 데 토큰을 다 써서 글이 안 나온 것"일 것으로 추정(미확인).
+    // 그래도 비면 아래 "empty answer" 로그/응답의 stop_reason, blocks 값으로 실제 원인을 확인한다.
+    // 필기 위치와 글은 도구 호출(write_solutions)로 받는다 → 항상 정해진 JSON 모양으로 온다.
+    const call = (extra: Record<string, unknown>) => fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      // thinking을 끈다: 응답이 16~17초 걸리고 비어 있던 원인이 "생각하는 데 토큰을 다 써서 글이 안 나온 것"일 것으로 추정(미확인).
-      // 그래도 비면 아래 "empty answer" 로그/응답의 stop_reason, blocks 값으로 실제 원인을 확인한다.
-      // 필기 위치와 글은 도구 호출(write_solutions)로 받는다 → 항상 정해진 JSON 모양으로 온다.
-      body: JSON.stringify({ model, max_tokens: 8000, thinking: { type: "disabled" }, system: SYSTEM, tools: [TOOL], tool_choice: { type: "tool", name: "write_solutions" }, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model, max_tokens: 8000, ...extra, system: SYSTEM, tools: [TOOL], tool_choice: { type: "tool", name: "write_solutions" }, messages: [{ role: "user", content }] }),
       signal: ctrl.signal,
     });
-    const out = await r.json().catch(() => ({}));
+    let r = await call({ thinking: { type: "disabled" } });
+    let out = await r.json().catch(() => ({}));
+    // 정확한 모드(Sonnet)에서만 실패하는 경우 대비: 서버 일시 오류(5xx/529)는 그대로 한 번 재시도하고,
+    // 400(파라미터 거부)이면 thinking 옵션을 빼고 한 번 재시도한다. (강제 도구 호출에서는 thinking이 어차피 꺼져 있어야 함)
+    if (!r.ok && (r.status >= 500 || r.status === 400)) {
+      console.error("anthropic retry", JSON.stringify({ model, status: r.status, err: JSON.stringify(out).slice(0, 300) }));
+      r = await call(r.status === 400 ? {} : { thinking: { type: "disabled" } });
+      out = await r.json().catch(() => ({}));
+    }
     if (!r.ok) {
       await refund();
-      console.error("anthropic error", r.status, JSON.stringify(out).slice(0, 500));
+      console.error("anthropic error", model, r.status, JSON.stringify(out).slice(0, 500));
       const msg = r.status === 401 ? "AI 키가 올바르지 않아요."
         : r.status === 402 || r.status === 403 ? "AI 사용 한도나 결제 상태를 확인해 주세요."
         : r.status === 429 ? "AI가 지금 바빠요. 잠시 뒤에 다시 시도해 주세요."
